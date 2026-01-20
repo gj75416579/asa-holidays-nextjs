@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     const data = await postDataJson('api/b2c/sector/list', body)
     return NextResponse.json(data)
   } catch (error) {
-    console.error('Sectors POST error:', error)
+    console.error('Free and easy sectors error:', error)
     return NextResponse.json({ error: 'Failed to fetch sectors' }, { status: 500 })
   }
 }

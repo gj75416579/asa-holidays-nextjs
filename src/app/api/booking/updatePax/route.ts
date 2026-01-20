@@ -8,10 +8,10 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json()
-    const data = await postDataJson('api/b2c/sector/list', body)
+    const data = await postDataJson('api/b2c/tour-tranx/pax-info', body)
     return NextResponse.json(data)
   } catch (error) {
-    console.error('Sectors POST error:', error)
-    return NextResponse.json({ error: 'Failed to fetch sectors' }, { status: 500 })
+    console.error('Booking update pax error:', error)
+    return NextResponse.json({ error: 'Failed to update pax' }, { status: 500 })
   }
 }

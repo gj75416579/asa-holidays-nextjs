@@ -8,10 +8,10 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json()
-    const data = await postDataJson('api/b2c/sector/list', body)
+    const data = await postDataJson('api/b2c/sector/level/list', body)
     return NextResponse.json(data)
   } catch (error) {
-    console.error('Sectors POST error:', error)
+    console.error('Tour sector error:', error)
     return NextResponse.json({ error: 'Failed to fetch sectors' }, { status: 500 })
   }
 }
