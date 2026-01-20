@@ -1,10 +1,990 @@
 'use client'
 
+import { useEffect, useState } from 'react'
+
 import Header from '@/templete/Header'
 import Footer from '@/templete/Footer'
 
+type HomeApiData = {
+  hotTours: unknown | null
+  sectorLevels: unknown | null
+  banners: unknown | null
+  sectors: unknown | null
+}
 
+const homeApiEndpoints = {
+  hotTours: '/api/tour/hot-list',
+  sectorLevels: '/api/tour/sector',
+  banners: '/api/banners?position=Home Page',
+  sectors: '/api/sectors',
+}
+
+const homeApiPayloads = {
+  hotTours: {
+    type: 0,
+    count: 10,
+    page: 0,
+  },
+  sectorLevels: {
+    level: 1,
+    type: 1,
+    popular: -1,
+    exists: 1,
+    containtPicture: 1,
+  },
+  sectors: {},
+}
+
+const homeApiInitialData: HomeApiData = {
+  hotTours: null,
+  sectorLevels: null,
+  banners: null,
+  sectors: null,
+}
+
+const apiMode = process.env.NEXT_PUBLIC_API_MODE ?? 'dev'
+const shouldFallback = apiMode !== 'prod'
+
+const heroSlides = [
+  {
+    id: 'hero-1',
+    bgImage: '/assets/img/home-1/hero/hero-bg.jpg',
+    title: 'Your Gateway to Unforgettable Adventures',
+    description: "Singapore's premier travel agency offering curated group tours, cruises, and customized travel experiences worldwide",
+    cta: {
+      href: '/tour-grid',
+      label: 'Explore Our Tours',
+    },
+    counters: [
+      {
+        value: '100',
+        suffix: '+',
+        label: 'Destinations Worldwide',
+      },
+      {
+        value: '30',
+        suffix: '+',
+        label: 'Years of Excellence',
+      },
+    ],
+  },
+  {
+    id: 'hero-2',
+    bgImage: '/assets/img/home-1/hero/hero-bg-2.jpg',
+    title: 'Explore Europe in Style with ASA Holidays',
+    description: 'Discover Switzerland, Scandinavia, Italy and Eastern Europe with our expertly guided tours',
+    cta: {
+      href: '/tour-grid',
+      label: 'View Europe Tours',
+    },
+    counters: [
+      {
+        value: '50',
+        suffix: 'k+',
+        label: 'Happy Travelers',
+      },
+      {
+        value: '98',
+        suffix: '%',
+        label: 'Customer Satisfaction',
+      },
+    ],
+  },
+  {
+    id: 'hero-3',
+    bgImage: '/assets/img/home-1/hero/hero-bg-3.jpg',
+    title: "Discover Asia's Hidden Treasures",
+    description: "From Japan's cherry blossoms to China's ancient wonders - experience the best of Asia with ASA Holidays",
+    cta: {
+      href: '/tour-grid',
+      label: 'View Asia Tours',
+    },
+    counters: [
+      {
+        value: '200',
+        suffix: '+',
+        label: 'Tour Packages',
+      },
+      {
+        value: '24/7',
+        suffix: '',
+        label: 'Customer Support',
+      },
+    ],
+  },
+]
+
+const contactForm = {
+  rightShapeImage: '/assets/img/home-1/tree.png',
+  stats: {
+    value: '50',
+    suffix: 'k+',
+    label: 'Happy travelers served since 1992',
+    image: '/assets/img/home-1/group.png',
+  },
+  heading: 'Find your perfect holiday package',
+  subtext: {
+    pre: 'We offer more than',
+    count: '200',
+    suffix: '+',
+    post: 'curated tour packages',
+  },
+  selects: [
+    {
+      placeholder: 'Select Destination',
+      options: ['Europe', 'Japan', 'China', 'Korea', 'Australia'],
+    },
+    {
+      placeholder: 'Departure Month',
+      options: ['January', 'February', 'March', 'April - June', 'July - September', 'October - December'],
+    },
+    {
+      placeholder: 'Tour Type',
+      options: ['Group Tours', 'Free & Easy', 'Cruises', 'MICE'],
+    },
+  ],
+  buttonText: 'Search Tours',
+}
+
+const tourSection = {
+  leftLarge: {
+    image: '/assets/img/home-1/tour/tour-1.jpg',
+    badge: '20+ tours',
+    title: 'Swiss Alps Adventure',
+    location: 'Switzerland',
+    href: '/tour-details',
+    animationClass: 'wow fadeInUp',
+    delay: '.3s',
+  },
+  leftStack: [
+    {
+      id: 'tour-left-1',
+      image: '/assets/img/home-1/tour/tour-2.jpg',
+      badge: '15+ tours',
+      title: 'Cherry Blossom Season',
+      location: 'Tokyo, Japan',
+      href: '/tour-details',
+      imageClass: 'style-3',
+      animationClass: 'wow fadeInRight',
+      delay: '.3s',
+    },
+    {
+      id: 'tour-left-2',
+      image: '/assets/img/home-1/tour/tour-3.jpg',
+      badge: '12+ tours',
+      title: 'Northern Lights',
+      location: 'Scandinavia',
+      href: '/tour-details',
+      imageClass: 'style-3',
+      animationClass: 'wow fadeInRight',
+      delay: '.5s',
+      wrapperClass: 'mt-1',
+    },
+  ],
+  rightLarge: {
+    image: '/assets/img/home-1/tour/tour-4.jpg',
+    badge: '25+ tours',
+    title: 'Great Wall & Forbidden City',
+    location: 'Beijing, China',
+    href: '/tour-details',
+    imageClass: 'style-2',
+    animationClass: 'wow fadeInUp',
+    delay: '.3s',
+  },
+  rightStack: [
+    {
+      id: 'tour-right-1',
+      image: '/assets/img/home-1/tour/tour-5.jpg',
+      badge: '10+ tours',
+      title: 'K-Culture Experience',
+      location: 'Seoul, Korea',
+      href: '/tour-details',
+      imageClass: 'style-3',
+      contentClass: 'style-4',
+      animationClass: 'wow fadeInRight',
+      delay: '.3s',
+    },
+    {
+      id: 'tour-right-2',
+      image: '/assets/img/home-1/tour/tour-6.jpg',
+      badge: '8+ tours',
+      title: 'Outback Discovery',
+      location: 'Sydney, Australia',
+      href: '/tour-details',
+      imageClass: 'style-3',
+      contentClass: 'style-5',
+      animationClass: 'wow fadeInRight',
+      delay: '.5s',
+      wrapperClass: 'mt-1',
+    },
+  ],
+}
+
+const aboutSection = {
+  titleLines: ['Your Trusted', 'Travel Partner', 'Since 1992'],
+  subtitle: {
+    pre: 'Established in 1992,',
+    value: '30',
+    suffix: '+',
+    post: 'years of excellence in travel',
+  },
+  imagePrimary: '/assets/img/home-1/about/01.jpg',
+  imageSecondary: '/assets/img/home-1/about/02.jpg',
+  box: {
+    iconClass: 'flaticon-travel',
+    title: 'Trusted & Secure',
+    description: 'Your safety and trust are our top priorities.',
+  },
+  description:
+    "ASA Holidays is Singapore's leading travel agency, specializing in curated group tours, free & easy packages, cruises, and MICE services. We pride ourselves on delivering exceptional travel experiences with professional guides and personalized service.",
+  featureGroups: [
+    ['Expert Tour Guides', 'Curated Itineraries'],
+    ['Competitive Pricing', '24/7 Support'],
+    ['Travel Insurance', 'Flexible Payments'],
+  ],
+  cta: {
+    href: '/about',
+    label: 'Learn More About Us',
+  },
+}
+
+const tourPlaceSection = {
+  title: 'Popular Tour Packages',
+  subtitle: {
+    pre: 'Discover our most loved destinations with',
+    count: '200',
+    suffix: '+',
+    post: 'curated tour packages',
+  },
+  rating: {
+    label: 'Rating',
+    stars: 4,
+    halfStar: true,
+  },
+  items: [
+    {
+      id: 'tour-place-1',
+      image: '/assets/img/home-1/tour/tour-8.jpg',
+      badge: '10% Off',
+      priceLabel: 'From',
+      price: '$2,888',
+      title: '10D Switzerland Grand Tour with Glacier Express',
+      location: 'Switzerland',
+      duration: '10 days',
+      group: 'Group Tour',
+      delay: '.2s',
+    },
+    {
+      id: 'tour-place-2',
+      image: '/assets/img/home-1/tour/tour-9.jpg',
+      priceLabel: 'From',
+      price: '$1,688',
+      title: '8D Japan Cherry Blossom Tour Tokyo to Osaka',
+      location: 'Tokyo, Japan',
+      duration: '8 days',
+      group: 'Group Tour',
+      delay: '.4s',
+    },
+    {
+      id: 'tour-place-3',
+      image: '/assets/img/home-1/tour/tour-10.jpg',
+      badge: 'Early Bird',
+      priceLabel: 'From',
+      price: '$1,288',
+      title: '6D China Beijing & Shanghai Highlights Tour',
+      location: 'Beijing, China',
+      duration: '6 days',
+      group: 'Group Tour',
+      delay: '.6s',
+    },
+    {
+      id: 'tour-place-4',
+      image: '/assets/img/home-1/tour/tour-11.jpg',
+      priceLabel: 'From',
+      price: '$988',
+      title: '5D Korea Seoul & Jeju Island Discovery',
+      location: 'Seoul, Korea',
+      duration: '5 days',
+      group: 'Group Tour',
+      delay: '.8s',
+    },
+    {
+      id: 'tour-place-5',
+      image: '/assets/img/home-1/tour/tour-12.jpg',
+      priceLabel: 'Tours Price',
+      price: '$49.00',
+      title: 'Train on Nine Arches Bridge in',
+      titleLine2: 'Sri Lanka',
+      location: 'Ella, Sri Lanka',
+      duration: '1 - 3 days',
+      group: '3 persons',
+      delay: '.2s',
+    },
+    {
+      id: 'tour-place-6',
+      image: '/assets/img/home-1/tour/tour-13.jpg',
+      badge: '8% Off',
+      priceLabel: 'Tours Price',
+      price: '$49.00',
+      title: 'White buildings with blue',
+      titleLine2: 'accents near the Atlantic shore.',
+      location: 'Galle, Sri Lanka',
+      duration: '1 - 3 days',
+      group: '3 persons',
+      delay: '.4s',
+    },
+    {
+      id: 'tour-place-7',
+      image: '/assets/img/home-1/tour/tour-14.jpg',
+      priceLabel: 'Tours Price',
+      price: '$49.00',
+      title: 'Man Sitting on Rocks next to',
+      titleLine2: 'Creek in Mountains',
+      location: 'Nepal',
+      duration: '1 - 3 days',
+      group: '3 persons',
+      delay: '.6s',
+    },
+    {
+      id: 'tour-place-8',
+      image: '/assets/img/home-1/tour/tour-15.jpg',
+      badge: '23% Off',
+      priceLabel: 'Tours Price',
+      price: '$49.00',
+      title: 'Aerial Photography of Cinque',
+      titleLine2: 'Terre in Italy',
+      location: 'Liguria, Italy',
+      duration: '1 - 3 days',
+      group: '3 persons',
+      delay: '.8s',
+    },
+  ],
+}
+
+const benefitTourSection = {
+  title: 'How to Benefit Our Tours',
+  descriptionLines: [
+    'Make the most of your travel experience with our carefully',
+    'curated tours designed to offer convenience',
+  ],
+  blocks: [
+    {
+      type: 'item',
+      id: 'benefit-1',
+      iconClass: 'flaticon-traveling',
+      title: 'Expert Travel Guide',
+      href: '/tour-details',
+      description: 'Travel professionals who help destinations, accommodations, and activities tailored.',
+      colClass: 'col-xl-3 col-lg-4 col-md-6',
+      wowClass: 'fadeInLeft',
+      delay: '.3s',
+    },
+    {
+      type: 'image',
+      id: 'benefit-image',
+      image: '/assets/img/home-1/tour/tour-7.jpg',
+      colClass: 'col-xl-6 col-lg-4 col-md-6',
+      wowClass: 'img-custom-anim-top',
+    },
+    {
+      type: 'item',
+      id: 'benefit-2',
+      iconClass: 'flaticon-roadmap',
+      title: 'Custom Tour Plan',
+      href: '/tour-details',
+      description: 'Enjoy trips designed around your preferences, whether you want a relaxing beach holiday',
+      colClass: 'col-xl-3 col-lg-4 col-md-6',
+      wowClass: 'fadeInRight',
+      delay: '.5s',
+    },
+    {
+      type: 'item',
+      id: 'benefit-3',
+      iconClass: 'flaticon-mouse',
+      title: 'Hassle-Free Booking',
+      href: '/tour-details',
+      description: 'Save time and effort with a single platform to book flights, hotels, activities, transportation',
+      colClass: 'col-xl-3 col-lg-4 col-md-6',
+      wowClass: 'fadeInUp',
+      delay: '.2s',
+    },
+    {
+      type: 'item',
+      id: 'benefit-4',
+      iconClass: 'flaticon-promotion',
+      title: 'Deals & Discounts',
+      href: '/tour-details',
+      description: 'Save time and effort with a single platform to book flights, hotels, activities, transportation',
+      colClass: 'col-xl-3 col-lg-4 col-md-6',
+      wowClass: 'fadeInUp',
+      delay: '.4s',
+    },
+    {
+      type: 'item',
+      id: 'benefit-5',
+      iconClass: 'flaticon-tourist',
+      title: 'Local Guides Authentic',
+      href: '/tour-details',
+      description: 'Immerse yourself local culture with trusted guides who provide insider tips and hidden',
+      colClass: 'col-xl-3 col-lg-4 col-md-6',
+      wowClass: 'fadeInUp',
+      delay: '.6s',
+    },
+    {
+      type: 'item',
+      id: 'benefit-6',
+      iconClass: 'flaticon-insurance',
+      title: 'Travel Insurance',
+      href: '/tour-details',
+      description: 'Stay protected with insurance options and on-ground support for a worry-free experience.',
+      colClass: 'col-xl-3 col-lg-4 col-md-6',
+      wowClass: 'fadeInUp',
+      delay: '.8s',
+    },
+  ],
+}
+
+const adventureSection = {
+  titleLines: ['Special Offers Sort', 'Time Adventures'],
+  description: "Don't miss out our exclusive special deals, designed make your dream vacation more affordable than ever.",
+  leftImage: '/assets/img/home-1/adventure/01.jpg',
+  rightImage: '/assets/img/home-1/adventure/02.jpg',
+  experience: {
+    titleLines: ['18+ years of experience', 'in travel services'],
+    href: '/tour-details',
+    client: {
+      image: '/assets/img/home-1/adventure/client.png',
+      name: 'Mickel z Ponkoz',
+      role: 'Travel guide',
+    },
+    shapeImage: '/assets/img/home-1/adventure/shape.png',
+  },
+  rightThumb: {
+    image: '/assets/img/home-1/adventure/03.jpg',
+    discountLabel: '23% Discount',
+    title: 'Hotel & Resort',
+    href: '/tour-details',
+    price: '$1500',
+    priceNote: 'per night 4 star rating',
+    ctaLabel: 'Book Now',
+    ctaHref: '/tour-details',
+  },
+}
+
+const featureSection = {
+  title: 'All-in-one Travel Assistance',
+  subtitle: 'Crafting journeys, creating memories plan smarter, travel better',
+  items: [
+    {
+      id: 'feature-1',
+      iconClass: 'flaticon-traveling-1',
+      title: 'Flight Booking & Reservation',
+      description: 'Take the stress to travel with our seamless flight booking and reservation services.',
+      delay: '.2s',
+    },
+    {
+      id: 'feature-2',
+      iconClass: 'flaticon-hot-air-balloon',
+      title: 'Hotel & Resort Accommodation',
+      description: 'Enjoy a perfect stay with our carefully selected hotels and resorts.',
+      delay: '.4s',
+    },
+    {
+      id: 'feature-3',
+      iconClass: 'flaticon-passport',
+      iconWrapperClass: 'style-2',
+      title: 'Visa & Travel',
+      titleLine2: 'Assistance',
+      description: 'Travel confidently with our comprehensive Visa & Travel Assistance services.',
+      delay: '.6s',
+    },
+    {
+      id: 'feature-4',
+      iconClass: 'flaticon-tent',
+      iconWrapperClass: 'style-2',
+      title: 'Customized &',
+      titleLine2: 'Private Tours',
+      description: 'We design itineraries that match your interests, schedule, and budget.',
+      delay: '.8s',
+    },
+  ],
+}
+
+const counterSection = {
+  backgroundImage: '/assets/img/home-1/bg.png',
+  title: 'Unlimited Travel Experience',
+  subtitle: 'Crafting journeys, creating memories plan smarter, travel better',
+  items: [
+    {
+      id: 'counter-1',
+      iconClass: 'flaticon-costumer',
+      value: '30',
+      suffix: 'k+',
+      label: 'Total worldwide satisfied clients',
+      delay: '.3s',
+    },
+    {
+      id: 'counter-2',
+      iconClass: 'flaticon-suitcase',
+      value: '500',
+      suffix: '+',
+      label: 'World tours available in toun',
+      delay: '.5s',
+    },
+    {
+      id: 'counter-3',
+      iconClass: 'flaticon-excursion',
+      value: '20',
+      suffix: '+',
+      label: 'Professional local tour guides',
+      delay: '.7s',
+    },
+  ],
+}
+
+const activitiesSection = [
+  {
+    id: 'activity-1',
+    image: '/assets/img/home-1/activiti/01.jpg',
+    title: 'Snorkeling & Scuba Diving',
+    href: 'destination-details.html',
+  },
+  {
+    id: 'activity-2',
+    image: '/assets/img/home-1/activiti/02.jpg',
+    title: 'Desert Safari & Camel Rides',
+    href: 'destination-details.html',
+    delay: '.2s',
+  },
+  {
+    id: 'activity-3',
+    image: '/assets/img/home-1/activiti/03.jpg',
+    title: 'Hiking & Nature Trails',
+    href: 'destination-details.html',
+    delay: '.4s',
+  },
+  {
+    id: 'activity-4',
+    image: '/assets/img/home-1/activiti/04.jpg',
+    title: 'Cultural Heritage Tours',
+    href: 'destination-details.html',
+    delay: '.6s',
+  },
+  {
+    id: 'activity-5',
+    image: '/assets/img/home-1/activiti/05.jpg',
+    title: 'Wildlife Safaris',
+    href: 'destination-details.html',
+    delay: '.8s',
+  },
+]
+
+const testimonialSection = {
+  backgroundImage: '/assets/img/home-1/testimonial/bg.jpg',
+  title: '100k+ Customer Say Us',
+  subtitle: 'Join over 100,000 satisfied travelers who have experienced',
+  slides: [
+    {
+      id: 'testimonial-1',
+      quote: 'Booking with this agency was the best decision for our Bali trip! from flights to accommodations!',
+      clientImage: '/assets/img/home-1/testimonial/client.png',
+      name: 'Michael Thompson',
+      role: 'World traveler',
+    },
+    {
+      id: 'testimonial-2',
+      quote: 'Booking with this agency was the best decision for our Bali trip! from flights to accommodations!',
+      clientImage: '/assets/img/home-1/testimonial/client.png',
+      name: 'Michael Thompson',
+      role: 'World traveler',
+    },
+    {
+      id: 'testimonial-3',
+      quote: 'Booking with this agency was the best decision for our Bali trip! from flights to accommodations!',
+      clientImage: '/assets/img/home-1/testimonial/client.png',
+      name: 'Michael Thompson',
+      role: 'World traveler',
+    },
+    {
+      id: 'testimonial-4',
+      quote: 'Booking with this agency was the best decision for our Bali trip! from flights to accommodations!',
+      clientImage: '/assets/img/home-1/testimonial/client.png',
+      name: 'Michael Thompson',
+      role: 'World traveler',
+    },
+  ],
+  gallery: [
+    {
+      id: 'testimonial-image-1',
+      image: '/assets/img/home-1/testimonial/01.jpg',
+      colClass: 'col-xl-7 col-md-6',
+      animationClass: 'wow img-custom-anim-left',
+    },
+    {
+      id: 'testimonial-image-2',
+      image: '/assets/img/home-1/testimonial/02.jpg',
+      colClass: 'col-xl-5 col-md-6',
+      animationClass: 'wow img-custom-anim-right',
+    },
+    {
+      id: 'testimonial-image-3',
+      image: '/assets/img/home-1/testimonial/03.jpg',
+      colClass: 'col-xl-5 col-md-6',
+      animationClass: 'wow img-custom-anim-left',
+    },
+    {
+      id: 'testimonial-image-4',
+      image: '/assets/img/home-1/testimonial/04.jpg',
+      colClass: 'col-xl-7 col-md-6',
+      animationClass: 'wow img-custom-anim-right',
+      videoLink: 'https://www.youtube.com/watch?v=Cn4G2lZ_g2I',
+    },
+  ],
+}
+
+const newsSection = {
+  title: 'Read Our Latest News & Blog',
+  subtitle: 'Crafting journeys, creating memories plan smarter, travel better',
+  items: [
+    {
+      id: 'news-1',
+      image: '/assets/img/home-1/news/news-1.jpg',
+      date: '18 August',
+      category: 'Tours & travel',
+      title: "Highlight trending destinations and why they're worth exploring.",
+      href: '/news-details',
+      delay: '.2s',
+    },
+    {
+      id: 'news-2',
+      image: '/assets/img/home-1/news/news-2.jpg',
+      date: '20 August',
+      category: 'Tours & travel',
+      title: 'Tips on itinerary planning, booking, and travel hacks.',
+      href: '/news-details',
+      delay: '.4s',
+    },
+    {
+      id: 'news-3',
+      image: '/assets/img/home-1/news/news-3.jpg',
+      date: '23 August',
+      category: 'Tours & travel',
+      title: 'Focus on destinations suitable for families with kids.',
+      href: '/news-details',
+      delay: '.6s',
+    },
+    {
+      id: 'news-4',
+      image: '/assets/img/home-1/news/news-4.jpg',
+      date: '24 August',
+      category: 'Tours & travel',
+      title: 'Guide to enjoying luxury stays and experiences without overspending.',
+      href: '/news-details',
+      delay: '.8s',
+    },
+  ],
+}
+
+const brandSection = {
+  title: 'Relied upon by top-performing teams worldwide',
+  logos: [
+    { id: 'brand-1', image: '/assets/img/home-1/brand/01.png' },
+    { id: 'brand-2', image: '/assets/img/home-1/brand/02.png' },
+    { id: 'brand-3', image: '/assets/img/home-1/brand/03.png' },
+    { id: 'brand-4', image: '/assets/img/home-1/brand/04.png' },
+    { id: 'brand-5', image: '/assets/img/home-1/brand/05.png' },
+    { id: 'brand-6', image: '/assets/img/home-1/brand/06.png' },
+    { id: 'brand-7', image: '/assets/img/home-1/brand/07.png' },
+  ],
+}
+
+const contactSection = {
+  image: '/assets/img/home-1/Image.jpg',
+  logo: '/assets/img/logo/white-logo.svg',
+  title: 'Ready for Your Next Adventure?',
+  description:
+    'Let ASA Holidays take you on a journey of a lifetime. From Europe to Asia, we have the perfect tour package waiting for you.',
+  cta: {
+    href: '/tour-grid',
+    label: 'Browse All Tours',
+  },
+}
+
+type ApiRecord = Record<string, unknown>
+
+const isRecord = (value: unknown): value is ApiRecord => !!value && typeof value === 'object'
+
+const extractList = (data: unknown): ApiRecord[] => {
+  if (Array.isArray(data)) {
+    return data as ApiRecord[]
+  }
+  if (!isRecord(data)) {
+    return []
+  }
+
+  const candidates = [data.data, data.list, data.items, data.records, data.rows, data.result]
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) {
+      return candidate as ApiRecord[]
+    }
+    if (isRecord(candidate)) {
+      const nested = candidate as ApiRecord
+      const nestedCandidates = [nested.data, nested.list, nested.items, nested.records, nested.rows, nested.result]
+      for (const nestedCandidate of nestedCandidates) {
+        if (Array.isArray(nestedCandidate)) {
+          return nestedCandidate as ApiRecord[]
+        }
+      }
+    }
+  }
+
+  return []
+}
+
+const pickString = (record: ApiRecord, keys: string[]): string => {
+  for (const key of keys) {
+    const value = record[key]
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim()
+    }
+    if (typeof value === 'number') {
+      return String(value)
+    }
+  }
+  return ''
+}
+
+const formatPrice = (value: unknown): string => {
+  if (value === null || value === undefined) {
+    return ''
+  }
+  const raw = typeof value === 'number' ? value.toString() : String(value)
+  const trimmed = raw.trim()
+  if (!trimmed) {
+    return ''
+  }
+  return trimmed.startsWith('$') ? trimmed : `$${trimmed}`
+}
+
+const formatDuration = (value: unknown): string => {
+  if (value === null || value === undefined) {
+    return ''
+  }
+  if (typeof value === 'number') {
+    return `${value} days`
+  }
+  return String(value).trim()
+}
+
+const formatPeople = (value: unknown): string => {
+  if (value === null || value === undefined) {
+    return ''
+  }
+  if (typeof value === 'number') {
+    return `${value} persons`
+  }
+  return String(value).trim()
+}
+
+const resolveHeroSlides = (
+  data: unknown,
+  fallback: typeof heroSlides,
+  fallbackEnabled: boolean
+) => {
+  const list = extractList(data)
+  if (!list.length) {
+    return fallbackEnabled ? fallback : []
+  }
+
+  return list.map((item, index) => {
+    const base = fallback[index] ?? fallback[0]
+    const title = typeof item.name === 'string' ? item.name.trim() : ''
+    const description = ''
+    const images = isRecord(item.images) ? (item.images as ApiRecord) : null
+    const image = typeof images?.desktop === 'string' ? images.desktop.trim() : ''
+    const link = typeof item.url === 'string' ? item.url.trim() : ''
+
+    return {
+      ...base,
+      id: base?.id ?? `hero-${index + 1}`,
+      bgImage: image || (fallbackEnabled ? base?.bgImage : ''),
+      title: title || (fallbackEnabled ? base?.title : ''),
+      description: description || (fallbackEnabled ? base?.description : ''),
+      cta: {
+        href: link || (fallbackEnabled ? base?.cta.href : '/'),
+        label: base?.cta.label ?? 'View Tours',
+      },
+      counters: base?.counters ?? [],
+    }
+  })
+}
+
+const resolveContactForm = (
+  data: unknown,
+  fallback: typeof contactForm,
+  fallbackEnabled: boolean
+) => {
+  const list = extractList(data)
+  const options = list
+    .map((item) => pickString(item, ['name', 'title', 'label', 'sectorName', 'sectorTitle']))
+    .filter((value) => value)
+
+  if (!options.length) {
+    if (!fallbackEnabled) {
+      return {
+        ...fallback,
+        selects: [
+          { ...fallback.selects[0], options: [] },
+          ...fallback.selects.slice(1),
+        ],
+      }
+    }
+    return fallback
+  }
+
+  return {
+    ...fallback,
+    selects: [
+      { ...fallback.selects[0], options },
+      ...fallback.selects.slice(1),
+    ],
+  }
+}
+
+const resolveTourSection = (
+  data: unknown,
+  fallback: typeof tourSection,
+  fallbackEnabled: boolean
+) => {
+  const list = extractList(data)
+  if (!list.length) {
+    return fallbackEnabled ? fallback : fallback
+  }
+
+  const baseCards = [
+    fallback.leftLarge,
+    ...fallback.leftStack,
+    fallback.rightLarge,
+    ...fallback.rightStack,
+  ]
+
+  const mappedCards = list.slice(0, baseCards.length).map((item, index) => {
+    const base = baseCards[index]
+    const title = pickString(item, ['title', 'name', 'sectorName', 'label'])
+    const location = pickString(item, ['location', 'country', 'city', 'region'])
+    const image = pickString(item, ['image', 'imageUrl', 'picture', 'pic', 'cover', 'thumbnail', 'thumb'])
+    const count = pickString(item, ['count', 'total', 'totalTours', 'tourCount'])
+    const badge = count ? `${count}+ tours` : ''
+
+    return {
+      ...base,
+      title: title || (fallbackEnabled ? base.title : ''),
+      location: location || (fallbackEnabled ? base.location : ''),
+      image: image || (fallbackEnabled ? base.image : ''),
+      badge: badge || (fallbackEnabled ? base.badge : ''),
+    }
+  })
+
+  const cards = baseCards.map((base, index) => mappedCards[index] ?? (fallbackEnabled ? base : base))
+
+  return {
+    leftLarge: cards[0],
+    leftStack: [cards[1], cards[2]],
+    rightLarge: cards[3],
+    rightStack: [cards[4], cards[5]],
+  }
+}
+
+const resolveTourPlaceSection = (
+  data: unknown,
+  fallback: typeof tourPlaceSection,
+  fallbackEnabled: boolean
+) => {
+  const list = extractList(data)
+  if (!list.length) {
+    return fallbackEnabled ? fallback : { ...fallback, items: [] }
+  }
+
+  const maxItems = fallback.items.length
+  const mappedItems = list.slice(0, maxItems).map((item, index) => {
+    const base = fallback.items[index] ?? fallback.items[0]
+    const title = pickString(item, ['title', 'name', 'tourName'])
+    const location = pickString(item, ['location', 'country', 'city', 'destination'])
+    const image = pickString(item, ['image', 'imageUrl', 'picture', 'pic', 'cover', 'thumbnail', 'thumb'])
+    const price = formatPrice(item.price ?? item.priceFrom ?? item.amount ?? item.minPrice)
+    const duration = formatDuration(item.duration ?? item.days ?? item.dayRange)
+    const group = formatPeople(item.group ?? item.pax ?? item.persons ?? item.tourType)
+    const badge = pickString(item, ['badge', 'label', 'tag', 'promotion'])
+
+    return {
+      ...base,
+      image: image || (fallbackEnabled ? base.image : ''),
+      title: title || (fallbackEnabled ? base.title : ''),
+      titleLine2: fallbackEnabled ? base.titleLine2 : '',
+      location: location || (fallbackEnabled ? base.location : ''),
+      price: price || (fallbackEnabled ? base.price : ''),
+      duration: duration || (fallbackEnabled ? base.duration : ''),
+      group: group || (fallbackEnabled ? base.group : ''),
+      badge: badge || (fallbackEnabled ? base.badge : ''),
+    }
+  })
+
+  return {
+    ...fallback,
+    items: mappedItems,
+  }
+}
 export default function Home() {
+  const [homeApiData, setHomeApiData] = useState(homeApiInitialData)
+
+  useEffect(() => {
+    let isActive = true
+
+    const postJson = async (url: string, payload: unknown) => {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload ?? {}),
+      })
+
+      return res.json()
+    }
+
+    const fetchHomeApi = async () => {
+      try {
+        const [hotTours, sectorLevels, banners, sectors] = await Promise.all([
+          postJson(homeApiEndpoints.hotTours, homeApiPayloads.hotTours),
+          postJson(homeApiEndpoints.sectorLevels, homeApiPayloads.sectorLevels),
+          fetch(homeApiEndpoints.banners).then((res) => res.json()),
+          postJson(homeApiEndpoints.sectors, homeApiPayloads.sectors),
+        ])
+
+        console.log('Home API raw data:', {
+          hotTours,
+          sectorLevels,
+          banners,
+          sectors,
+        })
+
+        if (isActive) {
+          setHomeApiData({ hotTours, sectorLevels, banners, sectors })
+        }
+      } catch (error) {
+        console.error('Home API fetch error:', error)
+      }
+    }
+
+    fetchHomeApi()
+
+    return () => {
+      isActive = false
+    }
+  }, [])
+
+  const resolvedHeroSlides = resolveHeroSlides(homeApiData.banners, heroSlides, shouldFallback)
+  const resolvedContactForm = resolveContactForm(homeApiData.sectors, contactForm, shouldFallback)
+  const resolvedTourSection = resolveTourSection(homeApiData.sectorLevels, tourSection, shouldFallback)
+  const resolvedTourPlaceSection = resolveTourPlaceSection(homeApiData.hotTours, tourPlaceSection, shouldFallback)
   return (
     <>
       <Header />
@@ -18,107 +998,49 @@ export default function Home() {
             </div>
             <div className="swiper hero-slider">
               <div className="swiper-wrapper">
-                <div className="swiper-slide">
-                  <div className="hero-1">
-                    <div className="hero-bg bg-cover" style={{backgroundImage: 'url(/assets/img/home-1/hero/hero-bg.jpg)'}}></div>
-                    <div className="container-fluid">
-                      <div className="row g-4 justify-content-between align-items-end">
-                        <div className="col-xl-4 col-lg-6">
-                          <div className="hero-content">
-                            <h1 data-animation="fadeInUp" data-delay="1.3s">
-                              Your Gateway to
-                              Unforgettable
-                              Adventures
-                            </h1>
-                            <p data-animation="fadeInUp" data-delay="1.3s">
-                              Singapore&apos;s premier travel agency offering curated group tours, cruises, and customized travel experiences worldwide
-                            </p>
-                            <a href="/tour-grid" className="theme-btn" data-animation="fadeInUp" data-delay="1.3s">Explore Our Tours</a>
-                          </div>
-                        </div>
-                        <div className="col-xl-6 col-lg-6">
-                          <div className="counter-item" data-animation="fadeInUp" data-delay="1.3s">
-                            <div className="content">
-                              <h2><span className="count">100</span>+</h2>
-                              <p>Destinations Worldwide</p>
-                            </div>
-                            <div className="content">
-                              <h2><span className="count">30</span>+</h2>
-                              <p>Years of Excellence</p>
+                {resolvedHeroSlides.map((slide) => (
+                  <div key={slide.id} className="swiper-slide">
+                    <div className="hero-1">
+                      <div className="hero-bg bg-cover" style={{backgroundImage: `url(${slide.bgImage})`}}></div>
+                      <div className="container-fluid">
+                        <div className="row g-4 justify-content-between align-items-end">
+                          <div className="col-xl-4 col-lg-6">
+                            <div className="hero-content">
+                              {slide.title ? (
+                                <h1 data-animation="fadeInUp" data-delay="1.3s">
+                                  {slide.title}
+                                </h1>
+                              ) : null}
+                              {slide.description ? (
+                                <p data-animation="fadeInUp" data-delay="1.3s">
+                                  {slide.description}
+                                </p>
+                              ) : null}
+                              {slide.cta.href ? (
+                                <a href={slide.cta.href} className="theme-btn" data-animation="fadeInUp" data-delay="1.3s">
+                                  {slide.cta.label}
+                                </a>
+                              ) : null}
                             </div>
                           </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="swiper-slide">
-                  <div className="hero-1">
-                    <div className="hero-bg bg-cover" style={{backgroundImage: 'url(/assets/img/home-1/hero/hero-bg-2.jpg)'}}></div>
-                    <div className="container-fluid">
-                      <div className="row g-4 justify-content-between align-items-end">
-                        <div className="col-xl-4 col-lg-6">
-                          <div className="hero-content">
-                            <h1 data-animation="fadeInUp" data-delay="1.3s">
-                              Explore Europe
-                              in Style with
-                              ASA Holidays
-                            </h1>
-                            <p data-animation="fadeInUp" data-delay="1.3s">
-                              Discover Switzerland, Scandinavia, Italy and Eastern Europe with our expertly guided tours
-                            </p>
-                            <a href="/tour-grid" className="theme-btn" data-animation="fadeInUp" data-delay="1.3s">View Europe Tours</a>
-                          </div>
-                        </div>
-                        <div className="col-xl-6 col-lg-6">
-                          <div className="counter-item" data-animation="fadeInUp" data-delay="1.3s">
-                            <div className="content">
-                              <h2><span className="count">50</span>k+</h2>
-                              <p>Happy Travelers</p>
-                            </div>
-                            <div className="content">
-                              <h2><span className="count">98</span>%</h2>
-                              <p>Customer Satisfaction</p>
+                          <div className="col-xl-6 col-lg-6">
+                            <div className="counter-item" data-animation="fadeInUp" data-delay="1.3s">
+                              {slide.counters.map((counter) => (
+                                <div key={counter.label} className="content">
+                                  <h2>
+                                    <span className="count">{counter.value}</span>
+                                    {counter.suffix}
+                                  </h2>
+                                  <p>{counter.label}</p>
+                                </div>
+                              ))}
                             </div>
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-                <div className="swiper-slide">
-                  <div className="hero-1">
-                    <div className="hero-bg bg-cover" style={{backgroundImage: 'url(/assets/img/home-1/hero/hero-bg-3.jpg)'}}></div>
-                    <div className="container-fluid">
-                      <div className="row g-4 justify-content-between align-items-end">
-                        <div className="col-xl-4 col-lg-6">
-                          <div className="hero-content">
-                            <h1 data-animation="fadeInUp" data-delay="1.3s">
-                              Discover Asia&apos;s
-                              Hidden Treasures
-                            </h1>
-                            <p data-animation="fadeInUp" data-delay="1.3s">
-                              From Japan&apos;s cherry blossoms to China&apos;s ancient wonders - experience the best of Asia with ASA Holidays
-                            </p>
-                            <a href="/tour-grid" className="theme-btn" data-animation="fadeInUp" data-delay="1.3s">View Asia Tours</a>
-                          </div>
-                        </div>
-                        <div className="col-xl-6 col-lg-6">
-                          <div className="counter-item" data-animation="fadeInUp" data-delay="1.3s">
-                            <div className="content">
-                              <h2><span className="count">200</span>+</h2>
-                              <p>Tour Packages</p>
-                            </div>
-                            <div className="content">
-                              <h2><span className="count">24</span>/7</h2>
-                              <p>Customer Support</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           </section>
@@ -126,60 +1048,42 @@ export default function Home() {
           {/* Contact-From Section Start */}
           <div className="contact-from-section header-bg wow fadeInUp" data-wow-delay=".3s">
             <div className="right-shape d-none d-xxl-block">
-              <img src="/assets/img/home-1/tree.png" alt="img" />
+              <img src={resolvedContactForm.rightShapeImage} alt="img" />
             </div>
             <div className="container-fluid">
               <div className="contact-from-wrapper">
                 <div className="contact-content">
-                  <h2><span className="count">50</span>k+</h2>
-                  <h6>Happy travelers served since 1992</h6>
+                  <h2>
+                    <span className="count">{resolvedContactForm.stats.value}</span>
+                    {resolvedContactForm.stats.suffix}
+                  </h2>
+                  <h6>{resolvedContactForm.stats.label}</h6>
                   <div className="grop-image">
-                    <img src="/assets/img/home-1/group.png" alt="img" />
+                    <img src={resolvedContactForm.stats.image} alt="img" />
                   </div>
                 </div>
                 <div className="contact-right">
-                  <h3>Find your perfect holiday package</h3>
-                  <p>We offer more than <span className="count">200</span><b>+</b> curated tour packages</p>
+                  <h3>{resolvedContactForm.heading}</h3>
+                  <p>
+                    {resolvedContactForm.subtext.pre} <span className="count">{resolvedContactForm.subtext.count}</span>
+                    <b>{resolvedContactForm.subtext.suffix}</b> {resolvedContactForm.subtext.post}
+                  </p>
                   <div className="box-item">
-                    <div className="form-clt">
-                      <div className="form">
-                        <select className="single-select w-100">
-                          <option>Select Destination</option>
-                          <option>Europe</option>
-                          <option>Japan</option>
-                          <option>China</option>
-                          <option>Korea</option>
-                          <option>Australia</option>
-                        </select>
+                    {resolvedContactForm.selects.map((select) => (
+                      <div key={select.placeholder} className="form-clt">
+                        <div className="form">
+                          <select className="single-select w-100">
+                            <option>{select.placeholder}</option>
+                            {select.options.map((option) => (
+                              <option key={option}>{option}</option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
-                    </div>
-                    <div className="form-clt">
-                      <div className="form">
-                        <select className="single-select w-100">
-                          <option>Departure Month</option>
-                          <option>January</option>
-                          <option>February</option>
-                          <option>March</option>
-                          <option>April - June</option>
-                          <option>July - September</option>
-                          <option>October - December</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div className="form-clt">
-                      <div className="form">
-                        <select className="single-select w-100">
-                          <option>Tour Type</option>
-                          <option>Group Tours</option>
-                          <option>Free &amp; Easy</option>
-                          <option>Cruises</option>
-                          <option>MICE</option>
-                        </select>
-                      </div>
-                    </div>
+                    ))}
                     <div className="form-clt">
                       <button className="theme-btn" type="submit">
-                        Search Tours
+                        {resolvedContactForm.buttonText}
                       </button>
                     </div>
                   </div>
@@ -194,89 +1098,69 @@ export default function Home() {
               <div className="row g-1">
                 <div className="col-xl-5">
                   <div className="row g-1">
-                    <div className="col-xl-6 col-lg-6 wow fadeInUp" data-wow-delay=".3s">
+                    <div className={`col-xl-6 col-lg-6 ${resolvedTourSection.leftLarge.animationClass}`} data-wow-delay={resolvedTourSection.leftLarge.delay}>
                       <div className="tour-card-item">
                         <div className="tour-image">
-                          <img src="/assets/img/home-1/tour/tour-1.jpg" alt="img" />
-                          <span>20+ tours</span>
+                          <img src={resolvedTourSection.leftLarge.image} alt="img" />
+                          <span>{resolvedTourSection.leftLarge.badge}</span>
                           <div className="tour-content">
                             <h3>
-                              <a href="/tour-details">Swiss Alps Adventure</a>
+                              <a href={resolvedTourSection.leftLarge.href}>{resolvedTourSection.leftLarge.title}</a>
                             </h3>
-                            <p>Switzerland</p>
+                            <p>{resolvedTourSection.leftLarge.location}</p>
                           </div>
                         </div>
                       </div>
                     </div>
                     <div className="col-xl-6 col-lg-6">
-                      <div className="tour-card-item wow fadeInRight" data-wow-delay=".3s">
-                        <div className="tour-image style-3">
-                          <img src="/assets/img/home-1/tour/tour-2.jpg" alt="img" />
-                          <span>15+ tours</span>
-                          <div className="tour-content">
-                            <h3>
-                              <a href="/tour-details">Cherry Blossom Season</a>
-                            </h3>
-                            <p>Tokyo, Japan</p>
+                      {resolvedTourSection.leftStack.map((card) => (
+                        <div key={card.id} className={`tour-card-item ${card.wrapperClass ?? ''} ${card.animationClass}`.trim()} data-wow-delay={card.delay}>
+                          <div className={`tour-image ${card.imageClass ?? ''}`.trim()}>
+                            <img src={card.image} alt="img" />
+                            <span>{card.badge}</span>
+                            <div className="tour-content">
+                              <h3>
+                                <a href={card.href}>{card.title}</a>
+                              </h3>
+                              <p>{card.location}</p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="tour-card-item mt-1 wow fadeInRight" data-wow-delay=".5s">
-                        <div className="tour-image style-3">
-                          <img src="/assets/img/home-1/tour/tour-3.jpg" alt="img" />
-                          <span>12+ tours</span>
-                          <div className="tour-content">
-                            <h3>
-                              <a href="/tour-details">Northern Lights</a>
-                            </h3>
-                            <p>Scandinavia</p>
-                          </div>
-                        </div>
-                      </div>
+                      ))}
                     </div>
                   </div>
                 </div>
                 <div className="col-xl-7">
                   <div className="row g-1">
-                    <div className="col-xl-8 col-lg-6 wow fadeInUp" data-wow-delay=".3s">
+                    <div className={`col-xl-8 col-lg-6 ${resolvedTourSection.rightLarge.animationClass}`} data-wow-delay={resolvedTourSection.rightLarge.delay}>
                       <div className="tour-card-item">
-                        <div className="tour-image style-2">
-                          <img src="/assets/img/home-1/tour/tour-4.jpg" alt="img" />
-                          <span>25+ tours</span>
+                        <div className={`tour-image ${resolvedTourSection.rightLarge.imageClass ?? ''}`.trim()}>
+                          <img src={resolvedTourSection.rightLarge.image} alt="img" />
+                          <span>{resolvedTourSection.rightLarge.badge}</span>
                           <div className="tour-content">
                             <h3>
-                              <a href="/tour-details">Great Wall &amp; Forbidden City</a>
+                              <a href={resolvedTourSection.rightLarge.href}>{resolvedTourSection.rightLarge.title}</a>
                             </h3>
-                            <p>Beijing, China</p>
+                            <p>{resolvedTourSection.rightLarge.location}</p>
                           </div>
                         </div>
                       </div>
                     </div>
                     <div className="col-xl-4 col-lg-6">
-                      <div className="tour-card-item wow fadeInRight" data-wow-delay=".3s">
-                        <div className="tour-image style-3">
-                          <img src="/assets/img/home-1/tour/tour-5.jpg" alt="img" />
-                          <span>10+ tours</span>
-                          <div className="tour-content style-4">
-                            <h3>
-                              <a href="/tour-details">K-Culture Experience</a>
-                            </h3>
-                            <p>Seoul, Korea</p>
+                      {resolvedTourSection.rightStack.map((card) => (
+                        <div key={card.id} className={`tour-card-item ${card.wrapperClass ?? ''} ${card.animationClass}`.trim()} data-wow-delay={card.delay}>
+                          <div className={`tour-image ${card.imageClass ?? ''}`.trim()}>
+                            <img src={card.image} alt="img" />
+                            <span>{card.badge}</span>
+                            <div className={`tour-content ${card.contentClass ?? ''}`.trim()}>
+                              <h3>
+                                <a href={card.href}>{card.title}</a>
+                              </h3>
+                              <p>{card.location}</p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="tour-card-item mt-1 wow fadeInRight" data-wow-delay=".5s">
-                        <div className="tour-image style-3">
-                          <img src="/assets/img/home-1/tour/tour-6.jpg" alt="img" />
-                          <span>8+ tours</span>
-                          <div className="tour-content style-5">
-                            <h3>
-                              <a href="/tour-details">Outback Discovery</a>
-                            </h3>
-                            <p>Sydney, Australia</p>
-                          </div>
-                        </div>
-                      </div>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -293,12 +1177,15 @@ export default function Home() {
                     <div className="about-left-item">
                       <div className="section-title mb-0">
                         <h2 className="text-anim">
-                          Your Trusted <br /> Travel Partner <br /> Since 1992
+                          {aboutSection.titleLines[0]} <br /> {aboutSection.titleLines[1]} <br /> {aboutSection.titleLines[2]}
                         </h2>
                       </div>
-                      <h6 className="wow fadeInUp" data-wow-delay=".5s">Established in 1992, <span className="count">30</span><b>+</b> years of excellence in travel</h6>
+                      <h6 className="wow fadeInUp" data-wow-delay=".5s">
+                        {aboutSection.subtitle.pre} <span className="count">{aboutSection.subtitle.value}</span>
+                        <b>{aboutSection.subtitle.suffix}</b> {aboutSection.subtitle.post}
+                      </h6>
                       <div className="about-image wow img-custom-anim-left">
-                        <img src="/assets/img/home-1/about/01.jpg" alt="img" />
+                        <img src={aboutSection.imagePrimary} alt="img" />
                       </div>
                     </div>
                   </div>
@@ -306,55 +1193,35 @@ export default function Home() {
                     <div className="about-right-item">
                       <div className="about-image-item">
                         <div className="about-image-2 wow img-custom-anim-left">
-                          <img src="/assets/img/home-1/about/02.jpg" alt="img" />
+                          <img src={aboutSection.imageSecondary} alt="img" />
                         </div>
                         <div className="about-box wow img-custom-anim-right">
                           <div className="icon">
-                            <i className="flaticon-travel"></i>
+                            <i className={aboutSection.box.iconClass}></i>
                           </div>
-                          <h5>Trusted &amp; Secure</h5>
-                          <p>
-                            Your safety and trust are our top priorities.
-                          </p>
+                          <h5>{aboutSection.box.title}</h5>
+                          <p>{aboutSection.box.description}</p>
                         </div>
                       </div>
                       <div className="content">
                         <p className="wow fadeInUp" data-wow-delay=".3s">
-                          ASA Holidays is Singapore&apos;s leading travel agency, specializing in curated group tours, free &amp; easy packages, cruises, and MICE services. We pride ourselves on delivering exceptional travel experiences with professional guides and personalized service.
+                          {aboutSection.description}
                         </p>
                         <div className="list-item wow fadeInUp" data-wow-delay=".5s">
-                          <ul className="list">
-                            <li>
-                              <i className="fa-solid fa-check"></i>
-                              Expert Tour Guides
-                            </li>
-                            <li>
-                              <i className="fa-solid fa-check"></i>
-                              Curated Itineraries
-                            </li>
-                          </ul>
-                          <ul className="list">
-                            <li>
-                              <i className="fa-solid fa-check"></i>
-                              Competitive Pricing
-                            </li>
-                            <li>
-                              <i className="fa-solid fa-check"></i>
-                              24/7 Support
-                            </li>
-                          </ul>
-                          <ul className="list">
-                            <li>
-                              <i className="fa-solid fa-check"></i>
-                              Travel Insurance
-                            </li>
-                            <li>
-                              <i className="fa-solid fa-check"></i>
-                              Flexible Payments
-                            </li>
-                          </ul>
+                          {aboutSection.featureGroups.map((group) => (
+                            <ul key={group.join('-')} className="list">
+                              {group.map((item) => (
+                                <li key={item}>
+                                  <i className="fa-solid fa-check"></i>
+                                  {item}
+                                </li>
+                              ))}
+                            </ul>
+                          ))}
                         </div>
-                        <a href="/about" className="theme-btn wow fadeInUp" data-wow-delay=".3s">Learn More About Us</a>
+                        <a href={aboutSection.cta.href} className="theme-btn wow fadeInUp" data-wow-delay=".3s">
+                          {aboutSection.cta.label}
+                        </a>
                       </div>
                     </div>
                   </div>
@@ -367,350 +1234,67 @@ export default function Home() {
           <section className="tour-place-section section-padding fix">
             <div className="container custom-container-2">
               <div className="section-title text-center">
-                <h2 className="text-anim">Popular Tour Packages</h2>
-                <p className="wow fadeInUp" data-wow-delay=".5s">Discover our most loved destinations with <span className="count">200</span><b>+</b> curated tour packages</p>
+                <h2 className="text-anim">{resolvedTourPlaceSection.title}</h2>
+                <p className="wow fadeInUp" data-wow-delay=".5s">
+                  {resolvedTourPlaceSection.subtitle.pre} <span className="count">{resolvedTourPlaceSection.subtitle.count}</span>
+                  <b>{resolvedTourPlaceSection.subtitle.suffix}</b> {resolvedTourPlaceSection.subtitle.post}
+                </p>
               </div>
               <div className="row">
-                <div className="col-xl-3 col-lg-6 col-md-6 wow fadeInUp" data-wow-delay=".2s">
-                  <div className="tour-place-item">
-                    <div className="tour-place-image">
-                      <img src="/assets/img/home-1/tour/tour-8.jpg" alt="img" />
-                      <span>10% Off</span>
-                      <div className="icon">
-                        <i className="fa-regular fa-heart"></i>
-                      </div>
-                    </div>
-                    <div className="tour-place-content">
-                      <div className="rating-item">
-                        <div className="star">
-                          <span>Rating</span>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-sharp fa-solid fa-star-half-stroke"></i>
+                {resolvedTourPlaceSection.items.map((item) => (
+                  <div key={item.id} className="col-xl-3 col-lg-6 col-md-6 wow fadeInUp" data-wow-delay={item.delay}>
+                    <div className="tour-place-item">
+                      <div className="tour-place-image">
+                        <img src={item.image} alt="img" />
+                        {item.badge ? <span>{item.badge}</span> : null}
+                        <div className="icon">
+                          <i className="fa-regular fa-heart"></i>
                         </div>
-                        <h5><span>From</span>$2,888</h5>
                       </div>
-                      <h3>
-                        <a href="/tour-details">
-                          10D Switzerland Grand Tour with Glacier Express
-                        </a>
-                      </h3>
-                      <ul className="tour-list">
-                        <li>
-                          <i className="fa-regular fa-location-dot"></i>
-                          Switzerland
-                        </li>
-                        <li>
-                          <i className="fa-regular fa-clock"></i>
-                          10 days
-                        </li>
-                        <li>
-                          <i className="fa-regular fa-users"></i>
-                          Group Tour
-                        </li>
-                      </ul>
+                      <div className="tour-place-content">
+                        <div className="rating-item">
+                          <div className="star">
+                            <span>{resolvedTourPlaceSection.rating.label}</span>
+                            {Array.from({length: resolvedTourPlaceSection.rating.stars}, (_, index) => (
+                              <i key={`${item.id}-star-${index}`} className="fa-solid fa-star"></i>
+                            ))}
+                            {resolvedTourPlaceSection.rating.halfStar ? (
+                              <i className="fa-sharp fa-solid fa-star-half-stroke"></i>
+                            ) : null}
+                          </div>
+                          <h5>
+                            <span>{item.priceLabel}</span>
+                            {item.price}
+                          </h5>
+                        </div>
+                        <h3>
+                          <a href="/tour-details">
+                            {item.title}
+                            {item.titleLine2 ? (
+                              <>
+                                <br /> {item.titleLine2}
+                              </>
+                            ) : null}
+                          </a>
+                        </h3>
+                        <ul className="tour-list">
+                          <li>
+                            <i className="fa-regular fa-location-dot"></i>
+                            {item.location}
+                          </li>
+                          <li>
+                            <i className="fa-regular fa-clock"></i>
+                            {item.duration}
+                          </li>
+                          <li>
+                            <i className="fa-regular fa-users"></i>
+                            {item.group}
+                          </li>
+                        </ul>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="col-xl-3 col-lg-6 col-md-6 wow fadeInUp" data-wow-delay=".4s">
-                  <div className="tour-place-item">
-                    <div className="tour-place-image">
-                      <img src="/assets/img/home-1/tour/tour-9.jpg" alt="img" />
-                      <div className="icon">
-                        <i className="fa-regular fa-heart"></i>
-                      </div>
-                    </div>
-                    <div className="tour-place-content">
-                      <div className="rating-item">
-                        <div className="star">
-                          <span>Rating</span>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-sharp fa-solid fa-star-half-stroke"></i>
-                        </div>
-                        <h5><span>From</span>$1,688</h5>
-                      </div>
-                      <h3>
-                        <a href="/tour-details">
-                          8D Japan Cherry Blossom Tour Tokyo to Osaka
-                        </a>
-                      </h3>
-                      <ul className="tour-list">
-                        <li>
-                          <i className="fa-regular fa-location-dot"></i>
-                          Tokyo, Japan
-                        </li>
-                        <li>
-                          <i className="fa-regular fa-clock"></i>
-                          8 days
-                        </li>
-                        <li>
-                          <i className="fa-regular fa-users"></i>
-                          Group Tour
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-xl-3 col-lg-6 col-md-6 wow fadeInUp" data-wow-delay=".6s">
-                  <div className="tour-place-item">
-                    <div className="tour-place-image">
-                      <img src="/assets/img/home-1/tour/tour-10.jpg" alt="img" />
-                      <span>Early Bird</span>
-                      <div className="icon">
-                        <i className="fa-regular fa-heart"></i>
-                      </div>
-                    </div>
-                    <div className="tour-place-content">
-                      <div className="rating-item">
-                        <div className="star">
-                          <span>Rating</span>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-sharp fa-solid fa-star-half-stroke"></i>
-                        </div>
-                        <h5><span>From</span>$1,288</h5>
-                      </div>
-                      <h3>
-                        <a href="/tour-details">
-                          6D China Beijing &amp; Shanghai Highlights Tour
-                        </a>
-                      </h3>
-                      <ul className="tour-list">
-                        <li>
-                          <i className="fa-regular fa-location-dot"></i>
-                          Beijing, China
-                        </li>
-                        <li>
-                          <i className="fa-regular fa-clock"></i>
-                          6 days
-                        </li>
-                        <li>
-                          <i className="fa-regular fa-users"></i>
-                          Group Tour
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-xl-3 col-lg-6 col-md-6 wow fadeInUp" data-wow-delay=".8s">
-                  <div className="tour-place-item">
-                    <div className="tour-place-image">
-                      <img src="/assets/img/home-1/tour/tour-11.jpg" alt="img" />
-                      <div className="icon">
-                        <i className="fa-regular fa-heart"></i>
-                      </div>
-                    </div>
-                    <div className="tour-place-content">
-                      <div className="rating-item">
-                        <div className="star">
-                          <span>Rating</span>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-sharp fa-solid fa-star-half-stroke"></i>
-                        </div>
-                        <h5><span>From</span>$988</h5>
-                      </div>
-                      <h3>
-                        <a href="/tour-details">
-                          5D Korea Seoul &amp; Jeju Island Discovery
-                        </a>
-                      </h3>
-                      <ul className="tour-list">
-                        <li>
-                          <i className="fa-regular fa-location-dot"></i>
-                          Seoul, Korea
-                        </li>
-                        <li>
-                          <i className="fa-regular fa-clock"></i>
-                          5 days
-                        </li>
-                        <li>
-                          <i className="fa-regular fa-users"></i>
-                          Group Tour
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-xl-3 col-lg-6 col-md-6 wow fadeInUp" data-wow-delay=".2s">
-                  <div className="tour-place-item">
-                    <div className="tour-place-image">
-                      <img src="/assets/img/home-1/tour/tour-12.jpg" alt="img" />
-                      <div className="icon">
-                        <i className="fa-regular fa-heart"></i>
-                      </div>
-                    </div>
-                    <div className="tour-place-content">
-                      <div className="rating-item">
-                        <div className="star">
-                          <span>Rating</span>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-sharp fa-solid fa-star-half-stroke"></i>
-                        </div>
-                        <h5><span>Tours Price</span>$49.00</h5>
-                      </div>
-                      <h3>
-                        <a href="/tour-details">
-                          Train on Nine Arches Bridge in <br /> Sri Lanka
-                        </a>
-                      </h3>
-                      <ul className="tour-list">
-                        <li>
-                          <i className="fa-regular fa-location-dot"></i>
-                          Ella, Sri Lanka
-                        </li>
-                        <li>
-                          <i className="fa-regular fa-clock"></i>
-                          1 - 3 days
-                        </li>
-                        <li>
-                          <i className="fa-regular fa-users"></i>
-                          3 persons
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-xl-3 col-lg-6 col-md-6 wow fadeInUp" data-wow-delay=".4s">
-                  <div className="tour-place-item">
-                    <div className="tour-place-image">
-                      <img src="/assets/img/home-1/tour/tour-13.jpg" alt="img" />
-                      <span>8% Off</span>
-                      <div className="icon">
-                        <i className="fa-regular fa-heart"></i>
-                      </div>
-                    </div>
-                    <div className="tour-place-content">
-                      <div className="rating-item">
-                        <div className="star">
-                          <span>Rating</span>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-sharp fa-solid fa-star-half-stroke"></i>
-                        </div>
-                        <h5><span>Tours Price</span>$49.00</h5>
-                      </div>
-                      <h3>
-                        <a href="/tour-details">
-                          White buildings with blue <br /> accents near the Atlantic shore.
-                        </a>
-                      </h3>
-                      <ul className="tour-list">
-                        <li>
-                          <i className="fa-regular fa-location-dot"></i>
-                          Galle, Sri Lanka
-                        </li>
-                        <li>
-                          <i className="fa-regular fa-clock"></i>
-                          1 - 3 days
-                        </li>
-                        <li>
-                          <i className="fa-regular fa-users"></i>
-                          3 persons
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-xl-3 col-lg-6 col-md-6 wow fadeInUp" data-wow-delay=".6s">
-                  <div className="tour-place-item">
-                    <div className="tour-place-image">
-                      <img src="/assets/img/home-1/tour/tour-14.jpg" alt="img" />
-                      <div className="icon">
-                        <i className="fa-regular fa-heart"></i>
-                      </div>
-                    </div>
-                    <div className="tour-place-content">
-                      <div className="rating-item">
-                        <div className="star">
-                          <span>Rating</span>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-sharp fa-solid fa-star-half-stroke"></i>
-                        </div>
-                        <h5><span>Tours Price</span>$49.00</h5>
-                      </div>
-                      <h3>
-                        <a href="/tour-details">
-                          Man Sitting on Rocks next to <br /> Creek in Mountains
-                        </a>
-                      </h3>
-                      <ul className="tour-list">
-                        <li>
-                          <i className="fa-regular fa-location-dot"></i>
-                          Nepal
-                        </li>
-                        <li>
-                          <i className="fa-regular fa-clock"></i>
-                          1 - 3 days
-                        </li>
-                        <li>
-                          <i className="fa-regular fa-users"></i>
-                          3 persons
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-xl-3 col-lg-6 col-md-6 wow fadeInUp" data-wow-delay=".8s">
-                  <div className="tour-place-item">
-                    <div className="tour-place-image">
-                      <img src="/assets/img/home-1/tour/tour-15.jpg" alt="img" />
-                      <span>23% Off</span>
-                      <div className="icon">
-                        <i className="fa-regular fa-heart"></i>
-                      </div>
-                    </div>
-                    <div className="tour-place-content">
-                      <div className="rating-item">
-                        <div className="star">
-                          <span>Rating</span>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-sharp fa-solid fa-star-half-stroke"></i>
-                        </div>
-                        <h5><span>Tours Price</span>$49.00</h5>
-                      </div>
-                      <h3>
-                        <a href="/tour-details">
-                          Aerial Photography of Cinque <br /> Terre in Italy
-                        </a>
-                      </h3>
-                      <ul className="tour-list">
-                        <li>
-                          <i className="fa-regular fa-location-dot"></i>
-                          Liguria, Italy
-                        </li>
-                        <li>
-                          <i className="fa-regular fa-clock"></i>
-                          1 - 3 days
-                        </li>
-                        <li>
-                          <i className="fa-regular fa-users"></i>
-                          3 persons
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           </section>
@@ -719,109 +1303,40 @@ export default function Home() {
           <section className="benefit-tour-section section-padding fix header-bg">
             <div className="container">
               <div className="section-title text-center">
-                <h2 className="text-white text-anim">How to Benefit Our Tours</h2>
-                <p className="text-white wow fadeInUp" data-wow-delay=".5s">Make the most of your travel experience with our carefully <br />
-                  curated tours designed to offer convenience
+                <h2 className="text-white text-anim">{benefitTourSection.title}</h2>
+                <p className="text-white wow fadeInUp" data-wow-delay=".5s">
+                  {benefitTourSection.descriptionLines[0]} <br />
+                  {benefitTourSection.descriptionLines[1]}
                 </p>
               </div>
               <div className="row">
-                <div className="col-xl-3 col-lg-4 col-md-6 wow fadeInLeft" data-wow-delay=".3s">
-                  <div className="benefit-tour-item">
-                    <div className="icon">
-                      <i className="flaticon-traveling"></i>
+                {benefitTourSection.blocks.map((block) => {
+                  if (block.type === 'image') {
+                    return (
+                      <div key={block.id} className={`${block.colClass} wow ${block.wowClass}`.trim()}>
+                        <div className="benefit-tour-image">
+                          <img src={block.image} alt="img" />
+                        </div>
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <div key={block.id} className={`${block.colClass} wow ${block.wowClass}`.trim()} data-wow-delay={block.delay}>
+                      <div className="benefit-tour-item">
+                        <div className="icon">
+                          <i className={block.iconClass}></i>
+                        </div>
+                        <div className="content">
+                          <h5>
+                            <a href={block.href}>{block.title}</a>
+                          </h5>
+                          <p>{block.description}</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="content">
-                      <h5>
-                        <a href="/tour-details">Expert Travel Guide</a>
-                      </h5>
-                      <p>
-                        Travel professionals who help destinations, accommodations,
-                        and activities tailored.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-xl-6 col-lg-4 col-md-6 wow img-custom-anim-top">
-                  <div className="benefit-tour-image">
-                    <img src="/assets/img/home-1/tour/tour-7.jpg" alt="img" />
-                  </div>
-                </div>
-                <div className="col-xl-3 col-lg-4 col-md-6 wow fadeInRight" data-wow-delay=".5s">
-                  <div className="benefit-tour-item">
-                    <div className="icon">
-                      <i className="flaticon-roadmap"></i>
-                    </div>
-                    <div className="content">
-                      <h5>
-                        <a href="/tour-details">Custom Tour Plan</a>
-                      </h5>
-                      <p>
-                        Enjoy trips designed around your preferences, whether you want a relaxing beach holiday
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-xl-3 col-lg-4 col-md-6 wow fadeInUp" data-wow-delay=".2s">
-                  <div className="benefit-tour-item">
-                    <div className="icon">
-                      <i className="flaticon-mouse"></i>
-                    </div>
-                    <div className="content">
-                      <h5>
-                        <a href="/tour-details">Hassle-Free Booking</a>
-                      </h5>
-                      <p>
-                        Save time and effort with a single platform to book flights, hotels, activities, transportation
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-xl-3 col-lg-4 col-md-6 wow fadeInUp" data-wow-delay=".4s">
-                  <div className="benefit-tour-item">
-                    <div className="icon">
-                      <i className="flaticon-promotion"></i>
-                    </div>
-                    <div className="content">
-                      <h5>
-                        <a href="/tour-details">Deals &amp; Discounts</a>
-                      </h5>
-                      <p>
-                        Save time and effort with a single platform to book flights, hotels, activities, transportation
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-xl-3 col-lg-4 col-md-6 wow fadeInUp" data-wow-delay=".6s">
-                  <div className="benefit-tour-item">
-                    <div className="icon">
-                      <i className="flaticon-tourist"></i>
-                    </div>
-                    <div className="content">
-                      <h5>
-                        <a href="/tour-details">Local Guides Authentic</a>
-                      </h5>
-                      <p>
-                        Immerse yourself local culture with trusted guides who provide
-                        insider tips and hidden
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-xl-3 col-lg-4 col-md-6 wow fadeInUp" data-wow-delay=".8s">
-                  <div className="benefit-tour-item">
-                    <div className="icon">
-                      <i className="flaticon-insurance"></i>
-                    </div>
-                    <div className="content">
-                      <h5>
-                        <a href="/tour-details">Travel Insurance</a>
-                      </h5>
-                      <p>
-                        Stay protected with insurance options and on-ground support for a worry-free experience.
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                  )
+                })}
               </div>
             </div>
           </section>
@@ -835,37 +1350,40 @@ export default function Home() {
                     <div className="row g-4">
                       <div className="col-xl-6 col-lg-6">
                         <div className="section-title mb-0">
-                          <h2 className="text-anim">Special Offers Sort
-                            Time Adventures
+                          <h2 className="text-anim">
+                            {adventureSection.titleLines[0]}
+                            <br />
+                            {adventureSection.titleLines[1]}
                           </h2>
                         </div>
                         <p className="text wow fadeInUp" data-wow-delay=".5s">
-                          Don&apos;t miss out our exclusive special deals, designed make your dream vacation more affordable than ever.
+                          {adventureSection.description}
                         </p>
                         <div className="adventure-image wow img-custom-anim-left">
-                          <img src="/assets/img/home-1/adventure/01.jpg" alt="img" />
+                          <img src={adventureSection.leftImage} alt="img" />
                         </div>
                       </div>
                       <div className="col-xl-6 col-lg-6">
                         <div className="adventure-image wow img-custom-anim-top">
-                          <img src="/assets/img/home-1/adventure/02.jpg" alt="img" />
+                          <img src={adventureSection.rightImage} alt="img" />
                         </div>
                         <div className="adventure-box wow img-custom-anim-bottom">
                           <h3>
-                            <a href="/tour-details">
-                              18+ years of experience
-                              in travel services
+                            <a href={adventureSection.experience.href}>
+                              {adventureSection.experience.titleLines[0]}
+                              <br />
+                              {adventureSection.experience.titleLines[1]}
                             </a>
                           </h3>
                           <div className="info-item">
-                            <img src="/assets/img/home-1/adventure/client.png" alt="img" />
+                            <img src={adventureSection.experience.client.image} alt="img" />
                             <div className="content">
-                              <h5>Mickel z Ponkoz</h5>
-                              <span>Travel guide</span>
+                              <h5>{adventureSection.experience.client.name}</h5>
+                              <span>{adventureSection.experience.client.role}</span>
                             </div>
                           </div>
                           <div className="shape">
-                            <img src="/assets/img/home-1/adventure/shape.png" alt="img" />
+                            <img src={adventureSection.experience.shapeImage} alt="img" />
                           </div>
                         </div>
                       </div>
@@ -873,18 +1391,20 @@ export default function Home() {
                   </div>
                   <div className="col-xl-4">
                     <div className="adventure-thumb wow img-custom-anim-right">
-                      <img src="/assets/img/home-1/adventure/03.jpg" alt="img" />
+                      <img src={adventureSection.rightThumb.image} alt="img" />
                       <div className="adventure-content">
-                        <h6>23% Discount</h6>
+                        <h6>{adventureSection.rightThumb.discountLabel}</h6>
                         <h3>
-                          <a href="/tour-details">Hotel &amp; Resort</a>
+                          <a href={adventureSection.rightThumb.href}>{adventureSection.rightThumb.title}</a>
                         </h3>
                         <div className="booking-item">
                           <div className="content">
-                            <h4>$1500</h4>
-                            <span>per night 4 star rating</span>
+                            <h4>{adventureSection.rightThumb.price}</h4>
+                            <span>{adventureSection.rightThumb.priceNote}</span>
                           </div>
-                          <a href="/tour-details" className="theme-btn">Book Now</a>
+                          <a href={adventureSection.rightThumb.ctaHref} className="theme-btn">
+                            {adventureSection.rightThumb.ctaLabel}
+                          </a>
                         </div>
                       </div>
                     </div>
@@ -898,111 +1418,60 @@ export default function Home() {
           <section className="feature-section section-padding fix pt-0">
             <div className="container">
               <div className="section-title text-center">
-                <h2 className="text-anim">All-in-one Travel Assistance</h2>
-                <p className="wow fadeInUp" data-wow-delay=".5s">Crafting journeys, creating memories plan smarter, travel better</p>
+                <h2 className="text-anim">{featureSection.title}</h2>
+                <p className="wow fadeInUp" data-wow-delay=".5s">{featureSection.subtitle}</p>
               </div>
               <div className="row">
-                <div className="col-xl-3 col-lg-4 col-md-6 wow fadeInUp" data-wow-delay=".2s">
-                  <div className="feature-item">
-                    <div className="feature-icon-item">
-                      <div className="icon">
-                        <i className="flaticon-traveling-1"></i>
+                {featureSection.items.map((item) => (
+                  <div key={item.id} className="col-xl-3 col-lg-4 col-md-6 wow fadeInUp" data-wow-delay={item.delay}>
+                    <div className="feature-item">
+                      <div className="feature-icon-item">
+                        <div className={`icon ${item.iconWrapperClass ?? ''}`.trim()}>
+                          <i className={item.iconClass}></i>
+                        </div>
+                        <h4>
+                          {item.title}
+                          {item.titleLine2 ? (
+                            <>
+                              <br /> {item.titleLine2}
+                            </>
+                          ) : null}
+                        </h4>
                       </div>
-                      <h4>
-                        Flight Booking &amp; Reservation
-                      </h4>
+                      <p>{item.description}</p>
                     </div>
-                    <p>
-                      Take the stress to travel with our seamless flight booking and reservation services.
-                    </p>
                   </div>
-                </div>
-                <div className="col-xl-3 col-lg-4 col-md-6 wow fadeInUp" data-wow-delay=".4s">
-                  <div className="feature-item">
-                    <div className="feature-icon-item">
-                      <div className="icon">
-                        <i className="flaticon-hot-air-balloon"></i>
-                      </div>
-                      <h4>
-                        Hotel &amp; Resort Accommodation
-                      </h4>
-                    </div>
-                    <p>
-                      Enjoy a perfect stay with our carefully selected hotels and resorts.
-                    </p>
-                  </div>
-                </div>
-                <div className="col-xl-3 col-lg-4 col-md-6 wow fadeInUp" data-wow-delay=".6s">
-                  <div className="feature-item">
-                    <div className="feature-icon-item">
-                      <div className="icon style-2">
-                        <i className="flaticon-passport"></i>
-                      </div>
-                      <h4>
-                        Visa &amp; Travel <br /> Assistance
-                      </h4>
-                    </div>
-                    <p>
-                      Travel confidently with our comprehensive Visa &amp; Travel Assistance services.
-                    </p>
-                  </div>
-                </div>
-                <div className="col-xl-3 col-lg-4 col-md-6 wow fadeInUp" data-wow-delay=".8s">
-                  <div className="feature-item">
-                    <div className="feature-icon-item">
-                      <div className="icon style-2">
-                        <i className="flaticon-tent"></i>
-                      </div>
-                      <h4>
-                        Customized &amp; <br /> Private Tours
-                      </h4>
-                    </div>
-                    <p>
-                      We design itineraries that match your interests, schedule, and budget.
-                    </p>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           </section>
 
           {/* Counter Section Start */}
-          <section className="counter-section section-padding fix bg-cover" style={{backgroundImage: 'url(/assets/img/home-1/bg.png)'}}>
+          <section className="counter-section section-padding fix bg-cover" style={{backgroundImage: `url(${counterSection.backgroundImage})`}}>
             <div className="container">
               <div className="counter-wrapper">
                 <div className="section-title text-center mb-0">
-                  <h2 className="text-white text-anim">Unlimited Travel Experience</h2>
-                  <p className="text-white wow fadeInUp" data-wow-delay=".5s">Crafting journeys, creating memories plan smarter, travel better</p>
+                  <h2 className="text-white text-anim">{counterSection.title}</h2>
+                  <p className="text-white wow fadeInUp" data-wow-delay=".5s">
+                    {counterSection.subtitle}
+                  </p>
                 </div>
                 <div className="row">
                   <div className="counter-main-item">
-                    <div className="counter-item wow fadeInUp" data-wow-delay=".3s">
-                      <div className="icon">
-                        <i className="flaticon-costumer"></i>
+                    {counterSection.items.map((item) => (
+                      <div key={item.id} className="counter-item wow fadeInUp" data-wow-delay={item.delay}>
+                        <div className="icon">
+                          <i className={item.iconClass}></i>
+                        </div>
+                        <div className="content">
+                          <h3>
+                            <span className="count">{item.value}</span>
+                            {item.suffix}
+                          </h3>
+                          <p>{item.label}</p>
+                        </div>
                       </div>
-                      <div className="content">
-                        <h3><span className="count">30</span>k+</h3>
-                        <p>Total worldwide satisfied clients</p>
-                      </div>
-                    </div>
-                    <div className="counter-item wow fadeInUp" data-wow-delay=".5s">
-                      <div className="icon">
-                        <i className="flaticon-suitcase"></i>
-                      </div>
-                      <div className="content">
-                        <h3><span className="count">500</span>+</h3>
-                        <p>World tours available in toun</p>
-                      </div>
-                    </div>
-                    <div className="counter-item wow fadeInUp" data-wow-delay=".7s">
-                      <div className="icon">
-                        <i className="flaticon-excursion"></i>
-                      </div>
-                      <div className="content">
-                        <h3><span className="count">20</span>+</h3>
-                        <p>Professional local tour guides</p>
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -1013,66 +1482,33 @@ export default function Home() {
           <section className="activities-section section-padding fix">
             <div className="container custom-container">
               <div className="activities-wrapper row g-4 g-xl-2 row-cols-xl-5 row-cols-lg-4 row-cols-md-2 row-cols-1">
-                <div className="col activities-card-item wow fadeInUp">
-                  <div className="activities-image">
-                    <img src="/assets/img/home-1/activiti/01.jpg" alt="img" />
+                {activitiesSection.map((activity) => (
+                  <div key={activity.id} className="col activities-card-item wow fadeInUp" data-wow-delay={activity.delay}>
+                    <div className="activities-image">
+                      <img src={activity.image} alt="img" />
+                    </div>
+                    <div className="activities-content">
+                      <h4>
+                        <a href={activity.href}>{activity.title}</a>
+                      </h4>
+                    </div>
                   </div>
-                  <div className="activities-content">
-                    <h4>
-                      <a href="destination-details.html">Snorkeling &amp; Scuba Diving</a>
-                    </h4>
-                  </div>
-                </div>
-                <div className="col activities-card-item wow fadeInUp" data-wow-delay=".2s">
-                  <div className="activities-image">
-                    <img src="/assets/img/home-1/activiti/02.jpg" alt="img" />
-                  </div>
-                  <div className="activities-content">
-                    <h4>
-                      <a href="destination-details.html">Desert Safari &amp; Camel Rides</a>
-                    </h4>
-                  </div>
-                </div>
-                <div className="col activities-card-item wow fadeInUp" data-wow-delay=".4s">
-                  <div className="activities-image">
-                    <img src="/assets/img/home-1/activiti/03.jpg" alt="img" />
-                  </div>
-                  <div className="activities-content">
-                    <h4>
-                      <a href="destination-details.html">Hiking &amp; Nature Trails</a>
-                    </h4>
-                  </div>
-                </div>
-                <div className="col activities-card-item wow fadeInUp" data-wow-delay=".6s">
-                  <div className="activities-image">
-                    <img src="/assets/img/home-1/activiti/04.jpg" alt="img" />
-                  </div>
-                  <div className="activities-content">
-                    <h4>
-                      <a href="destination-details.html">Cultural Heritage Tours</a>
-                    </h4>
-                  </div>
-                </div>
-                <div className="col activities-card-item wow fadeInUp" data-wow-delay=".8s">
-                  <div className="activities-image">
-                    <img src="/assets/img/home-1/activiti/05.jpg" alt="img" />
-                  </div>
-                  <div className="activities-content">
-                    <h4>
-                      <a href="destination-details.html">Wildlife Safaris</a>
-                    </h4>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           </section>
 
           {/* Testimonial Section Start */}
-          <section className="testimonial-section section-padding fix bg-cover" style={{backgroundImage: 'url(/assets/img/home-1/testimonial/bg.jpg)'}}>
+          <section
+            className="testimonial-section section-padding fix bg-cover"
+            style={{backgroundImage: `url(${testimonialSection.backgroundImage})`}}
+          >
             <div className="container">
               <div className="section-title text-center">
-                <h2 className="text-white text-anim">100k+ Customer Say Us</h2>
-                <p className="text-white wow fadeInUp" data-wow-delay=".5s">Join over 100,000 satisfied travelers who have experienced</p>
+                <h2 className="text-white text-anim">{testimonialSection.title}</h2>
+                <p className="text-white wow fadeInUp" data-wow-delay=".5s">
+                  {testimonialSection.subtitle}
+                </p>
               </div>
               <div className="testimonial-wrapper">
                 <div className="row g-4">
@@ -1080,74 +1516,21 @@ export default function Home() {
                     <div className="testimonial-content">
                       <div className="swiper testimonial-slider">
                         <div className="swiper-wrapper">
-                          <div className="swiper-slide">
-                            <div className="content">
-                              <div className="icon">
-                                <i className="flaticon-left-quote"></i>
+                          {testimonialSection.slides.map((slide) => (
+                            <div key={slide.id} className="swiper-slide">
+                              <div className="content">
+                                <div className="icon">
+                                  <i className="flaticon-left-quote"></i>
+                                </div>
+                                <p>&quot;{slide.quote}&quot;</p>
+                                <div className="client-image">
+                                  <img src={slide.clientImage} alt="img" />
+                                </div>
+                                <h4>{slide.name}</h4>
+                                <span>{slide.role}</span>
                               </div>
-                              <p>
-                                &quot;Booking with this agency was
-                                the best decision for our Bali trip!
-                                from flights to accommodations!&quot;
-                              </p>
-                              <div className="client-image">
-                                <img src="/assets/img/home-1/testimonial/client.png" alt="img" />
-                              </div>
-                              <h4>Michael Thompson</h4>
-                              <span>World traveler</span>
                             </div>
-                          </div>
-                          <div className="swiper-slide">
-                            <div className="content">
-                              <div className="icon">
-                                <i className="flaticon-left-quote"></i>
-                              </div>
-                              <p>
-                                &quot;Booking with this agency was
-                                the best decision for our Bali trip!
-                                from flights to accommodations!&quot;
-                              </p>
-                              <div className="client-image">
-                                <img src="/assets/img/home-1/testimonial/client.png" alt="img" />
-                              </div>
-                              <h4>Michael Thompson</h4>
-                              <span>World traveler</span>
-                            </div>
-                          </div>
-                          <div className="swiper-slide">
-                            <div className="content">
-                              <div className="icon">
-                                <i className="flaticon-left-quote"></i>
-                              </div>
-                              <p>
-                                &quot;Booking with this agency was
-                                the best decision for our Bali trip!
-                                from flights to accommodations!&quot;
-                              </p>
-                              <div className="client-image">
-                                <img src="/assets/img/home-1/testimonial/client.png" alt="img" />
-                              </div>
-                              <h4>Michael Thompson</h4>
-                              <span>World traveler</span>
-                            </div>
-                          </div>
-                          <div className="swiper-slide">
-                            <div className="content">
-                              <div className="icon">
-                                <i className="flaticon-left-quote"></i>
-                              </div>
-                              <p>
-                                &quot;Booking with this agency was
-                                the best decision for our Bali trip!
-                                from flights to accommodations!&quot;
-                              </p>
-                              <div className="client-image">
-                                <img src="/assets/img/home-1/testimonial/client.png" alt="img" />
-                              </div>
-                              <h4>Michael Thompson</h4>
-                              <span>World traveler</span>
-                            </div>
-                          </div>
+                          ))}
                         </div>
                       </div>
                       <div className="swiper-dot">
@@ -1158,29 +1541,18 @@ export default function Home() {
                   <div className="col-lg-6">
                     <div className="testimonial-right-item">
                       <div className="row g-2">
-                        <div className="col-xl-7 col-md-6 wow img-custom-anim-left">
-                          <div className="testimonial-image">
-                            <img src="/assets/img/home-1/testimonial/01.jpg" alt="img" />
+                        {testimonialSection.gallery.map((item) => (
+                          <div key={item.id} className={`${item.colClass} ${item.animationClass}`.trim()}>
+                            <div className="testimonial-image">
+                              <img src={item.image} alt="img" />
+                              {item.videoLink ? (
+                                <a href={item.videoLink} className="video-btn video-popup">
+                                  <i className="fa-duotone fa-play"></i>
+                                </a>
+                              ) : null}
+                            </div>
                           </div>
-                        </div>
-                        <div className="col-xl-5 col-md-6 wow img-custom-anim-right">
-                          <div className="testimonial-image">
-                            <img src="/assets/img/home-1/testimonial/02.jpg" alt="img" />
-                          </div>
-                        </div>
-                        <div className="col-xl-5 col-md-6 wow img-custom-anim-left">
-                          <div className="testimonial-image">
-                            <img src="/assets/img/home-1/testimonial/03.jpg" alt="img" />
-                          </div>
-                        </div>
-                        <div className="col-xl-7 col-md-6 wow img-custom-anim-right">
-                          <div className="testimonial-image">
-                            <img src="/assets/img/home-1/testimonial/04.jpg" alt="img" />
-                            <a href="https://www.youtube.com/watch?v=Cn4G2lZ_g2I" className="video-btn video-popup">
-                              <i className="fa-duotone fa-play"></i>
-                            </a>
-                          </div>
-                        </div>
+                        ))}
                       </div>
                     </div>
                   </div>
@@ -1193,80 +1565,29 @@ export default function Home() {
           <section className="news-section section-padding fix">
             <div className="container custom-container-2">
               <div className="section-title text-center">
-                <h2 className="text-anim">
-                  Read Our Latest News &amp; Blog
-                </h2>
-                <p className="wow fadeInUp" data-wow-delay=".5s">Crafting journeys, creating memories plan smarter, travel better</p>
+                <h2 className="text-anim">{newsSection.title}</h2>
+                <p className="wow fadeInUp" data-wow-delay=".5s">{newsSection.subtitle}</p>
               </div>
               <div className="row">
-                <div className="col-xl-3 col-lg-4 col-md-6 wow fadeInUp" data-wow-delay=".2s">
-                  <div className="news-card-items">
-                    <div className="news-image">
-                      <img src="/assets/img/home-1/news/news-1.jpg" alt="img" />
-                      <span>18 August</span>
-                    </div>
-                    <div className="news-content">
-                      <span>Tours &amp; travel</span>
-                      <h3>
-                        <a href="/news-details">
-                          Highlight trending destinations and why they&apos;re worth exploring.
+                {newsSection.items.map((item) => (
+                  <div key={item.id} className="col-xl-3 col-lg-4 col-md-6 wow fadeInUp" data-wow-delay={item.delay}>
+                    <div className="news-card-items">
+                      <div className="news-image">
+                        <img src={item.image} alt="img" />
+                        <span>{item.date}</span>
+                      </div>
+                      <div className="news-content">
+                        <span>{item.category}</span>
+                        <h3>
+                          <a href={item.href}>{item.title}</a>
+                        </h3>
+                        <a href={item.href} className="link-btn">
+                          Read More <i className="fa-solid fa-chevron-right"></i>
                         </a>
-                      </h3>
-                      <a href="/news-details" className="link-btn">Read More <i className="fa-solid fa-chevron-right"></i></a>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="col-xl-3 col-lg-4 col-md-6 wow fadeInUp" data-wow-delay=".4s">
-                  <div className="news-card-items">
-                    <div className="news-image">
-                      <img src="/assets/img/home-1/news/news-2.jpg" alt="img" />
-                      <span>20 August</span>
-                    </div>
-                    <div className="news-content">
-                      <span>Tours &amp; travel</span>
-                      <h3>
-                        <a href="/news-details">
-                          Tips on itinerary planning, booking, and travel hacks.
-                        </a>
-                      </h3>
-                      <a href="/news-details" className="link-btn">Read More <i className="fa-solid fa-chevron-right"></i></a>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-xl-3 col-lg-4 col-md-6 wow fadeInUp" data-wow-delay=".6s">
-                  <div className="news-card-items">
-                    <div className="news-image">
-                      <img src="/assets/img/home-1/news/news-3.jpg" alt="img" />
-                      <span>23 August</span>
-                    </div>
-                    <div className="news-content">
-                      <span>Tours &amp; travel</span>
-                      <h3>
-                        <a href="/news-details">
-                          Focus on destinations suitable for families with kids.
-                        </a>
-                      </h3>
-                      <a href="/news-details" className="link-btn">Read More <i className="fa-solid fa-chevron-right"></i></a>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-xl-3 col-lg-4 col-md-6 wow fadeInUp" data-wow-delay=".8s">
-                  <div className="news-card-items">
-                    <div className="news-image">
-                      <img src="/assets/img/home-1/news/news-4.jpg" alt="img" />
-                      <span>24 August</span>
-                    </div>
-                    <div className="news-content">
-                      <span>Tours &amp; travel</span>
-                      <h3>
-                        <a href="/news-details">
-                          Guide to enjoying luxury stays and experiences without overspending.
-                        </a>
-                      </h3>
-                      <a href="/news-details" className="link-btn">Read More <i className="fa-solid fa-chevron-right"></i></a>
-                    </div>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           </section>
@@ -1275,44 +1596,16 @@ export default function Home() {
           <section className="brand-section section-padding fix">
             <div className="container custom-container-2">
               <div className="brand-wrapper">
-                <h6>Relied upon by top-performing teams worldwide</h6>
+                <h6>{brandSection.title}</h6>
                 <div className="swiper brand-slider">
                   <div className="swiper-wrapper">
-                    <div className="swiper-slide">
-                      <div className="brand-image text-center">
-                        <img src="/assets/img/home-1/brand/01.png" alt="img" />
+                    {brandSection.logos.map((logo) => (
+                      <div key={logo.id} className="swiper-slide">
+                        <div className="brand-image text-center">
+                          <img src={logo.image} alt="img" />
+                        </div>
                       </div>
-                    </div>
-                    <div className="swiper-slide">
-                      <div className="brand-image text-center">
-                        <img src="/assets/img/home-1/brand/02.png" alt="img" />
-                      </div>
-                    </div>
-                    <div className="swiper-slide">
-                      <div className="brand-image text-center">
-                        <img src="/assets/img/home-1/brand/03.png" alt="img" />
-                      </div>
-                    </div>
-                    <div className="swiper-slide">
-                      <div className="brand-image text-center">
-                        <img src="/assets/img/home-1/brand/04.png" alt="img" />
-                      </div>
-                    </div>
-                    <div className="swiper-slide">
-                      <div className="brand-image text-center">
-                        <img src="/assets/img/home-1/brand/05.png" alt="img" />
-                      </div>
-                    </div>
-                    <div className="swiper-slide">
-                      <div className="brand-image text-center">
-                        <img src="/assets/img/home-1/brand/06.png" alt="img" />
-                      </div>
-                    </div>
-                    <div className="swiper-slide">
-                      <div className="brand-image text-center">
-                        <img src="/assets/img/home-1/brand/07.png" alt="img" />
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -1326,23 +1619,25 @@ export default function Home() {
                 <div className="row g-4 align-items-end">
                   <div className="col-lg-6">
                     <div className="contact-image">
-                      <img data-speed=".8" src="/assets/img/home-1/Image.jpg" alt="img" />
+                      <img data-speed=".8" src={contactSection.image} alt="img" />
                     </div>
                   </div>
                   <div className="col-lg-6">
                     <div className="contact-content">
                       <div className="logo-image">
-                        <a href="/"><img src="/assets/img/logo/white-logo.svg" alt="img" /></a>
+                        <a href="/">
+                          <img src={contactSection.logo} alt="img" />
+                        </a>
                       </div>
                       <div className="section-title mb-0">
-                        <h2 className="sec-title text-white text-anim">
-                          Ready for Your Next Adventure?
-                        </h2>
+                        <h2 className="sec-title text-white text-anim">{contactSection.title}</h2>
                       </div>
                       <p className="text wow fadeInUp" data-wow-delay=".3s">
-                        Let ASA Holidays take you on a journey of a lifetime. From Europe to Asia, we have the perfect tour package waiting for you.
+                        {contactSection.description}
                       </p>
-                      <a href="/tour-grid" className="theme-btn">Browse All Tours</a>
+                      <a href={contactSection.cta.href} className="theme-btn">
+                        {contactSection.cta.label}
+                      </a>
                     </div>
                   </div>
                 </div>
@@ -1357,9 +1652,3 @@ export default function Home() {
     </>
   )
 }
-
-
-
-
-
-
