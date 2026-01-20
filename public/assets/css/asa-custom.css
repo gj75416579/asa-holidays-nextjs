@@ -1,0 +1,168 @@
+/*
+ * ASA Holidays Custom Styles
+ * Override default Roavio theme colors with ASA branding
+ */
+
+:root {
+  /* ASA Brand Colors - Blue/Teal Theme */
+  --theme: #0066B3;        /* ASA Primary Blue */
+  --theme-2: #00A3E0;      /* ASA Secondary Blue */
+  --header: #1a1a1a;       /* Dark text */
+  --text: #555555;         /* Body text */
+  --border: #e0e0e0;
+  --bg: #f8f9fa;
+  --bg-2: #e8f4fc;
+}
+
+/* Theme Button Override */
+.theme-btn {
+  background-color: var(--theme);
+}
+
+.theme-btn.color {
+  background-color: var(--theme-2);
+}
+
+.theme-btn:hover::after {
+  background-color: #004d86;
+}
+
+/* Link Button Hover */
+.link-btn:hover {
+  color: var(--theme);
+  background-image: linear-gradient(180deg, var(--theme) 0%, var(--theme) 100%);
+}
+
+/* Header Top Bar */
+.header-top-section {
+  background-color: var(--theme);
+}
+
+.header-top-wrapper p span {
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Preloader Spinner */
+.preloader .spinner {
+  border-top-color: var(--theme);
+}
+
+.preloader .letters-loading {
+  color: var(--theme);
+}
+
+/* Benefit Section Background */
+.benefit-tour-section.header-bg {
+  background-color: var(--theme);
+}
+
+/* Footer Background */
+.footer-section.header-bg {
+  background-color: #1a2a3a;
+}
+
+.footer-bottom.style-1 {
+  background-color: #0f1a24;
+}
+
+/* About Box Icon */
+.about-box .icon i {
+  color: var(--theme);
+}
+
+/* Feature Icon */
+.feature-item .icon i {
+  color: var(--theme);
+}
+
+/* Tour Card Badge */
+.tour-card-item .tour-image span,
+.tour-place-item .tour-place-image span {
+  background-color: var(--theme);
+}
+
+/* Counter Section */
+.counter-section {
+  background-color: var(--theme);
+}
+
+.counter-item .icon i {
+  color: var(--theme-2);
+}
+
+/* Rating Stars */
+.tour-place-content .star i {
+  color: #ffc107;
+}
+
+/* Contact From Section */
+.contact-from-section.header-bg {
+  background-color: var(--theme);
+}
+
+/* Testimonial Section Dots */
+.swiper-pagination-bullet-active {
+  background-color: var(--theme) !important;
+}
+
+/* Nice Select */
+.nice-select .option:hover,
+.nice-select .option.focus,
+.nice-select .option.selected.focus {
+  background-color: var(--bg-2);
+}
+
+/* Price Slider */
+.ui-slider .ui-slider-range {
+  background-color: var(--theme);
+}
+
+.ui-slider .ui-slider-handle {
+  background-color: var(--theme);
+  border-color: var(--theme);
+}
+
+/* Social Icons Hover */
+.social-icon a:hover {
+  background-color: var(--theme);
+  border-color: var(--theme);
+}
+
+/* Activities Card Hover */
+.activities-card-item:hover .activities-content h4 a {
+  color: var(--theme);
+}
+
+/* Tour List Items Icon */
+.tour-list li i {
+  color: var(--theme);
+}
+
+/* Check List Icon */
+.list-item .list li i {
+  color: var(--theme);
+}
+
+/* Sticky Header */
+#header-sticky.sticky-header {
+  box-shadow: 0 2px 10px rgba(0, 102, 179, 0.1);
+}
+
+/* Back to Top Button */
+#back-top {
+  background-color: var(--theme);
+}
+
+#back-top:hover {
+  background-color: #004d86;
+}
+
+/* Custom Cursor */
+.cursor-inner.cursor-hover {
+  background-color: var(--theme);
+}
+
+.cursor-outer.cursor-hover {
+  border-color: var(--theme);
+}
