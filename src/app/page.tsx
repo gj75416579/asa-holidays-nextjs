@@ -1,207 +1,13 @@
 'use client'
 
+import Header from '@/templete/Header'
+import Footer from '@/templete/Footer'
+
+
 export default function Home() {
   return (
     <>
-      {/* Preloader Start */}
-      <div id="preloader" className="preloader">
-        <div className="animation-preloader">
-          <div className="spinner"></div>
-          <div className="txt-loading">
-            <span data-text-preloader="A" className="letters-loading">A</span>
-            <span data-text-preloader="S" className="letters-loading">S</span>
-            <span data-text-preloader="A" className="letters-loading">A</span>
-          </div>
-          <p className="text-center">Loading</p>
-        </div>
-        <div className="loader">
-          <div className="row">
-            <div className="col-3 loader-section section-left">
-              <div className="bg"></div>
-            </div>
-            <div className="col-3 loader-section section-left">
-              <div className="bg"></div>
-            </div>
-            <div className="col-3 loader-section section-right">
-              <div className="bg"></div>
-            </div>
-            <div className="col-3 loader-section section-right">
-              <div className="bg"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* MouseCursor Start */}
-      <div className="mouseCursor cursor-outer"></div>
-      <div className="mouseCursor cursor-inner"></div>
-
-      <div className="fix-area">
-        <div className="offcanvas__info">
-          <div className="offcanvas__wrapper">
-            <div className="offcanvas__content">
-              <div className="offcanvas__top mb-5 d-flex justify-content-between align-items-center">
-                <div className="offcanvas__logo">
-                  <a href="index.html">
-                    <img src="/assets/img/logo/black-logo.svg" alt="logo-img" />
-                  </a>
-                </div>
-                <div className="offcanvas__close">
-                  <button>
-                    <i className="fas fa-times"></i>
-                  </button>
-                </div>
-              </div>
-              <p className="text d-none d-xl-block">
-                ASA Holidays is Singapore&apos;s leading travel agency with over 30 years of experience in crafting unforgettable travel experiences across the globe.
-              </p>
-              <div className="mobile-menu fix mb-3"></div>
-              <div className="offcanvas__contact">
-                <h3>Enquire Now</h3>
-                <form action="#" id="contact-form" method="POST" className="contact-form-items">
-                  <div className="row g-4">
-                    <div className="col-lg-12">
-                      <div className="form-clt">
-                        <input type="text" name="name" id="name33" placeholder="Name" />
-                      </div>
-                    </div>
-                    <div className="col-lg-12">
-                      <div className="form-clt">
-                        <input type="text" name="name" id="email33" placeholder="Email Address" />
-                      </div>
-                    </div>
-                    <div className="col-lg-12">
-                      <div className="form-clt">
-                        <textarea name="message" id="message2" placeholder="Enter message..."></textarea>
-                      </div>
-                    </div>
-                  </div>
-                </form>
-                <div className="social-icon d-flex align-items-center">
-                  <a href="#"><i className="fab fa-facebook-f"></i></a>
-                  <a href="#"><i className="fab fa-twitter"></i></a>
-                  <a href="#"><i className="fab fa-youtube"></i></a>
-                  <a href="#"><i className="fab fa-linkedin-in"></i></a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="offcanvas__overlay"></div>
-
-      {/* Header-Top Section Start */}
-      <div className="header-top-section">
-        <div className="container-fluid">
-          <div className="header-top-wrapper">
-            <p>Welcome to <span>ASA Holidays</span> - Singapore&apos;s Premier Travel Agency <b>Let&apos;s Talk</b></p>
-            <div className="header-right">
-              <div className="flag-wrap">
-                <i className="fa-solid fa-globe"></i>
-                <div className="nice-select" tabIndex={0}>
-                  <span className="current">English</span>
-                  <ul className="list">
-                    <li data-value="1" className="option selected focus">English</li>
-                    <li data-value="2" className="option">中文</li>
-                  </ul>
-                </div>
-              </div>
-              <ul className="header-list">
-                <li>
-                  <i className="fa-solid fa-envelope"></i>
-                  <a href="mailto:enquiry@asaholiday.com">Email : enquiry@asaholiday.com</a>
-                </li>
-                <li>
-                  <i className="fa-solid fa-phone-flip"></i>
-                  <a href="tel:+65-6534-3722">Call : +65 6534 3722</a>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Header Section Start */}
-      <header id="header-sticky" className="header-1">
-        <div className="container-fluid">
-          <div className="mega-menu-wrapper">
-            <div className="header-main">
-              <div className="header-left">
-                <div className="logo">
-                  <a href="index.html" className="header-logo">
-                    <img src="/assets/img/logo/black-logo.svg" alt="logo-img" />
-                  </a>
-                </div>
-                <div className="mean__menu-wrapper">
-                  <div className="main-menu">
-                    <nav id="mobile-menu">
-                      <ul>
-                        <li className="active">
-                          <a href="index.html">Home</a>
-                        </li>
-                        <li>
-                          <a href="tour-grid.html">
-                            Group Tours
-                            <i className="fa-solid fa-chevron-down"></i>
-                          </a>
-                          <ul className="submenu">
-                            <li><a href="tour-grid.html">Europe Tours</a></li>
-                            <li><a href="tour-grid.html">China Tours</a></li>
-                            <li><a href="tour-grid.html">Japan Tours</a></li>
-                            <li><a href="tour-grid.html">Korea Tours</a></li>
-                            <li><a href="tour-grid.html">Australia Tours</a></li>
-                            <li><a href="tour-grid.html">View All Tours</a></li>
-                          </ul>
-                        </li>
-                        <li>
-                          <a href="tour-list.html">Free &amp; Easy</a>
-                        </li>
-                        <li>
-                          <a href="destination.html">Cruises</a>
-                        </li>
-                        <li>
-                          <a href="about.html">MICE</a>
-                        </li>
-                        <li>
-                          <a href="about.html">
-                            About
-                            <i className="fa-solid fa-chevron-down"></i>
-                          </a>
-                          <ul className="submenu">
-                            <li><a href="about.html">About Us</a></li>
-                            <li><a href="team.html">Our Team</a></li>
-                            <li><a href="gallery.html">Gallery</a></li>
-                            <li><a href="faq.html">FAQ</a></li>
-                          </ul>
-                        </li>
-                        <li>
-                          <a href="contact.html">Contact Us</a>
-                        </li>
-                      </ul>
-                    </nav>
-                  </div>
-                </div>
-              </div>
-              <div className="header-right d-flex justify-content-end align-items-center">
-                <div className="search-widget">
-                  <form action="#">
-                    <button type="submit"><i className="fa-solid fa-magnifying-glass"></i></button>
-                    <input type="text" placeholder="Search" />
-                  </form>
-                </div>
-                <div className="header-button">
-                  <a href="contact.html" className="theme-btn">Book Now</a>
-                </div>
-                <div className="header__hamburger d-xl-none my-auto">
-                  <div className="sidebar__toggle">
-                    <i className="fas fa-bars"></i>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header />
 
       <div id="smooth-wrapper">
         <div id="smooth-content">
@@ -227,7 +33,7 @@ export default function Home() {
                             <p data-animation="fadeInUp" data-delay="1.3s">
                               Singapore&apos;s premier travel agency offering curated group tours, cruises, and customized travel experiences worldwide
                             </p>
-                            <a href="tour-grid.html" className="theme-btn" data-animation="fadeInUp" data-delay="1.3s">Explore Our Tours</a>
+                            <a href="/tour-grid" className="theme-btn" data-animation="fadeInUp" data-delay="1.3s">Explore Our Tours</a>
                           </div>
                         </div>
                         <div className="col-xl-6 col-lg-6">
@@ -261,7 +67,7 @@ export default function Home() {
                             <p data-animation="fadeInUp" data-delay="1.3s">
                               Discover Switzerland, Scandinavia, Italy and Eastern Europe with our expertly guided tours
                             </p>
-                            <a href="tour-grid.html" className="theme-btn" data-animation="fadeInUp" data-delay="1.3s">View Europe Tours</a>
+                            <a href="/tour-grid" className="theme-btn" data-animation="fadeInUp" data-delay="1.3s">View Europe Tours</a>
                           </div>
                         </div>
                         <div className="col-xl-6 col-lg-6">
@@ -294,7 +100,7 @@ export default function Home() {
                             <p data-animation="fadeInUp" data-delay="1.3s">
                               From Japan&apos;s cherry blossoms to China&apos;s ancient wonders - experience the best of Asia with ASA Holidays
                             </p>
-                            <a href="tour-grid.html" className="theme-btn" data-animation="fadeInUp" data-delay="1.3s">View Asia Tours</a>
+                            <a href="/tour-grid" className="theme-btn" data-animation="fadeInUp" data-delay="1.3s">View Asia Tours</a>
                           </div>
                         </div>
                         <div className="col-xl-6 col-lg-6">
@@ -395,7 +201,7 @@ export default function Home() {
                           <span>20+ tours</span>
                           <div className="tour-content">
                             <h3>
-                              <a href="tour-details.html">Swiss Alps Adventure</a>
+                              <a href="/tour-details">Swiss Alps Adventure</a>
                             </h3>
                             <p>Switzerland</p>
                           </div>
@@ -409,7 +215,7 @@ export default function Home() {
                           <span>15+ tours</span>
                           <div className="tour-content">
                             <h3>
-                              <a href="tour-details.html">Cherry Blossom Season</a>
+                              <a href="/tour-details">Cherry Blossom Season</a>
                             </h3>
                             <p>Tokyo, Japan</p>
                           </div>
@@ -421,7 +227,7 @@ export default function Home() {
                           <span>12+ tours</span>
                           <div className="tour-content">
                             <h3>
-                              <a href="tour-details.html">Northern Lights</a>
+                              <a href="/tour-details">Northern Lights</a>
                             </h3>
                             <p>Scandinavia</p>
                           </div>
@@ -439,7 +245,7 @@ export default function Home() {
                           <span>25+ tours</span>
                           <div className="tour-content">
                             <h3>
-                              <a href="tour-details.html">Great Wall &amp; Forbidden City</a>
+                              <a href="/tour-details">Great Wall &amp; Forbidden City</a>
                             </h3>
                             <p>Beijing, China</p>
                           </div>
@@ -453,7 +259,7 @@ export default function Home() {
                           <span>10+ tours</span>
                           <div className="tour-content style-4">
                             <h3>
-                              <a href="tour-details.html">K-Culture Experience</a>
+                              <a href="/tour-details">K-Culture Experience</a>
                             </h3>
                             <p>Seoul, Korea</p>
                           </div>
@@ -465,7 +271,7 @@ export default function Home() {
                           <span>8+ tours</span>
                           <div className="tour-content style-5">
                             <h3>
-                              <a href="tour-details.html">Outback Discovery</a>
+                              <a href="/tour-details">Outback Discovery</a>
                             </h3>
                             <p>Sydney, Australia</p>
                           </div>
@@ -548,7 +354,7 @@ export default function Home() {
                             </li>
                           </ul>
                         </div>
-                        <a href="about.html" className="theme-btn wow fadeInUp" data-wow-delay=".3s">Learn More About Us</a>
+                        <a href="/about" className="theme-btn wow fadeInUp" data-wow-delay=".3s">Learn More About Us</a>
                       </div>
                     </div>
                   </div>
@@ -587,7 +393,7 @@ export default function Home() {
                         <h5><span>From</span>$2,888</h5>
                       </div>
                       <h3>
-                        <a href="tour-details.html">
+                        <a href="/tour-details">
                           10D Switzerland Grand Tour with Glacier Express
                         </a>
                       </h3>
@@ -629,7 +435,7 @@ export default function Home() {
                         <h5><span>From</span>$1,688</h5>
                       </div>
                       <h3>
-                        <a href="tour-details.html">
+                        <a href="/tour-details">
                           8D Japan Cherry Blossom Tour Tokyo to Osaka
                         </a>
                       </h3>
@@ -672,7 +478,7 @@ export default function Home() {
                         <h5><span>From</span>$1,288</h5>
                       </div>
                       <h3>
-                        <a href="tour-details.html">
+                        <a href="/tour-details">
                           6D China Beijing &amp; Shanghai Highlights Tour
                         </a>
                       </h3>
@@ -714,7 +520,7 @@ export default function Home() {
                         <h5><span>From</span>$988</h5>
                       </div>
                       <h3>
-                        <a href="tour-details.html">
+                        <a href="/tour-details">
                           5D Korea Seoul &amp; Jeju Island Discovery
                         </a>
                       </h3>
@@ -756,7 +562,7 @@ export default function Home() {
                         <h5><span>Tours Price</span>$49.00</h5>
                       </div>
                       <h3>
-                        <a href="tour-details.html">
+                        <a href="/tour-details">
                           Train on Nine Arches Bridge in <br /> Sri Lanka
                         </a>
                       </h3>
@@ -799,7 +605,7 @@ export default function Home() {
                         <h5><span>Tours Price</span>$49.00</h5>
                       </div>
                       <h3>
-                        <a href="tour-details.html">
+                        <a href="/tour-details">
                           White buildings with blue <br /> accents near the Atlantic shore.
                         </a>
                       </h3>
@@ -841,7 +647,7 @@ export default function Home() {
                         <h5><span>Tours Price</span>$49.00</h5>
                       </div>
                       <h3>
-                        <a href="tour-details.html">
+                        <a href="/tour-details">
                           Man Sitting on Rocks next to <br /> Creek in Mountains
                         </a>
                       </h3>
@@ -884,7 +690,7 @@ export default function Home() {
                         <h5><span>Tours Price</span>$49.00</h5>
                       </div>
                       <h3>
-                        <a href="tour-details.html">
+                        <a href="/tour-details">
                           Aerial Photography of Cinque <br /> Terre in Italy
                         </a>
                       </h3>
@@ -926,7 +732,7 @@ export default function Home() {
                     </div>
                     <div className="content">
                       <h5>
-                        <a href="tour-details.html">Expert Travel Guide</a>
+                        <a href="/tour-details">Expert Travel Guide</a>
                       </h5>
                       <p>
                         Travel professionals who help destinations, accommodations,
@@ -947,7 +753,7 @@ export default function Home() {
                     </div>
                     <div className="content">
                       <h5>
-                        <a href="tour-details.html">Custom Tour Plan</a>
+                        <a href="/tour-details">Custom Tour Plan</a>
                       </h5>
                       <p>
                         Enjoy trips designed around your preferences, whether you want a relaxing beach holiday
@@ -962,7 +768,7 @@ export default function Home() {
                     </div>
                     <div className="content">
                       <h5>
-                        <a href="tour-details.html">Hassle-Free Booking</a>
+                        <a href="/tour-details">Hassle-Free Booking</a>
                       </h5>
                       <p>
                         Save time and effort with a single platform to book flights, hotels, activities, transportation
@@ -977,7 +783,7 @@ export default function Home() {
                     </div>
                     <div className="content">
                       <h5>
-                        <a href="tour-details.html">Deals &amp; Discounts</a>
+                        <a href="/tour-details">Deals &amp; Discounts</a>
                       </h5>
                       <p>
                         Save time and effort with a single platform to book flights, hotels, activities, transportation
@@ -992,7 +798,7 @@ export default function Home() {
                     </div>
                     <div className="content">
                       <h5>
-                        <a href="tour-details.html">Local Guides Authentic</a>
+                        <a href="/tour-details">Local Guides Authentic</a>
                       </h5>
                       <p>
                         Immerse yourself local culture with trusted guides who provide
@@ -1008,7 +814,7 @@ export default function Home() {
                     </div>
                     <div className="content">
                       <h5>
-                        <a href="tour-details.html">Travel Insurance</a>
+                        <a href="/tour-details">Travel Insurance</a>
                       </h5>
                       <p>
                         Stay protected with insurance options and on-ground support for a worry-free experience.
@@ -1046,7 +852,7 @@ export default function Home() {
                         </div>
                         <div className="adventure-box wow img-custom-anim-bottom">
                           <h3>
-                            <a href="tour-details.html">
+                            <a href="/tour-details">
                               18+ years of experience
                               in travel services
                             </a>
@@ -1071,14 +877,14 @@ export default function Home() {
                       <div className="adventure-content">
                         <h6>23% Discount</h6>
                         <h3>
-                          <a href="tour-details.html">Hotel &amp; Resort</a>
+                          <a href="/tour-details">Hotel &amp; Resort</a>
                         </h3>
                         <div className="booking-item">
                           <div className="content">
                             <h4>$1500</h4>
                             <span>per night 4 star rating</span>
                           </div>
-                          <a href="tour-details.html" className="theme-btn">Book Now</a>
+                          <a href="/tour-details" className="theme-btn">Book Now</a>
                         </div>
                       </div>
                     </div>
@@ -1402,11 +1208,11 @@ export default function Home() {
                     <div className="news-content">
                       <span>Tours &amp; travel</span>
                       <h3>
-                        <a href="news-details.html">
+                        <a href="/news-details">
                           Highlight trending destinations and why they&apos;re worth exploring.
                         </a>
                       </h3>
-                      <a href="news-details.html" className="link-btn">Read More <i className="fa-solid fa-chevron-right"></i></a>
+                      <a href="/news-details" className="link-btn">Read More <i className="fa-solid fa-chevron-right"></i></a>
                     </div>
                   </div>
                 </div>
@@ -1419,11 +1225,11 @@ export default function Home() {
                     <div className="news-content">
                       <span>Tours &amp; travel</span>
                       <h3>
-                        <a href="news-details.html">
+                        <a href="/news-details">
                           Tips on itinerary planning, booking, and travel hacks.
                         </a>
                       </h3>
-                      <a href="news-details.html" className="link-btn">Read More <i className="fa-solid fa-chevron-right"></i></a>
+                      <a href="/news-details" className="link-btn">Read More <i className="fa-solid fa-chevron-right"></i></a>
                     </div>
                   </div>
                 </div>
@@ -1436,11 +1242,11 @@ export default function Home() {
                     <div className="news-content">
                       <span>Tours &amp; travel</span>
                       <h3>
-                        <a href="news-details.html">
+                        <a href="/news-details">
                           Focus on destinations suitable for families with kids.
                         </a>
                       </h3>
-                      <a href="news-details.html" className="link-btn">Read More <i className="fa-solid fa-chevron-right"></i></a>
+                      <a href="/news-details" className="link-btn">Read More <i className="fa-solid fa-chevron-right"></i></a>
                     </div>
                   </div>
                 </div>
@@ -1453,11 +1259,11 @@ export default function Home() {
                     <div className="news-content">
                       <span>Tours &amp; travel</span>
                       <h3>
-                        <a href="news-details.html">
+                        <a href="/news-details">
                           Guide to enjoying luxury stays and experiences without overspending.
                         </a>
                       </h3>
-                      <a href="news-details.html" className="link-btn">Read More <i className="fa-solid fa-chevron-right"></i></a>
+                      <a href="/news-details" className="link-btn">Read More <i className="fa-solid fa-chevron-right"></i></a>
                     </div>
                   </div>
                 </div>
@@ -1526,7 +1332,7 @@ export default function Home() {
                   <div className="col-lg-6">
                     <div className="contact-content">
                       <div className="logo-image">
-                        <a href="index.html"><img src="/assets/img/logo/white-logo.svg" alt="img" /></a>
+                        <a href="/"><img src="/assets/img/logo/white-logo.svg" alt="img" /></a>
                       </div>
                       <div className="section-title mb-0">
                         <h2 className="sec-title text-white text-anim">
@@ -1536,7 +1342,7 @@ export default function Home() {
                       <p className="text wow fadeInUp" data-wow-delay=".3s">
                         Let ASA Holidays take you on a journey of a lifetime. From Europe to Asia, we have the perfect tour package waiting for you.
                       </p>
-                      <a href="tour-grid.html" className="theme-btn">Browse All Tours</a>
+                      <a href="/tour-grid" className="theme-btn">Browse All Tours</a>
                     </div>
                   </div>
                 </div>
@@ -1545,187 +1351,15 @@ export default function Home() {
           </section>
 
           {/* Footer Section Start */}
-          <footer className="footer-section fix header-bg">
-            <div className="container">
-              <div className="footer-widget-wrapper">
-                <div className="row">
-                  <div className="col-xl-2 col-md-4 col-lg-3 wow fadeInUp">
-                    <div className="single-footer-widget">
-                      <div className="wid-title">
-                        <h4>Services</h4>
-                      </div>
-                      <ul className="list-area">
-                        <li>
-                          <a href="tour-grid.html">
-                            <i className="fa-solid fa-chevron-right"></i>
-                            Group Tours
-                          </a>
-                        </li>
-                        <li>
-                          <a href="tour-list.html">
-                            <i className="fa-solid fa-chevron-right"></i>
-                            Free &amp; Easy
-                          </a>
-                        </li>
-                        <li>
-                          <a href="destination.html">
-                            <i className="fa-solid fa-chevron-right"></i>
-                            Cruises
-                          </a>
-                        </li>
-                        <li>
-                          <a href="about.html">
-                            <i className="fa-solid fa-chevron-right"></i>
-                            MICE Services
-                          </a>
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                  <div className="col-xl-2 col-md-4 col-lg-3 wow fadeInUp" data-wow-delay=".2s">
-                    <div className="single-footer-widget">
-                      <div className="wid-title">
-                        <h4>Company</h4>
-                      </div>
-                      <ul className="list-area">
-                        <li>
-                          <a href="about.html">
-                            <i className="fa-solid fa-chevron-right"></i>
-                            About Us
-                          </a>
-                        </li>
-                        <li>
-                          <a href="team.html">
-                            <i className="fa-solid fa-chevron-right"></i>
-                            Our Team
-                          </a>
-                        </li>
-                        <li>
-                          <a href="contact.html">
-                            <i className="fa-solid fa-chevron-right"></i>
-                            Careers
-                          </a>
-                        </li>
-                        <li>
-                          <a href="faq.html">
-                            <i className="fa-solid fa-chevron-right"></i>
-                            FAQ
-                          </a>
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                  <div className="col-xl-2 col-md-4 col-lg-3 wow fadeInUp" data-wow-delay=".4s">
-                    <div className="single-footer-widget">
-                      <div className="wid-title">
-                        <h4>Destinations</h4>
-                      </div>
-                      <ul className="list-area">
-                        <li>
-                          <a href="tour-grid.html">
-                            <i className="fa-solid fa-chevron-right"></i>
-                            Europe
-                          </a>
-                        </li>
-                        <li>
-                          <a href="tour-grid.html">
-                            <i className="fa-solid fa-chevron-right"></i>
-                            Japan
-                          </a>
-                        </li>
-                        <li>
-                          <a href="tour-grid.html">
-                            <i className="fa-solid fa-chevron-right"></i>
-                            China
-                          </a>
-                        </li>
-                        <li>
-                          <a href="tour-grid.html">
-                            <i className="fa-solid fa-chevron-right"></i>
-                            Korea &amp; Australia
-                          </a>
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                  <div className="col-xl-3 col-md-6 col-lg-3 wow fadeInUp" data-wow-delay=".6s">
-                    <div className="single-footer-widget">
-                      <div className="wid-title">
-                        <h4>Get In Touch</h4>
-                      </div>
-                      <div className="contact-item">
-                        <div className="icon">
-                          <i className="fa-regular fa-map-location-dot"></i>
-                        </div>
-                        <div className="content">
-                          <h6>
-                            101 Upper Cross Street #05-36 <br />
-                            People&apos;s Park Centre, Singapore 058357
-                          </h6>
-                        </div>
-                      </div>
-                      <div className="contact-item">
-                        <div className="icon">
-                          <i className="fa-regular fa-envelope"></i>
-                        </div>
-                        <div className="content">
-                          <h6>
-                            <a href="mailto:enquiry@asaholiday.com">enquiry@asaholiday.com</a>
-                          </h6>
-                        </div>
-                      </div>
-                      <div className="contact-item mb-0">
-                        <div className="icon">
-                          <i className="fa-regular fa-phone-volume"></i>
-                        </div>
-                        <div className="content">
-                          <h6>
-                            <a href="tel:+6565343722">+65 6534 3722</a>
-                          </h6>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="col-xl-3 col-md-6 col-lg-6 wow fadeInUp" data-wow-delay=".8s">
-                    <div className="single-footer-widget">
-                      <div className="wid-title">
-                        <h4>Subscribe to Our Newsletter <br />
-                          for Exclusive Deals
-                        </h4>
-                      </div>
-                      <div className="newsletter-content">
-                        <p>
-                          Stay updated with the latest tour packages,
-                          special promotions and travel tips from ASA Holidays
-                        </p>
-                        <form action="#">
-                          <div className="form-clt">
-                            <input type="text" name="email" id="email" placeholder="Email Address" />
-                            <button type="submit" className="theme-btn">
-                              Subscribe
-                            </button>
-                          </div>
-                        </form>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="footer-bottom style-1">
-              <div className="container">
-                <div className="footer-wrapper">
-                  <h2 className="wow fadeInUp" data-wow-delay=".3s">ASA Holidays</h2>
-                  <div className="text-item wow fadeInUp" data-wow-delay=".5s">
-                    <p>&copy; 2025 <span>ASA Holidays,</span> All rights reserved</p>
-                    <a href="#" className="icon"><i className="fa-solid fa-chevron-up"></i></a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </footer>
+          <Footer />
         </div>
       </div>
     </>
   )
 }
+
+
+
+
+
+

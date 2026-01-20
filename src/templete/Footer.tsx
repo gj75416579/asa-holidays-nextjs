@@ -1,0 +1,185 @@
+'use client'
+
+export default function Footer() {
+  return (
+    <footer className="footer-section fix header-bg">
+      <div className="container">
+        <div className="footer-widget-wrapper">
+          <div className="row">
+            <div className="col-xl-2 col-md-4 col-lg-3 wow fadeInUp">
+              <div className="single-footer-widget">
+                <div className="wid-title">
+                  <h4>Services</h4>
+                </div>
+                <ul className="list-area">
+                  <li>
+                    <a href="/tour-grid">
+                      <i className="fa-solid fa-chevron-right"></i>
+                      Group Tours
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/tour-list">
+                      <i className="fa-solid fa-chevron-right"></i>
+                      Free &amp; Easy
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/destination">
+                      <i className="fa-solid fa-chevron-right"></i>
+                      Cruises
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/about">
+                      <i className="fa-solid fa-chevron-right"></i>
+                      MICE Services
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div className="col-xl-2 col-md-4 col-lg-3 wow fadeInUp" data-wow-delay=".2s">
+              <div className="single-footer-widget">
+                <div className="wid-title">
+                  <h4>Company</h4>
+                </div>
+                <ul className="list-area">
+                  <li>
+                    <a href="/about">
+                      <i className="fa-solid fa-chevron-right"></i>
+                      About Us
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/team">
+                      <i className="fa-solid fa-chevron-right"></i>
+                      Our Team
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/contact">
+                      <i className="fa-solid fa-chevron-right"></i>
+                      Careers
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/faq">
+                      <i className="fa-solid fa-chevron-right"></i>
+                      FAQ
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div className="col-xl-2 col-md-4 col-lg-3 wow fadeInUp" data-wow-delay=".4s">
+              <div className="single-footer-widget">
+                <div className="wid-title">
+                  <h4>Destinations</h4>
+                </div>
+                <ul className="list-area">
+                  <li>
+                    <a href="/tour-grid">
+                      <i className="fa-solid fa-chevron-right"></i>
+                      Europe
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/tour-grid">
+                      <i className="fa-solid fa-chevron-right"></i>
+                      Japan
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/tour-grid">
+                      <i className="fa-solid fa-chevron-right"></i>
+                      China
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/tour-grid">
+                      <i className="fa-solid fa-chevron-right"></i>
+                      Korea &amp; Australia
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div className="col-xl-3 col-md-6 col-lg-3 wow fadeInUp" data-wow-delay=".6s">
+              <div className="single-footer-widget">
+                <div className="wid-title">
+                  <h4>Get In Touch</h4>
+                </div>
+                <div className="contact-item">
+                  <div className="icon">
+                    <i className="fa-regular fa-map-location-dot"></i>
+                  </div>
+                  <div className="content">
+                    <h6>
+                      101 Upper Cross Street #05-36 <br />
+                      People&apos;s Park Centre, Singapore 058357
+                    </h6>
+                  </div>
+                </div>
+                <div className="contact-item">
+                  <div className="icon">
+                    <i className="fa-regular fa-envelope"></i>
+                  </div>
+                  <div className="content">
+                    <h6>
+                      <a href="mailto:enquiry@asaholiday.com">enquiry@asaholiday.com</a>
+                    </h6>
+                  </div>
+                </div>
+                <div className="contact-item mb-0">
+                  <div className="icon">
+                    <i className="fa-regular fa-phone-volume"></i>
+                  </div>
+                  <div className="content">
+                    <h6>
+                      <a href="tel:+6565343722">+65 6534 3722</a>
+                    </h6>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="col-xl-3 col-md-6 col-lg-6 wow fadeInUp" data-wow-delay=".8s">
+              <div className="single-footer-widget">
+                <div className="wid-title">
+                  <h4>Subscribe to Our Newsletter <br />
+                    for Exclusive Deals
+                  </h4>
+                </div>
+                <div className="newsletter-content">
+                  <p>
+                    Stay updated with the latest tour packages,
+                    special promotions and travel tips from ASA Holidays
+                  </p>
+                  <form action="#">
+                    <div className="form-clt">
+                      <input type="text" name="email" id="email" placeholder="Email Address" />
+                      <button type="submit" className="theme-btn">
+                        Subscribe
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="footer-bottom style-1">
+        <div className="container">
+          <div className="footer-wrapper">
+            <h2 className="wow fadeInUp" data-wow-delay=".3s">ASA Holidays</h2>
+            <div className="text-item wow fadeInUp" data-wow-delay=".5s">
+              <p>&copy; 2025 <span>ASA Holidays,</span> All rights reserved</p>
+              <a href="#" className="icon"><i className="fa-solid fa-chevron-up"></i></a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </footer>
+  )
+}
