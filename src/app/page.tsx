@@ -43,7 +43,7 @@ const homeApiInitialData: HomeApiData = {
 }
 
 const apiMode = process.env.NEXT_PUBLIC_API_MODE ?? 'dev'
-const shouldFallback = apiMode !== 'prod'
+const shouldFallback = apiMode !== 'dev'
 
 const heroSlides = [
   {
@@ -136,11 +136,24 @@ const contactForm = {
     },
     {
       placeholder: 'Departure Month',
-      options: ['January', 'February', 'March', 'April - June', 'July - September', 'October - December'],
+      options: [
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December',
+      ],
     },
     {
       placeholder: 'Tour Type',
-      options: ['Group Tours', 'Free & Easy', 'Cruises', 'MICE'],
+      options: ['Group Tours', 'Free & Easy'],
     },
   ],
   buttonText: 'Search Tours',
@@ -249,7 +262,6 @@ const aboutSection = {
 }
 
 const tourPlaceSection = {
-  title: 'Popular Tour Packages',
   subtitle: {
     pre: 'Discover our most loved destinations with',
     count: '200',
@@ -266,6 +278,7 @@ const tourPlaceSection = {
       id: 'tour-place-1',
       image: '/assets/img/home-1/tour/tour-8.jpg',
       badge: '10% Off',
+      productCode: '',
       priceLabel: 'From',
       price: '$2,888',
       title: '10D Switzerland Grand Tour with Glacier Express',
@@ -277,6 +290,7 @@ const tourPlaceSection = {
     {
       id: 'tour-place-2',
       image: '/assets/img/home-1/tour/tour-9.jpg',
+      productCode: '',
       priceLabel: 'From',
       price: '$1,688',
       title: '8D Japan Cherry Blossom Tour Tokyo to Osaka',
@@ -289,6 +303,7 @@ const tourPlaceSection = {
       id: 'tour-place-3',
       image: '/assets/img/home-1/tour/tour-10.jpg',
       badge: 'Early Bird',
+      productCode: '',
       priceLabel: 'From',
       price: '$1,288',
       title: '6D China Beijing & Shanghai Highlights Tour',
@@ -300,6 +315,7 @@ const tourPlaceSection = {
     {
       id: 'tour-place-4',
       image: '/assets/img/home-1/tour/tour-11.jpg',
+      productCode: '',
       priceLabel: 'From',
       price: '$988',
       title: '5D Korea Seoul & Jeju Island Discovery',
@@ -311,6 +327,7 @@ const tourPlaceSection = {
     {
       id: 'tour-place-5',
       image: '/assets/img/home-1/tour/tour-12.jpg',
+      productCode: '',
       priceLabel: 'Tours Price',
       price: '$49.00',
       title: 'Train on Nine Arches Bridge in',
@@ -324,6 +341,7 @@ const tourPlaceSection = {
       id: 'tour-place-6',
       image: '/assets/img/home-1/tour/tour-13.jpg',
       badge: '8% Off',
+      productCode: '',
       priceLabel: 'Tours Price',
       price: '$49.00',
       title: 'White buildings with blue',
@@ -336,6 +354,7 @@ const tourPlaceSection = {
     {
       id: 'tour-place-7',
       image: '/assets/img/home-1/tour/tour-14.jpg',
+      productCode: '',
       priceLabel: 'Tours Price',
       price: '$49.00',
       title: 'Man Sitting on Rocks next to',
@@ -349,6 +368,7 @@ const tourPlaceSection = {
       id: 'tour-place-8',
       image: '/assets/img/home-1/tour/tour-15.jpg',
       badge: '23% Off',
+      productCode: '',
       priceLabel: 'Tours Price',
       price: '$49.00',
       title: 'Aerial Photography of Cinque',
@@ -586,31 +606,66 @@ const testimonialSection = {
   slides: [
     {
       id: 'testimonial-1',
-      quote: 'Booking with this agency was the best decision for our Bali trip! from flights to accommodations!',
+      quote: 'Nam Ho Travel made our family vacation to Japan absolutely perfect! The attention to detail and personalized service exceeded our expectations.',
       clientImage: '/assets/img/home-1/testimonial/client.png',
-      name: 'Michael Thompson',
-      role: 'World traveler',
+      name: 'Sarah Johnson',
+      role: 'Japan Cherry Blossom Tour',
     },
     {
       id: 'testimonial-2',
-      quote: 'Booking with this agency was the best decision for our Bali trip! from flights to accommodations!',
+      quote: 'Professional, reliable, and knowledgeable. Our guide was fantastic and the itinerary was well-planned. Highly recommend Nam Ho Travel!',
       clientImage: '/assets/img/home-1/testimonial/client.png',
-      name: 'Michael Thompson',
-      role: 'World traveler',
+      name: 'Michael Chen',
+      role: 'Thailand Adventure Package',
     },
     {
       id: 'testimonial-3',
-      quote: 'Booking with this agency was the best decision for our Bali trip! from flights to accommodations!',
+      quote: 'Best travel agency experience! They took care of everything from start to finish. Will definitely book with them again.',
       clientImage: '/assets/img/home-1/testimonial/client.png',
-      name: 'Michael Thompson',
-      role: 'World traveler',
+      name: 'Emily Tan',
+      role: 'Korea Cultural Experience',
     },
     {
       id: 'testimonial-4',
-      quote: 'Booking with this agency was the best decision for our Bali trip! from flights to accommodations!',
+      quote: 'An amazing trip to Vietnam, all thanks to Nam Ho. The custom itinerary was perfect for our interests. Flawless execution.',
       clientImage: '/assets/img/home-1/testimonial/client.png',
-      name: 'Michael Thompson',
-      role: 'World traveler',
+      name: 'David Lee',
+      role: 'Vietnam Highlights',
+    },
+    {
+      id: 'testimonial-5',
+      quote: 'Great value and a very well-organized tour of Europe. The accommodations were excellent and the pace was just right.',
+      clientImage: '/assets/img/home-1/testimonial/client.png',
+      name: 'Jessica Wang',
+      role: 'European Wonders',
+    },
+    {
+      id: 'testimonial-6',
+      quote: 'Our cruise booking was handled so smoothly. The team was very responsive and found us a fantastic deal. Can\'t wait for the next one!',
+      clientImage: '/assets/img/home-1/testimonial/client.png',
+      name: 'Alex Tan',
+      role: 'Royal Caribbean Cruise',
+    },
+    {
+      id: 'testimonial-7',
+      quote: 'From flights to hotels to local tours in New Zealand, everything was seamlessly arranged. A truly stress-free holiday.',
+      clientImage: '/assets/img/home-1/testimonial/client.png',
+      name: 'Priya Sharma',
+      role: 'New Zealand Adventure',
+    },
+    {
+      id: 'testimonial-8',
+      quote: 'The free and easy package to Taiwan gave us the flexibility we wanted with the support we needed. Great recommendations from the team.',
+      clientImage: '/assets/img/home-1/testimonial/client.png',
+      name: 'Ben Chong',
+      role: 'Taiwan Free & Easy',
+    },
+    {
+      id: 'testimonial-9',
+      quote: 'A memorable journey through the historical sites of Turkey. The local guides were exceptional. Thank you, Nam Ho!',
+      clientImage: '/assets/img/home-1/testimonial/client.png',
+      name: 'Fatimah Binte Omar',
+      role: 'Turkish Delights',
     },
   ],
   gallery: [
@@ -826,8 +881,18 @@ const resolveContactForm = (
 ) => {
   const list = extractList(data)
   const options = list
-    .map((item) => pickString(item, ['name', 'title', 'label', 'sectorName', 'sectorTitle']))
+    .map((item) => {
+      if (typeof item.name === 'string') {
+        return item.name.trim()
+      }
+      if (isRecord(item.name) && typeof item.name.EN === 'string') {
+        return item.name.EN.trim()
+      }
+      return ''
+    })
     .filter((value) => value)
+
+  console.log('Select Destination options:', options)
 
   if (!options.length) {
     if (!fallbackEnabled) {
@@ -857,8 +922,15 @@ const resolveTourSection = (
   fallbackEnabled: boolean
 ) => {
   const list = extractList(data)
+  const emptySection = {
+    leftLarge: null,
+    leftStack: [],
+    rightLarge: null,
+    rightStack: [],
+  }
+
   if (!list.length) {
-    return fallbackEnabled ? fallback : fallback
+    return fallbackEnabled ? fallback : emptySection
   }
 
   const baseCards = [
@@ -870,28 +942,41 @@ const resolveTourSection = (
 
   const mappedCards = list.slice(0, baseCards.length).map((item, index) => {
     const base = baseCards[index]
-    const title = pickString(item, ['title', 'name', 'sectorName', 'label'])
-    const location = pickString(item, ['location', 'country', 'city', 'region'])
-    const image = pickString(item, ['image', 'imageUrl', 'picture', 'pic', 'cover', 'thumbnail', 'thumb'])
-    const count = pickString(item, ['count', 'total', 'totalTours', 'tourCount'])
-    const badge = count ? `${count}+ tours` : ''
+    const nameValue =
+      typeof item.name === 'string'
+        ? item.name.trim()
+        : isRecord(item.name) && typeof item.name.EN === 'string'
+          ? item.name.EN.trim()
+          : ''
+    const imageValue = typeof item.picture === 'string' ? item.picture.trim() : ''
+    const countValue =
+      typeof item.tourCount === 'number'
+        ? item.tourCount
+        : typeof item.tourCount === 'string'
+          ? item.tourCount.trim()
+          : ''
+    const badge = countValue ? `${countValue}+ tours` : ''
+    const parentName = typeof item.parentName === 'string' ? item.parentName.trim() : ''
+    const uri = typeof item.uri === 'string' ? item.uri.trim() : ''
+    const href = uri ? (uri.startsWith('/') ? uri : `/${uri}`) : ''
 
     return {
       ...base,
-      title: title || (fallbackEnabled ? base.title : ''),
-      location: location || (fallbackEnabled ? base.location : ''),
-      image: image || (fallbackEnabled ? base.image : ''),
+      title: nameValue || (fallbackEnabled ? base.title : ''),
+      location: parentName || (fallbackEnabled ? base.location : ''),
+      image: imageValue || (fallbackEnabled ? base.image : ''),
       badge: badge || (fallbackEnabled ? base.badge : ''),
+      href: href || (fallbackEnabled ? base.href : ''),
     }
   })
 
-  const cards = baseCards.map((base, index) => mappedCards[index] ?? (fallbackEnabled ? base : base))
+  const fillCard = (index: number) => mappedCards[index] ?? (fallbackEnabled ? baseCards[index] : null)
 
   return {
-    leftLarge: cards[0],
-    leftStack: [cards[1], cards[2]],
-    rightLarge: cards[3],
-    rightStack: [cards[4], cards[5]],
+    leftLarge: fillCard(0),
+    leftStack: [fillCard(1), fillCard(2)],
+    rightLarge: fillCard(3),
+    rightStack: [fillCard(4), fillCard(5)],
   }
 }
 
@@ -908,24 +993,40 @@ const resolveTourPlaceSection = (
   const maxItems = fallback.items.length
   const mappedItems = list.slice(0, maxItems).map((item, index) => {
     const base = fallback.items[index] ?? fallback.items[0]
-    const title = pickString(item, ['title', 'name', 'tourName'])
-    const location = pickString(item, ['location', 'country', 'city', 'destination'])
-    const image = pickString(item, ['image', 'imageUrl', 'picture', 'pic', 'cover', 'thumbnail', 'thumb'])
-    const price = formatPrice(item.price ?? item.priceFrom ?? item.amount ?? item.minPrice)
-    const duration = formatDuration(item.duration ?? item.days ?? item.dayRange)
-    const group = formatPeople(item.group ?? item.pax ?? item.persons ?? item.tourType)
-    const badge = pickString(item, ['badge', 'label', 'tag', 'promotion'])
+    const nameValue =
+      typeof item.name === 'string'
+        ? item.name.trim()
+        : isRecord(item.name) && typeof item.name.EN === 'string'
+          ? item.name.EN.trim()
+          : ''
+    const sectorValue = typeof item.sector === 'string' ? item.sector.trim() : ''
+    const priceValue = formatPrice(item.price)
+    const durationValue =
+      typeof item.duration === 'number'
+        ? formatDuration(item.duration)
+        : typeof item.duration === 'string'
+          ? item.duration.trim()
+          : ''
+    const imageValue = typeof item.cover === 'string' ? item.cover.trim() : ''
+    const badgeValue = typeof item.badge === 'string' ? item.badge.trim() : ''
+    const productCodeValue = typeof item.productCode === 'string' ? item.productCode.trim() : ''
+    const uriValue = typeof item.uri === 'string' ? item.uri.trim() : ''
+    const hrefValue = uriValue ? `/tour-details?tour=${encodeURIComponent(uriValue)}` : ''
 
     return {
       ...base,
-      image: image || (fallbackEnabled ? base.image : ''),
-      title: title || (fallbackEnabled ? base.title : ''),
-      titleLine2: fallbackEnabled ? base.titleLine2 : '',
-      location: location || (fallbackEnabled ? base.location : ''),
-      price: price || (fallbackEnabled ? base.price : ''),
-      duration: duration || (fallbackEnabled ? base.duration : ''),
-      group: group || (fallbackEnabled ? base.group : ''),
-      badge: badge || (fallbackEnabled ? base.badge : ''),
+      id: typeof item.id === 'number' ? item.id : base.id,
+      image: imageValue,
+      title: nameValue,
+      titleLine2: '',
+      location: sectorValue,
+      price: priceValue,
+      priceLabel: priceValue ? base.priceLabel : '',
+      duration: durationValue,
+      group: '',
+      badge: badgeValue,
+      productCode: productCodeValue,
+      href: hrefValue,
     }
   })
 
@@ -985,6 +1086,31 @@ export default function Home() {
   const resolvedContactForm = resolveContactForm(homeApiData.sectors, contactForm, shouldFallback)
   const resolvedTourSection = resolveTourSection(homeApiData.sectorLevels, tourSection, shouldFallback)
   const resolvedTourPlaceSection = resolveTourPlaceSection(homeApiData.hotTours, tourPlaceSection, shouldFallback)
+
+  const selectOptionsKey = resolvedContactForm.selects[0]?.options.join('|') ?? ''
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    const $ = (window as any).jQuery
+    if (!$ || !$.fn || !$.fn.niceSelect) {
+      return
+    }
+
+    const $select = $('.contact-from-section .single-select')
+    if (!$select.length) {
+      return
+    }
+
+    if ($select.next('.nice-select').length) {
+      $select.niceSelect('update')
+    } else {
+      $select.niceSelect()
+    }
+  }, [selectOptionsKey])
+
   return (
     <>
       <Header />
@@ -1001,7 +1127,7 @@ export default function Home() {
                 {resolvedHeroSlides.map((slide) => (
                   <div key={slide.id} className="swiper-slide">
                     <div className="hero-1">
-                      <div className="hero-bg bg-cover" style={{backgroundImage: `url(${slide.bgImage})`}}></div>
+                      <div className="hero-bg bg-cover" style={{ backgroundImage: `url(${slide.bgImage})` }}></div>
                       <div className="container-fluid">
                         <div className="row g-4 justify-content-between align-items-end">
                           <div className="col-xl-4 col-lg-6">
@@ -1098,69 +1224,119 @@ export default function Home() {
               <div className="row g-1">
                 <div className="col-xl-5">
                   <div className="row g-1">
-                    <div className={`col-xl-6 col-lg-6 ${resolvedTourSection.leftLarge.animationClass}`} data-wow-delay={resolvedTourSection.leftLarge.delay}>
-                      <div className="tour-card-item">
-                        <div className="tour-image">
-                          <img src={resolvedTourSection.leftLarge.image} alt="img" />
-                          <span>{resolvedTourSection.leftLarge.badge}</span>
-                          <div className="tour-content">
-                            <h3>
-                              <a href={resolvedTourSection.leftLarge.href}>{resolvedTourSection.leftLarge.title}</a>
-                            </h3>
-                            <p>{resolvedTourSection.leftLarge.location}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="col-xl-6 col-lg-6">
-                      {resolvedTourSection.leftStack.map((card) => (
-                        <div key={card.id} className={`tour-card-item ${card.wrapperClass ?? ''} ${card.animationClass}`.trim()} data-wow-delay={card.delay}>
-                          <div className={`tour-image ${card.imageClass ?? ''}`.trim()}>
-                            <img src={card.image} alt="img" />
-                            <span>{card.badge}</span>
+                    {resolvedTourSection.leftLarge ? (
+                      <div
+                        className={`col-xl-6 col-lg-6 ${resolvedTourSection.leftLarge.animationClass}`}
+                        data-wow-delay={resolvedTourSection.leftLarge.delay}
+                      >
+                        <div className="tour-card-item">
+                          <div className="tour-image">
+                            {resolvedTourSection.leftLarge.image ? (
+                              <img src={resolvedTourSection.leftLarge.image} alt="img" />
+                            ) : null}
+                            {resolvedTourSection.leftLarge.badge ? (
+                              <span>{resolvedTourSection.leftLarge.badge}</span>
+                            ) : null}
                             <div className="tour-content">
-                              <h3>
-                                <a href={card.href}>{card.title}</a>
-                              </h3>
-                              <p>{card.location}</p>
+                              {resolvedTourSection.leftLarge.title ? (
+                                <h3>
+                                  {resolvedTourSection.leftLarge.href ? (
+                                    <a href={resolvedTourSection.leftLarge.href}>{resolvedTourSection.leftLarge.title}</a>
+                                  ) : (
+                                    <span>{resolvedTourSection.leftLarge.title}</span>
+                                  )}
+                                </h3>
+                              ) : null}
+                              {resolvedTourSection.leftLarge.location ? (
+                                <p>{resolvedTourSection.leftLarge.location}</p>
+                              ) : null}
                             </div>
                           </div>
                         </div>
-                      ))}
+                      </div>
+                    ) : null}
+                    <div className="col-xl-6 col-lg-6">
+                      {resolvedTourSection.leftStack.map((card) =>
+                        card ? (
+                          <div key={card.id} className={`tour-card-item ${card.wrapperClass ?? ''} ${card.animationClass}`.trim()} data-wow-delay={card.delay}>
+                            <div className={`tour-image ${card.imageClass ?? ''}`.trim()}>
+                              {card.image ? <img src={card.image} alt="img" /> : null}
+                              {card.badge ? <span>{card.badge}</span> : null}
+                              <div className="tour-content">
+                                {card.title ? (
+                                  <h3>
+                                    {card.href ? (
+                                      <a href={card.href}>{card.title}</a>
+                                    ) : (
+                                      <span>{card.title}</span>
+                                    )}
+                                  </h3>
+                                ) : null}
+                                {card.location ? <p>{card.location}</p> : null}
+                              </div>
+                            </div>
+                          </div>
+                        ) : null
+                      )}
                     </div>
                   </div>
                 </div>
                 <div className="col-xl-7">
                   <div className="row g-1">
-                    <div className={`col-xl-8 col-lg-6 ${resolvedTourSection.rightLarge.animationClass}`} data-wow-delay={resolvedTourSection.rightLarge.delay}>
-                      <div className="tour-card-item">
-                        <div className={`tour-image ${resolvedTourSection.rightLarge.imageClass ?? ''}`.trim()}>
-                          <img src={resolvedTourSection.rightLarge.image} alt="img" />
-                          <span>{resolvedTourSection.rightLarge.badge}</span>
-                          <div className="tour-content">
-                            <h3>
-                              <a href={resolvedTourSection.rightLarge.href}>{resolvedTourSection.rightLarge.title}</a>
-                            </h3>
-                            <p>{resolvedTourSection.rightLarge.location}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="col-xl-4 col-lg-6">
-                      {resolvedTourSection.rightStack.map((card) => (
-                        <div key={card.id} className={`tour-card-item ${card.wrapperClass ?? ''} ${card.animationClass}`.trim()} data-wow-delay={card.delay}>
-                          <div className={`tour-image ${card.imageClass ?? ''}`.trim()}>
-                            <img src={card.image} alt="img" />
-                            <span>{card.badge}</span>
-                            <div className={`tour-content ${card.contentClass ?? ''}`.trim()}>
-                              <h3>
-                                <a href={card.href}>{card.title}</a>
-                              </h3>
-                              <p>{card.location}</p>
+                    {resolvedTourSection.rightLarge ? (
+                      <div
+                        className={`col-xl-8 col-lg-6 ${resolvedTourSection.rightLarge.animationClass}`}
+                        data-wow-delay={resolvedTourSection.rightLarge.delay}
+                      >
+                        <div className="tour-card-item">
+                          <div className={`tour-image ${resolvedTourSection.rightLarge.imageClass ?? ''}`.trim()}>
+                            {resolvedTourSection.rightLarge.image ? (
+                              <img src={resolvedTourSection.rightLarge.image} alt="img" />
+                            ) : null}
+                            {resolvedTourSection.rightLarge.badge ? (
+                              <span>{resolvedTourSection.rightLarge.badge}</span>
+                            ) : null}
+                            <div className="tour-content">
+                              {resolvedTourSection.rightLarge.title ? (
+                                <h3>
+                                  {resolvedTourSection.rightLarge.href ? (
+                                    <a href={resolvedTourSection.rightLarge.href}>{resolvedTourSection.rightLarge.title}</a>
+                                  ) : (
+                                    <span>{resolvedTourSection.rightLarge.title}</span>
+                                  )}
+                                </h3>
+                              ) : null}
+                              {resolvedTourSection.rightLarge.location ? (
+                                <p>{resolvedTourSection.rightLarge.location}</p>
+                              ) : null}
                             </div>
                           </div>
                         </div>
-                      ))}
+                      </div>
+                    ) : null}
+                    <div className="col-xl-4 col-lg-6">
+                      {resolvedTourSection.rightStack.map((card) =>
+                        card ? (
+                          <div key={card.id} className={`tour-card-item ${card.wrapperClass ?? ''} ${card.animationClass}`.trim()} data-wow-delay={card.delay}>
+                            <div className={`tour-image ${card.imageClass ?? ''}`.trim()}>
+                              {card.image ? <img src={card.image} alt="img" /> : null}
+                              {card.badge ? <span>{card.badge}</span> : null}
+                              <div className={`tour-content ${card.contentClass ?? ''}`.trim()}>
+                                {card.title ? (
+                                  <h3>
+                                    {card.href ? (
+                                      <a href={card.href}>{card.title}</a>
+                                    ) : (
+                                      <span>{card.title}</span>
+                                    )}
+                                  </h3>
+                                ) : null}
+                                {card.location ? <p>{card.location}</p> : null}
+                              </div>
+                            </div>
+                          </div>
+                        ) : null
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1234,7 +1410,7 @@ export default function Home() {
           <section className="tour-place-section section-padding fix">
             <div className="container custom-container-2">
               <div className="section-title text-center">
-                <h2 className="text-anim">{resolvedTourPlaceSection.title}</h2>
+                <h2 className="text-anim">Popular Tour Packages</h2>
                 <p className="wow fadeInUp" data-wow-delay=".5s">
                   {resolvedTourPlaceSection.subtitle.pre} <span className="count">{resolvedTourPlaceSection.subtitle.count}</span>
                   <b>{resolvedTourPlaceSection.subtitle.suffix}</b> {resolvedTourPlaceSection.subtitle.post}
@@ -1244,8 +1420,8 @@ export default function Home() {
                 {resolvedTourPlaceSection.items.map((item) => (
                   <div key={item.id} className="col-xl-3 col-lg-6 col-md-6 wow fadeInUp" data-wow-delay={item.delay}>
                     <div className="tour-place-item">
-                      <div className="tour-place-image">
-                        <img src={item.image} alt="img" />
+                      <div className={`tour-place-image${item.image ? '' : ' is-empty'}`}>
+                        {item.image ? <img src={item.image} alt="img" /> : null}
                         {item.badge ? <span>{item.badge}</span> : null}
                         <div className="icon">
                           <i className="fa-regular fa-heart"></i>
@@ -1253,43 +1429,47 @@ export default function Home() {
                       </div>
                       <div className="tour-place-content">
                         <div className="rating-item">
-                          <div className="star">
-                            <span>{resolvedTourPlaceSection.rating.label}</span>
-                            {Array.from({length: resolvedTourPlaceSection.rating.stars}, (_, index) => (
-                              <i key={`${item.id}-star-${index}`} className="fa-solid fa-star"></i>
-                            ))}
-                            {resolvedTourPlaceSection.rating.halfStar ? (
-                              <i className="fa-sharp fa-solid fa-star-half-stroke"></i>
-                            ) : null}
-                          </div>
-                          <h5>
-                            <span>{item.priceLabel}</span>
-                            {item.price}
-                          </h5>
+                          {item.productCode ? <div className="product-code">{item.productCode}</div> : null}
+                          {item.price ? (
+                            <h5>
+                              <span>{item.priceLabel}</span>
+                              {item.price}
+                            </h5>
+                          ) : null}
                         </div>
-                        <h3>
-                          <a href="/tour-details">
-                            {item.title}
+                        {item.title ? (
+                          <h3>
+                            {item.href ? (
+                              <a href={item.href}>{item.title}</a>
+                            ) : (
+                              <span>{item.title}</span>
+                            )}
                             {item.titleLine2 ? (
                               <>
                                 <br /> {item.titleLine2}
                               </>
                             ) : null}
-                          </a>
-                        </h3>
+                          </h3>
+                        ) : null}
                         <ul className="tour-list">
-                          <li>
-                            <i className="fa-regular fa-location-dot"></i>
-                            {item.location}
-                          </li>
-                          <li>
-                            <i className="fa-regular fa-clock"></i>
-                            {item.duration}
-                          </li>
-                          <li>
-                            <i className="fa-regular fa-users"></i>
-                            {item.group}
-                          </li>
+                          {item.location ? (
+                            <li>
+                              <i className="fa-regular fa-location-dot"></i>
+                              {item.location}
+                            </li>
+                          ) : null}
+                          {item.duration ? (
+                            <li>
+                              <i className="fa-regular fa-clock"></i>
+                              {item.duration}
+                            </li>
+                          ) : null}
+                          {item.group ? (
+                            <li>
+                              <i className="fa-regular fa-users"></i>
+                              {item.group}
+                            </li>
+                          ) : null}
                         </ul>
                       </div>
                     </div>
@@ -1447,7 +1627,7 @@ export default function Home() {
           </section>
 
           {/* Counter Section Start */}
-          <section className="counter-section section-padding fix bg-cover" style={{backgroundImage: `url(${counterSection.backgroundImage})`}}>
+          <section className="counter-section section-padding fix bg-cover" style={{ backgroundImage: `url(${counterSection.backgroundImage})` }}>
             <div className="container">
               <div className="counter-wrapper">
                 <div className="section-title text-center mb-0">
@@ -1501,7 +1681,7 @@ export default function Home() {
           {/* Testimonial Section Start */}
           <section
             className="testimonial-section section-padding fix bg-cover"
-            style={{backgroundImage: `url(${testimonialSection.backgroundImage})`}}
+            style={{ backgroundImage: `url(${testimonialSection.backgroundImage})` }}
           >
             <div className="container">
               <div className="section-title text-center">

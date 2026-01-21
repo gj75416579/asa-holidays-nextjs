@@ -679,8 +679,26 @@
                 " - $ " + $(".price-slider-range").slider("values", 1));
     }
 
-
+    //>> GSAP Text Animation Safe Init <<//
     if ($(".text-anim").length) {
+        $(".text-anim").css({ opacity: 1, visibility: "visible" });
+    }
+
+    if (typeof gsap !== "undefined") {
+        let gsapPlugins = [];
+        if (typeof ScrollTrigger !== "undefined") gsapPlugins.push(ScrollTrigger);
+        if (typeof ScrollSmoother !== "undefined") gsapPlugins.push(ScrollSmoother);
+        if (typeof SplitText !== "undefined") gsapPlugins.push(SplitText);
+
+        if (gsapPlugins.length) {
+            gsap.registerPlugin(...gsapPlugins);
+            gsap.config({
+                nullTargetWarn: false,
+            });
+        }
+    }
+
+    if ($(".text-anim").length && typeof gsap !== "undefined" && typeof SplitText !== "undefined" && typeof ScrollTrigger !== "undefined") {
         let staggerAmount = 0.03,
             translateXValue = 20,
             delayValue = 0.1,
@@ -712,13 +730,7 @@
  /* ================================
        Smooth Scroller And Title Animation Js Start
     ================================ */
-    if ($('#smooth-wrapper').length && $('#smooth-content').length) {
-        gsap.registerPlugin(ScrollTrigger, ScrollSmoother, SplitText);
-
-        gsap.config({
-            nullTargetWarn: false,
-        });
-
+    if ($('#smooth-wrapper').length && $('#smooth-content').length && typeof gsap !== "undefined" && typeof ScrollSmoother !== "undefined") {
         let smoother = ScrollSmoother.create({
             wrapper: "#smooth-wrapper",
             content: "#smooth-content",

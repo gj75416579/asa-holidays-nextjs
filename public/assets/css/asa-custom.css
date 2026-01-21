@@ -80,6 +80,16 @@
 .tour-card-item .tour-image span,
 .tour-place-item .tour-place-image span {
   background-color: var(--theme);
+  width: 60px;
+  height: 60px;
+  padding: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.1;
 }
 
 /* Counter Section */
@@ -113,6 +123,13 @@
   background-color: var(--bg-2);
 }
 
+/* Nice Select Dropdown */
+.nice-select .list {
+  max-height: 260px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Price Slider */
 .ui-slider .ui-slider-range {
   background-color: var(--theme);
@@ -137,6 +154,13 @@
 /* Tour List Items Icon */
 .tour-list li i {
   color: var(--theme);
+}
+
+/* Tour Place Product Code */
+.tour-place-item .tour-place-content .rating-item .product-code {
+  color: var(--theme);
+  font-weight: 600;
+  font-size: 14px;
 }
 
 /* Check List Icon */
@@ -165,4 +189,12 @@
 
 .cursor-outer.cursor-hover {
   border-color: var(--theme);
+}
+
+/* Tour place image placeholder */
+.tour-place-item .tour-place-image.is-empty {
+  aspect-ratio: 4 / 3;
+  min-height: 220px;
+  background: linear-gradient(135deg, #eef3f8 0%, #dfe7f0 100%);
+  border: 1px solid var(--border);
 }
