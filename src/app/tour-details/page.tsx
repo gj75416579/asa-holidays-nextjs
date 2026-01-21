@@ -1,10 +1,278 @@
-'use client';
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 
 import Header from '@/templete/Header'
 import Footer from '@/templete/Footer'
+import ApiMaintenanceNotice from '@/templete/ApiMaintenanceNotice'
 
+type TourDetail = {
+  id: number | null
+  title: string
+  location: string
+  duration: string
+  overviewHtml: string
+  highlightsHtml: string
+  itineraryHtml: string
+  inclusionsHtml: string
+  exclusionsHtml: string
+  mapImage: string
+  productType: number
+}
 
+type DepartureItem = {
+  id: number | string
+  startDate: string
+  endDate: string
+  price: string
+  seatsLeft: string
+}
+
+const tourDetailFallback = {
+  title: 'Relinking Beach in Nusa panada island, Bali, Indonesia',
+  location: 'Bali, Indonesia',
+  duration: '1 - 3 days',
+}
+
+const apiMode = process.env.NEXT_PUBLIC_API_MODE ?? 'dev'
+const shouldFallback = apiMode !== 'prod'
+
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null
+
+const getLocalizedText = (value: unknown) => {
+  if (typeof value === 'string') {
+    return value.trim()
+  }
+  if (isRecord(value) && typeof value.EN === 'string') {
+    return value.EN.trim()
+  }
+  return ''
+}
+
+const formatDuration = (value: unknown) => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return `${value} days`
+  }
+  if (typeof value === 'string') {
+    return value.trim()
+  }
+  return ''
+}
+
+const formatPrice = (value: unknown) => {
+  const numberValue = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(numberValue)) {
+    return ''
+  }
+  return `$${numberValue.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
+}
+
+const parseJsonResponse = async (res: Response) => {
+  const text = await res.text()
+  if (!res.ok) {
+    throw new Error(text || `HTTP ${res.status}`)
+  }
+  return text ? JSON.parse(text) : {}
+}
+
+const resolveSeoId = async (uri: string) => {
+  const candidates = uri.includes('/') ? [uri] : [`tour/${uri}`, uri]
+  for (const candidate of candidates) {
+    try {
+      const seoRes = await fetch(`/api/system/seo/${encodeURI(candidate)}`)
+      const seoData = await parseJsonResponse(seoRes)
+      const refId = isRecord(seoData) && isRecord(seoData.data) ? seoData.data.refId : null
+      if (typeof refId === 'number') {
+        return refId
+      }
+    } catch (error) {
+      console.warn('SEO lookup failed:', candidate, error)
+    }
+  }
+  return null
+}
+
+const resolveTourDetail = (data: unknown, fallback: typeof tourDetailFallback, fallbackEnabled: boolean): TourDetail => {
+  const emptyDetail: TourDetail = {
+    id: null,
+    title: fallbackEnabled ? fallback.title : '',
+    location: fallbackEnabled ? fallback.location : '',
+    duration: fallbackEnabled ? fallback.duration : '',
+    overviewHtml: '',
+    highlightsHtml: '',
+    itineraryHtml: '',
+    inclusionsHtml: '',
+    exclusionsHtml: '',
+    mapImage: '',
+    productType: 1,
+  }
+
+  if (!isRecord(data) || !isRecord(data.data)) {
+    return emptyDetail
+  }
+
+  const record = data.data
+  const titleValue = getLocalizedText(record.name)
+  const locationValue = typeof record.sector === 'string' ? record.sector.trim() : ''
+  const durationValue = formatDuration(record.duration)
+
+  return {
+    id: typeof record.id === 'number' ? record.id : null,
+    title: titleValue || (fallbackEnabled ? fallback.title : ''),
+    location: locationValue || (fallbackEnabled ? fallback.location : ''),
+    duration: durationValue || (fallbackEnabled ? fallback.duration : ''),
+    overviewHtml: getLocalizedText(record.shortDescription),
+    highlightsHtml: getLocalizedText(record.highlights),
+    itineraryHtml: getLocalizedText(record.writeUps),
+    inclusionsHtml: getLocalizedText(record.inclusions),
+    exclusionsHtml: getLocalizedText(record.exclusions),
+    mapImage: typeof record.sectorMap === 'string' ? record.sectorMap.trim() : '',
+    productType: typeof record.productType === 'number' ? record.productType : 1,
+  }
+}
+
+const pickDeparturePrice = (record: Record<string, unknown>) => {
+  const candidates = [record.twnFare, record.sglFare, record.grTwnFare, record.grSglFare, record.misc]
+  for (const candidate of candidates) {
+    const formatted = formatPrice(candidate)
+    if (formatted) {
+      return formatted
+    }
+  }
+  return ''
+}
+
+const resolveDepartures = (data: unknown): DepartureItem[] => {
+  if (!isRecord(data) || !isRecord(data.data) || !Array.isArray(data.data.pageData)) {
+    return []
+  }
+
+  return data.data.pageData
+    .map((item) => {
+      if (!isRecord(item)) {
+        return null
+      }
+
+      const startDate = typeof item.startDate === 'string' ? item.startDate.trim() : ''
+      const endDate = typeof item.endDate === 'string' ? item.endDate.trim() : ''
+      const seatsLeft =
+        typeof item.capacity === 'number' && typeof item.sold === 'number'
+          ? String(Math.max(item.capacity - item.sold, 0))
+          : ''
+      const price = pickDeparturePrice(item)
+
+      return {
+        id: typeof item.id === 'number' ? item.id : startDate || endDate || 'departure',
+        startDate,
+        endDate,
+        price,
+        seatsLeft,
+      }
+    })
+    .filter((item): item is DepartureItem => Boolean(item))
+}
 export default function TourDetails() {
+  const searchParams = useSearchParams()
+  const idParam = searchParams.get('id')
+  const uriParam = searchParams.get('uri')
+
+  const [detailData, setDetailData] = useState<unknown | null>(null)
+  const [departuresData, setDeparturesData] = useState<unknown | null>(null)
+  const [detailError, setDetailError] = useState(false)
+  const [departuresError, setDeparturesError] = useState(false)
+
+  useEffect(() => {
+    let isActive = true
+
+    const fetchDetail = async () => {
+      try {
+        if (isActive) {
+          setDetailError(false)
+        }
+        let detailId: number | null = null
+        if (idParam) {
+          const parsedId = Number(idParam)
+          detailId = Number.isFinite(parsedId) ? parsedId : null
+        }
+
+        if (!detailId && uriParam) {
+          detailId = await resolveSeoId(uriParam)
+        }
+
+        if (!detailId) {
+          if (isActive) {
+            setDetailError(true)
+          }
+          return
+        }
+
+        const detailRes = await fetch(`/api/tour/detail?id=${detailId}`)
+        const detailJson = await parseJsonResponse(detailRes)
+        if (isActive) {
+          setDetailData(detailJson)
+        }
+      } catch (error) {
+        console.error('Tour detail fetch error:', error)
+        if (isActive) {
+          setDetailError(true)
+        }
+      }
+    }
+
+    fetchDetail()
+
+    return () => {
+      isActive = false
+    }
+  }, [idParam, uriParam])
+
+  const resolvedDetail = resolveTourDetail(detailData, tourDetailFallback, shouldFallback)
+  const departures = resolveDepartures(departuresData)
+  const isGroupTour = resolvedDetail.productType === 1
+  const showApiNotice = detailError || departuresError
+
+  useEffect(() => {
+    let isActive = true
+
+    if (!resolvedDetail.id || !isGroupTour) {
+      setDeparturesData(null)
+      return
+    }
+
+    const fetchDepartures = async () => {
+      try {
+        if (isActive) {
+          setDeparturesError(false)
+        }
+        const res = await fetch('/api/tour/departures', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: resolvedDetail.id,
+            pageSize: 0,
+            currentPage: 0,
+          }),
+        })
+        const data = await parseJsonResponse(res)
+        if (isActive) {
+          setDeparturesData(data)
+        }
+      } catch (error) {
+        console.error('Tour departures fetch error:', error)
+        if (isActive) {
+          setDeparturesError(true)
+        }
+      }
+    }
+
+    fetchDepartures()
+
+    return () => {
+      isActive = false
+    }
+  }, [resolvedDetail.id, isGroupTour])
+
   return (
     <>
       <Header />
@@ -26,28 +294,27 @@ export default function TourDetails() {
                   </li>
                 </ul>
                 <div className="breadcrumb-sub-title">
-                  <h1 className="wow fadeInUp" data-wow-delay=".3s">
-                    Relinking Beach in Nusa panada <br />
-                    island, Bali, Indonesia
-                  </h1>
+                  <h1 className="wow fadeInUp" data-wow-delay=".3s">{resolvedDetail.title}</h1>
                 </div>
                 <ul className="list">
-                  <li>
-                    <i className="fa-regular fa-location-dot"></i>
-                    Bali, Indonesia
-                  </li>
-                  <li>
-                    <i className="fa-regular fa-clock"></i>
-                    1 - 3 days
-                  </li>
-                  <li>
-                    <i className="fa-regular fa-users"></i>
-                    3 persons
-                  </li>
-                </ul>
+  {resolvedDetail.location ? (
+    <li>
+      <i className="fa-regular fa-location-dot"></i>
+      {resolvedDetail.location}
+    </li>
+  ) : null}
+  {resolvedDetail.duration ? (
+    <li>
+      <i className="fa-regular fa-clock"></i>
+      {resolvedDetail.duration}
+    </li>
+  ) : null}
+</ul>
               </div>
             </div>
           </div>
+
+          <ApiMaintenanceNotice visible={showApiNotice} />
 
           {/* tour-details Section Start */}
           <section className="tour-details-section section-padding pt-0 fix">
@@ -90,180 +357,204 @@ export default function TourDetails() {
                     <div className="col-lg-8 col-12">
                       <div className="tour-left-content">
                         <h3>Tours Overview</h3>
-                        <p className="mt-3 mb-3">
-                          Bali, often called &quot;The Island of Gods&quot;, is one of the world&apos;s most captivating travel destinations. Located in Indonesia, this tropical paradise is famous for its pristine beaches, lush rice terraces, vibrant nightlife, and deeply spiritual culture. Whether you&apos;re seeking adventure, relaxation, or cultural immersion, Bali offers an experience like no other.
-                        </p>
-                        <p className="mb-5">
-                          Visitors can unwind on stunning beaches like Kuta, Seminyak, and Nusa Dua, or escape to bud for peaceful retreat surrounded by rice fields, art galleries, and yoga centers. Adventure seekers can explore volcano hikes at Mount Batur, diving in crystal-clear waters, or surfing world-class waves. Bali is also rich in tradition, with thousands of temples, colorful ceremonies, and warm hospitality from locals.
-                        </p>
+{resolvedDetail.overviewHtml ? (
+  <div className="tour-richtext mt-3 mb-5" dangerouslySetInnerHTML={{ __html: resolvedDetail.overviewHtml }} />
+) : shouldFallback ? (
+  <>
+    <p className="mt-3 mb-3">
+      Bali, often called &quot;The Island of Gods&quot;, is one of the world&apos;s most captivating travel destinations. Located in Indonesia, this tropical paradise is famous for its pristine beaches, lush rice terraces, vibrant nightlife, and deeply spiritual culture. Whether you&apos;re seeking adventure, relaxation, or cultural immersion, Bali offers an experience like no other.
+    </p>
+    <p className="mb-5">
+      Visitors can unwind on stunning beaches like Kuta, Seminyak, and Nusa Dua, or escape to bud for peaceful retreat surrounded by rice fields, art galleries, and yoga centers. Adventure seekers can explore volcano hikes at Mount Batur, diving in crystal-clear waters, or surfing world-class waves. Bali is also rich in tradition, with thousands of temples, colorful ceremonies, and warm hospitality from locals.
+    </p>
+  </>
+) : null}
                         <div className="row g-4 mb-5">
                           <div className="col-lg-6">
                             <div className="list-item">
                               <h3>Included and Excluded</h3>
-                              <ul className="list">
-                                <li>
-                                  <i className="fa-solid fa-check"></i>
-                                  Pick and Drop Services
-                                </li>
-                                <li>
-                                  <i className="fa-solid fa-check"></i>
-                                  1 Meal Per Day
-                                </li>
-                                <li>
-                                  <i className="fa-solid fa-check"></i>
-                                  Cruise Dinner &amp; Music Event
-                                </li>
-                                <li>
-                                  <i className="fa-solid fa-check"></i>
-                                  Visit 7 Best Places in the City
-                                </li>
-                                <li>
-                                  <i className="fa-solid fa-check"></i>
-                                  Bottled Water on Buses
-                                </li>
-                                <li>
-                                  <i className="fa-solid fa-check"></i>
-                                  Transportation Luxury Tour Bus
-                                </li>
-                              </ul>
+{resolvedDetail.inclusionsHtml ? (
+  <div className="tour-richtext" dangerouslySetInnerHTML={{ __html: resolvedDetail.inclusionsHtml }} />
+) : shouldFallback ? (
+  <ul className="list">
+    <li>
+      <i className="fa-solid fa-check"></i>
+      Pick and Drop Services
+    </li>
+    <li>
+      <i className="fa-solid fa-check"></i>
+      1 Meal Per Day
+    </li>
+    <li>
+      <i className="fa-solid fa-check"></i>
+      Cruise Dinner &amp; Music Event
+    </li>
+    <li>
+      <i className="fa-solid fa-check"></i>
+      Visit 7 Best Places in the City
+    </li>
+    <li>
+      <i className="fa-solid fa-check"></i>
+      Bottled Water on Buses
+    </li>
+    <li>
+      <i className="fa-solid fa-check"></i>
+      Transportation Luxury Tour Bus
+    </li>
+  </ul>
+) : null}
                             </div>
                           </div>
                           <div className="col-lg-6">
                             <div className="list-item">
                               <h3>Excluded</h3>
-                              <ul className="list">
-                                <li>
-                                  <i className="fa-solid fa-xmark"></i>
-                                  Gratuities
-                                </li>
-                                <li>
-                                  <i className="fa-solid fa-xmark"></i>
-                                  Hotel pickup and drop-off
-                                </li>
-                                <li>
-                                  <i className="fa-solid fa-xmark"></i>
-                                  Lunch, Food &amp; Drinks
-                                </li>
-                                <li>
-                                  <i className="fa-solid fa-xmark"></i>
-                                  Optional upgrade to a glass
-                                </li>
-                                <li>
-                                  <i className="fa-solid fa-xmark"></i>
-                                  Additional Services
-                                </li>
-                                <li>
-                                  <i className="fa-solid fa-xmark"></i>
-                                  Insurance
-                                </li>
-                              </ul>
+{resolvedDetail.exclusionsHtml ? (
+  <div className="tour-richtext" dangerouslySetInnerHTML={{ __html: resolvedDetail.exclusionsHtml }} />
+) : shouldFallback ? (
+  <ul className="list">
+    <li>
+      <i className="fa-solid fa-xmark"></i>
+      Gratuities
+    </li>
+    <li>
+      <i className="fa-solid fa-xmark"></i>
+      Hotel pickup and drop-off
+    </li>
+    <li>
+      <i className="fa-solid fa-xmark"></i>
+      Lunch, Food &amp; Drinks
+    </li>
+    <li>
+      <i className="fa-solid fa-xmark"></i>
+      Optional upgrade to a glass
+    </li>
+    <li>
+      <i className="fa-solid fa-xmark"></i>
+      Additional Services
+    </li>
+    <li>
+      <i className="fa-solid fa-xmark"></i>
+      Insurance
+    </li>
+  </ul>
+) : null}
                             </div>
                           </div>
                         </div>
                         <h3>Top Highlights</h3>
-                        <p className="mt-3">
-                          Bali is more than just a tropical destination鈥攊t&apos;s a paradise filled with unforgettable experiences. from its sacred temples perched on dramatic cliffs to golden beaches that stretch for miles, every corner of the island offers something unique.
-                        </p>
-                        <ul className="list-2">
-                          <li>
-                            <i className="fa-solid fa-check"></i>
-                            Explore iconic sites like Tanah Lot, Uluwatu, and Besakih Temple.
-                          </li>
-                          <li>
-                            <i className="fa-solid fa-check"></i>
-                            Relax on Kuta, Seminyak, Nusa Dua, and Jimbaran Bay.
-                          </li>
-                          <li>
-                            <i className="fa-solid fa-check"></i>
-                            Discover rice terraces, art markets, yoga retreats, and monkey forests.
-                          </li>
-                          <li>
-                            <i className="fa-solid fa-check"></i>
-                            Hike an active volcano for breathtaking sunrise views.
-                          </li>
-                          <li>
-                            <i className="fa-solid fa-check"></i>
-                            Experience beach clubs, rooftop bars, and live music in Seminyak and Canggu.
-                          </li>
-                          <li>
-                            <i className="fa-solid fa-check"></i>
-                            Visit Tegenungan, Gitgit, and Sekumpul waterfalls for adventure and serenity.
-                          </li>
-                        </ul>
+{resolvedDetail.highlightsHtml ? (
+  <div className="tour-richtext mt-3" dangerouslySetInnerHTML={{ __html: resolvedDetail.highlightsHtml }} />
+) : shouldFallback ? (
+  <>
+    <p className="mt-3">
+      Bali is more than just a tropical destination¨¦?£¤?¡±?t&apos;s a paradise filled with unforgettable experiences. from its sacred temples perched on dramatic cliffs to golden beaches that stretch for miles, every corner of the island offers something unique.
+    </p>
+    <ul className="list-2">
+      <li>
+        <i className="fa-solid fa-check"></i>
+        Explore iconic sites like Tanah Lot, Uluwatu, and Besakih Temple.
+      </li>
+      <li>
+        <i className="fa-solid fa-check"></i>
+        Relax on Kuta, Seminyak, Nusa Dua, and Jimbaran Bay.
+      </li>
+      <li>
+        <i className="fa-solid fa-check"></i>
+        Discover rice terraces, art markets, yoga retreats, and monkey forests.
+      </li>
+      <li>
+        <i className="fa-solid fa-check"></i>
+        Hike an active volcano for breathtaking sunrise views.
+      </li>
+      <li>
+        <i className="fa-solid fa-check"></i>
+        Experience beach clubs, rooftop bars, and live music in Seminyak and Canggu.
+      </li>
+      <li>
+        <i className="fa-solid fa-check"></i>
+        Visit Tegenungan, Gitgit, and Sekumpul waterfalls for adventure and serenity.
+      </li>
+    </ul>
+  </>
+) : null}
                         <h3>Itinerary</h3>
-                        <div className="accordion-two" id="faq-accordion-two">
-                          <div className="accordion-item">
-                            <h5 className="accordion-header">
-                              <button className="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwoOne" aria-expanded="false" aria-controls="collapseTwoOne">
-                                Day 1 - Arrive at campground
-                              </button>
-                            </h5>
-                            <div id="collapseTwoOne" className="accordion-collapse collapse" data-bs-parent="#faq-accordion-two">
-                              <div className="accordion-body">
-                                <p>
-                                  The early start ensures you can fully immerse yourself in the tranquility of nature before the world fully awakens. As the morning light filters through the trees, you&apos;ll experience the crisp, fresh air and the peaceful sounds of the forest. The trail ahead offers both a physical challenge promise of breathtaking.
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="accordion-item">
-                            <h5 className="accordion-header">
-                              <button className="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwoTwo" aria-expanded="false" aria-controls="collapseTwoTwo">
-                                Day 2 - Wake up early and embark on a day hike
-                              </button>
-                            </h5>
-                            <div id="collapseTwoTwo" className="accordion-collapse collapse" data-bs-parent="#faq-accordion-two">
-                              <div className="accordion-body">
-                                <p>
-                                  The early start ensures you can fully immerse yourself in the tranquility of nature before the world fully awakens. As the morning light filters through the trees, you&apos;ll experience the crisp, fresh air and the peaceful sounds of the forest. The trail ahead offers both a physical challenge promise of breathtaking.
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="accordion-item">
-                            <h5 className="accordion-header">
-                              <button className="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwoThree" aria-expanded="false" aria-controls="collapseTwoThree">
-                                Day 3 - Join a guided ranger-led nature walk
-                              </button>
-                            </h5>
-                            <div id="collapseTwoThree" className="accordion-collapse collapse" data-bs-parent="#faq-accordion-two">
-                              <div className="accordion-body">
-                                <p>
-                                  The early start ensures you can fully immerse yourself in the tranquility of nature before the world fully awakens. As the morning light filters through the trees, you&apos;ll experience the crisp, fresh air and the peaceful sounds of the forest. The trail ahead offers both a physical challenge promise of breathtaking.
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="accordion-item">
-                            <h5 className="accordion-header">
-                              <button className="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwoFour" aria-expanded="false" aria-controls="collapseTwoFour">
-                                Day 4 - Take a break from hiking
-                              </button>
-                            </h5>
-                            <div id="collapseTwoFour" className="accordion-collapse collapse" data-bs-parent="#faq-accordion-two">
-                              <div className="accordion-body">
-                                <p>
-                                  The early start ensures you can fully immerse yourself in the tranquility of nature before the world fully awakens. As the morning light filters through the trees, you&apos;ll experience the crisp, fresh air and the peaceful sounds of the forest. The trail ahead offers both a physical challenge promise of breathtaking.
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="accordion-item">
-                            <h5 className="accordion-header">
-                              <button className="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwoFive" aria-expanded="false" aria-controls="collapseTwoFive">
-                                Day 5 - Pack a lunch and embark on a longer hike
-                              </button>
-                            </h5>
-                            <div id="collapseTwoFive" className="accordion-collapse collapse" data-bs-parent="#faq-accordion-two">
-                              <div className="accordion-body">
-                                <p>
-                                  The early start ensures you can fully immerse yourself in the tranquility of nature before the world fully awakens. As the morning light filters through the trees, you&apos;ll experience the crisp, fresh air and the peaceful sounds of the forest. The trail ahead offers both a physical challenge promise of breathtaking.
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <h3>Frequently Asked Questions</h3>
+{resolvedDetail.itineraryHtml ? (
+  <div className="tour-richtext" dangerouslySetInnerHTML={{ __html: resolvedDetail.itineraryHtml }} />
+) : shouldFallback ? (
+  <div className="accordion-two" id="faq-accordion-two">
+    <div className="accordion-item">
+      <h5 className="accordion-header">
+        <button className="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwoOne" aria-expanded="false" aria-controls="collapseTwoOne">
+          Day 1 - Arrive at campground
+        </button>
+      </h5>
+      <div id="collapseTwoOne" className="accordion-collapse collapse" data-bs-parent="#faq-accordion-two">
+        <div className="accordion-body">
+          <p>
+            The early start ensures you can fully immerse yourself in the tranquility of nature before the world fully awakens. As the morning light filters through the trees, you&apos;ll experience the crisp, fresh air and the peaceful sounds of the forest. The trail ahead offers both a physical challenge promise of breathtaking.
+          </p>
+        </div>
+      </div>
+    </div>
+    <div className="accordion-item">
+      <h5 className="accordion-header">
+        <button className="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwoTwo" aria-expanded="false" aria-controls="collapseTwoTwo">
+          Day 2 - Wake up early and embark on a day hike
+        </button>
+      </h5>
+      <div id="collapseTwoTwo" className="accordion-collapse collapse" data-bs-parent="#faq-accordion-two">
+        <div className="accordion-body">
+          <p>
+            The early start ensures you can fully immerse yourself in the tranquility of nature before the world fully awakens. As the morning light filters through the trees, you&apos;ll experience the crisp, fresh air and the peaceful sounds of the forest. The trail ahead offers both a physical challenge promise of breathtaking.
+          </p>
+        </div>
+      </div>
+    </div>
+    <div className="accordion-item">
+      <h5 className="accordion-header">
+        <button className="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwoThree" aria-expanded="false" aria-controls="collapseTwoThree">
+          Day 3 - Join a guided ranger-led nature walk
+        </button>
+      </h5>
+      <div id="collapseTwoThree" className="accordion-collapse collapse" data-bs-parent="#faq-accordion-two">
+        <div className="accordion-body">
+          <p>
+            The early start ensures you can fully immerse yourself in the tranquility of nature before the world fully awakens. As the morning light filters through the trees, you&apos;ll experience the crisp, fresh air and the peaceful sounds of the forest. The trail ahead offers both a physical challenge promise of breathtaking.
+          </p>
+        </div>
+      </div>
+    </div>
+    <div className="accordion-item">
+      <h5 className="accordion-header">
+        <button className="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwoFour" aria-expanded="false" aria-controls="collapseTwoFour">
+          Day 4 - Take a break from hiking
+        </button>
+      </h5>
+      <div id="collapseTwoFour" className="accordion-collapse collapse" data-bs-parent="#faq-accordion-two">
+        <div className="accordion-body">
+          <p>
+            The early start ensures you can fully immerse yourself in the tranquility of nature before the world fully awakens. As the morning light filters through the trees, you&apos;ll experience the crisp, fresh air and the peaceful sounds of the forest. The trail ahead offers both a physical challenge promise of breathtaking.
+          </p>
+        </div>
+      </div>
+    </div>
+    <div className="accordion-item">
+      <h5 className="accordion-header">
+        <button className="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwoFive" aria-expanded="false" aria-controls="collapseTwoFive">
+          Day 5 - Pack a lunch and embark on a longer hike
+        </button>
+      </h5>
+      <div id="collapseTwoFive" className="accordion-collapse collapse" data-bs-parent="#faq-accordion-two">
+        <div className="accordion-body">
+          <p>
+            The early start ensures you can fully immerse yourself in the tranquility of nature before the world fully awakens. As the morning light filters through the trees, you&apos;ll experience the crisp, fresh air and the peaceful sounds of the forest. The trail ahead offers both a physical challenge promise of breathtaking.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+) : null}
+<h3>Frequently Asked Questions</h3>
                         <div className="accordion-one mt-25 mb-60" id="faq-accordion">
                           <div className="accordion-item">
                             <h5 className="accordion-header">
@@ -334,13 +625,26 @@ export default function TourDetails() {
                             </div>
                           </div>
                         </div>
-                        <h3>Maps</h3>
-                        <div className="map-items">
-                          <div className="googpemap">
-                            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d6678.7619084840835!2d144.9618311901502!3d-37.81450084255415!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x6ad642b4758afc1d%3A0x3119cc820fdfc62e!2sEnvato!5e0!3m2!1sen!2sbd!4v1641984054261!5m2!1sen!2sbd" style={{ border: 0 }} allowFullScreen loading="lazy"></iframe>
-                          </div>
-                        </div>
-                        <h3>Clients Reviews</h3>
+                        {resolvedDetail.mapImage || shouldFallback ? (
+  <>
+    <h3>Maps</h3>
+    <div className="map-items">
+      <div className="googpemap">
+        {resolvedDetail.mapImage ? (
+          <img src={resolvedDetail.mapImage} alt="map" />
+        ) : (
+          <iframe
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d6678.7619084840835!2d144.9618311901502!3d-37.81450084255415!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x6ad642b4758afc1d%3A0x3119cc820fdfc62e!2sEnvato!5e0!3m2!1sen!2sbd!4v1641984054261!5m2!1sen!2sbd"
+            style={{ border: 0 }}
+            allowFullScreen
+            loading="lazy"
+          ></iframe>
+        )}
+      </div>
+    </div>
+  </>
+) : null}
+<h3>Clients Reviews</h3>
                         <div className="courses-reviews-box-items">
                           <div className="courses-reviews-box">
                             <div className="reviews-box">
@@ -466,116 +770,39 @@ export default function TourDetails() {
                       <div className="tour-details-side">
                         <div className="tour-details-sidebar sticky-style">
                           <div className="tour-sidebar-items">
-                            <h3>Tour Booking</h3>
-                            <ul className="form-list">
-                              <li>
-                                From Date:
-                                <div className="form-clt">
-                                  <div className="date mb-25">
-                                    <input type="date" />
-                                  </div>
-                                </div>
-                              </li>
-                              <li>
-                                Time:
-                                <div className="form-clt d-flex gap-3">
-                                  <label className="checkbox-single">
-                                    <span className="d-flex gap-xl-3 gap-2 align-items-center">
-                                      <span className="checkbox-area d-center">
-                                        <input type="checkbox" />
-                                        <span className="checkmark d-center"></span>
-                                      </span>
-                                      <span className="text-color">
-                                        12:00
-                                      </span>
-                                    </span>
-                                  </label>
-                                  <label className="checkbox-single">
-                                    <span className="d-flex gap-xl-3 gap-2 align-items-center">
-                                      <span className="checkbox-area d-center">
-                                        <input type="checkbox" />
-                                        <span className="checkmark d-center"></span>
-                                      </span>
-                                      <span className="text-color">
-                                        10:00
-                                      </span>
-                                    </span>
-                                  </label>
-                                </div>
-                              </li>
-                            </ul>
-                            <div className="tickets-list">
-                              <p>Tickets</p>
-                              <ul>
-                                <li>
-                                  18+ Years: <b>$168</b>
-                                  <div className="form-clt">
-                                    <div className="form">
-                                      <select className="single-select w-100">
-                                        <option> 01</option>
-                                        <option> 02</option>
-                                        <option> 03</option>
-                                        <option> 04</option>
-                                      </select>
-                                    </div>
-                                  </div>
-                                </li>
-                                <li>
-                                  18- Years: <b>$100</b>
-                                  <div className="form-clt">
-                                    <div className="form">
-                                      <select className="single-select w-100">
-                                        <option> 01</option>
-                                        <option> 02</option>
-                                        <option> 03</option>
-                                        <option> 04</option>
-                                      </select>
-                                    </div>
-                                  </div>
-                                </li>
-                              </ul>
-                            </div>
-                            <div className="extra-items">
-                              <p>Add Extra:</p>
-                              <label className="checkbox-single d-flex justify-content-between align-items-center">
-                                <span className="d-flex gap-xl-3 gap-2 align-items-center">
-                                  <span className="checkbox-area d-center">
-                                    <input type="checkbox" />
-                                    <span className="checkmark d-center"></span>
-                                  </span>
-                                  <span className="text-color">
-                                    Add service per booking
-                                  </span>
-                                </span>
-                                <span className="text-color">$45</span>
-                              </label>
-                              <label className="checkbox-single d-flex justify-content-between align-items-center">
-                                <span className="d-flex gap-xl-3 gap-2 align-items-center">
-                                  <span className="checkbox-area d-center">
-                                    <input type="checkbox" />
-                                    <span className="checkmark d-center"></span>
-                                  </span>
-                                  <span className="text-color">
-                                    Add service per personal
-                                  </span>
-                                </span>
-                                <span className="text-color">$35</span>
-                              </label>
-                            </div>
-                            <ul className="total-list">
-                              <li>
-                                Total:
-                              </li>
-                              <li>
-                                $80
-                              </li>
-                            </ul>
-                            <button className="theme-btn" type="submit">
-                              Book Now
-                            </button>
-                            <p className="text">Need some help?</p>
-                          </div>
-                          <div className="widget-contact">
+  <h3>{isGroupTour ? 'Departure Dates' : 'Tour Enquiry'}</h3>
+  {isGroupTour ? (
+    <>
+      {departures.length ? (
+        <ul className="departure-list">
+          {departures.map((departure) => (
+            <li key={`departure-${departure.id}`}>
+              <div className="departure-date">
+                <span>{departure.startDate}</span>
+                {departure.endDate ? <span> - {departure.endDate}</span> : null}
+              </div>
+              {departure.price ? <div className="departure-price">{departure.price}</div> : null}
+              {departure.seatsLeft ? <div className="departure-seats">Seats left: {departure.seatsLeft}</div> : null}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text">No departures available yet.</p>
+      )}
+      <a href="/contact" className="theme-btn">
+        Book Now
+      </a>
+    </>
+  ) : (
+    <>
+      <p className="text">This tour is for enquiry only. Please contact us for availability.</p>
+      <a href="/contact" className="theme-btn">
+        Enquiry Now
+      </a>
+    </>
+  )}
+</div>
+<div className="widget-contact">
                             <h3>Need Help?</h3>
                             <ul className="list-style-one">
                               <li><i className="far fa-envelope"></i> <a href="mailto:helpxample@gmail.com">helpxample@gmail.com</a></li>
@@ -757,7 +984,7 @@ export default function TourDetails() {
                       </div>
                       <div className="section-title mb-0">
                         <h2 className="sec-title text-white text-anim">
-                          Adventure Is Calling 鈥?Are You Ready?
+                          Adventure Is Calling éˆ?Are You Ready?
                         </h2>
                       </div>
                       <p className="text wow fadeInUp" data-wow-delay=".3s">
@@ -778,6 +1005,19 @@ export default function TourDetails() {
     </>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

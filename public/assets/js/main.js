@@ -665,7 +665,7 @@
 
     //>> Price Slider Start <<//
     
-    if ($('.price-slider-range').length) {
+    if ($('.price-slider-range').length && $.fn && typeof $.fn.slider === "function") {
             $(".price-slider-range").slider({
                 range: true,
                 min: 5,

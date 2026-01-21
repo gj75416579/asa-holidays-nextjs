@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 
 import Header from '@/templete/Header'
 import Footer from '@/templete/Footer'
+import ApiMaintenanceNotice from '@/templete/ApiMaintenanceNotice'
 
 type HomeApiData = {
   hotTours: unknown | null
@@ -43,7 +44,7 @@ const homeApiInitialData: HomeApiData = {
 }
 
 const apiMode = process.env.NEXT_PUBLIC_API_MODE ?? 'dev'
-const shouldFallback = apiMode !== 'dev'
+const shouldFallback = apiMode !== 'prod'
 
 const heroSlides = [
   {
@@ -769,6 +770,14 @@ type ApiRecord = Record<string, unknown>
 
 const isRecord = (value: unknown): value is ApiRecord => !!value && typeof value === 'object'
 
+const parseJsonResponse = async (res: Response) => {
+  const text = await res.text()
+  if (!res.ok) {
+    throw new Error(text || `HTTP ${res.status}`)
+  }
+  return text ? JSON.parse(text) : {}
+}
+
 const extractList = (data: unknown): ApiRecord[] => {
   if (Array.isArray(data)) {
     return data as ApiRecord[]
@@ -1011,11 +1020,16 @@ const resolveTourPlaceSection = (
     const badgeValue = typeof item.badge === 'string' ? item.badge.trim() : ''
     const productCodeValue = typeof item.productCode === 'string' ? item.productCode.trim() : ''
     const uriValue = typeof item.uri === 'string' ? item.uri.trim() : ''
-    const hrefValue = uriValue ? `/tour-details?tour=${encodeURIComponent(uriValue)}` : ''
+    const idValue = typeof item.id === 'number' ? item.id : base.id
+    const hrefValue = uriValue
+      ? `/tour-details?uri=${encodeURIComponent(uriValue)}`
+      : typeof idValue === 'number'
+        ? `/tour-details?id=${idValue}`
+        : ''
 
     return {
       ...base,
-      id: typeof item.id === 'number' ? item.id : base.id,
+      id: idValue,
       image: imageValue,
       title: nameValue,
       titleLine2: '',
@@ -1037,6 +1051,7 @@ const resolveTourPlaceSection = (
 }
 export default function Home() {
   const [homeApiData, setHomeApiData] = useState(homeApiInitialData)
+  const [apiError, setApiError] = useState(false)
 
   useEffect(() => {
     let isActive = true
@@ -1048,15 +1063,18 @@ export default function Home() {
         body: JSON.stringify(payload ?? {}),
       })
 
-      return res.json()
+      return parseJsonResponse(res)
     }
 
     const fetchHomeApi = async () => {
       try {
+        if (isActive) {
+          setApiError(false)
+        }
         const [hotTours, sectorLevels, banners, sectors] = await Promise.all([
           postJson(homeApiEndpoints.hotTours, homeApiPayloads.hotTours),
           postJson(homeApiEndpoints.sectorLevels, homeApiPayloads.sectorLevels),
-          fetch(homeApiEndpoints.banners).then((res) => res.json()),
+          fetch(homeApiEndpoints.banners).then((res) => parseJsonResponse(res)),
           postJson(homeApiEndpoints.sectors, homeApiPayloads.sectors),
         ])
 
@@ -1072,6 +1090,9 @@ export default function Home() {
         }
       } catch (error) {
         console.error('Home API fetch error:', error)
+        if (isActive) {
+          setApiError(true)
+        }
       }
     }
 
@@ -1117,6 +1138,7 @@ export default function Home() {
 
       <div id="smooth-wrapper">
         <div id="smooth-content">
+          <ApiMaintenanceNotice visible={apiError} />
           {/* Hero Section Start */}
           <section className="hero-section-1 fix">
             <div className="swiper-dot-3">

@@ -1,10 +1,279 @@
 'use client'
 
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+
 import Header from '@/templete/Header'
 import Footer from '@/templete/Footer'
+import ApiMaintenanceNotice from '@/templete/ApiMaintenanceNotice'
+
+type TourListItem = {
+  id: number | string
+  image: string
+  badge?: string
+  title: string
+  location: string
+  duration: string
+  priceLabel?: string
+  price?: string
+  productCode?: string
+  href?: string
+}
+
+type SectorOption = {
+  id: number | string
+  name: string
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null
+
+const extractPageData = (data: unknown): unknown[] => {
+  if (!isRecord(data)) {
+    return []
+  }
+  const dataNode = data.data
+  if (isRecord(dataNode) && Array.isArray(dataNode.pageData)) {
+    return dataNode.pageData
+  }
+  return []
+}
+
+const extractTotalRows = (data: unknown): number | null => {
+  if (!isRecord(data)) {
+    return null
+  }
+  const dataNode = data.data
+  if (isRecord(dataNode) && typeof dataNode.totalRows === 'number') {
+    return dataNode.totalRows
+  }
+  return null
+}
+
+const extractSectors = (data: unknown): SectorOption[] => {
+  if (!isRecord(data) || !Array.isArray(data.data)) {
+    return []
+  }
+
+  return data.data
+    .map((item) => {
+      if (!isRecord(item)) {
+        return null
+      }
+      const name = typeof item.name === 'string' ? item.name.trim() : ''
+      if (!name) {
+        return null
+      }
+      const idValue =
+        typeof item.id === 'number'
+          ? item.id
+          : typeof item.id === 'string' && item.id
+            ? item.id
+            : name
+      return { id: idValue, name }
+    })
+    .filter((item): item is SectorOption => Boolean(item))
+}
+
+const formatPrice = (value: unknown) => {
+  const numberValue = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(numberValue)) {
+    return ''
+  }
+  return `$${numberValue.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
+}
+
+const formatDuration = (value: unknown) => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return `${value} days`
+  }
+  if (typeof value === 'string') {
+    return value.trim()
+  }
+  return ''
+}
+
+const parseJsonResponse = async (res: Response) => {
+  const text = await res.text()
+  if (!res.ok) {
+    throw new Error(text || `HTTP ${res.status}`)
+  }
+  return text ? JSON.parse(text) : {}
+}
+
+const resolveTourListItems = (data: unknown): TourListItem[] => {
+  const list = extractPageData(data)
+  if (!list.length) {
+    return []
+  }
+
+  return list
+    .map((item, index) => {
+      if (!isRecord(item)) {
+        return null
+      }
+
+      const nameValue =
+        typeof item.name === 'string'
+          ? item.name.trim()
+          : isRecord(item.name) && typeof item.name.EN === 'string'
+            ? item.name.EN.trim()
+            : ''
+      const sectorValue = typeof item.sector === 'string' ? item.sector.trim() : ''
+      const priceValue = formatPrice(item.price)
+      const durationValue = formatDuration(item.duration)
+      const imageValue = typeof item.cover === 'string' ? item.cover.trim() : ''
+      const productCodeValue = typeof item.productCode === 'string' ? item.productCode.trim() : ''
+      const uriValue = typeof item.uri === 'string' ? item.uri.trim() : ''
+      const idValue =
+        typeof item.id === 'number'
+          ? item.id
+          : typeof productCodeValue === 'string' && productCodeValue
+            ? productCodeValue
+            : `tour-${index + 1}`
+      const hrefValue = uriValue
+        ? `/tour-details?uri=${encodeURIComponent(uriValue)}`
+        : typeof item.id === 'number'
+          ? `/tour-details?id=${item.id}`
+          : ''
+      const tagBadge = Array.isArray(item.tags)
+        ? item.tags.find((tag) => isRecord(tag) && typeof tag.groupName === 'string' && tag.groupName === 'Promo Tag')
+        : null
+      const badgeValue = tagBadge && typeof tagBadge.name === 'string' ? tagBadge.name.trim() : ''
+
+      return {
+        id: idValue,
+        image: imageValue,
+        badge: badgeValue,
+        title: nameValue,
+        location: sectorValue,
+        duration: durationValue,
+        price: priceValue,
+        priceLabel: priceValue ? 'From' : '',
+        productCode: productCodeValue,
+        href: hrefValue,
+      }
+    })
+    .filter((item): item is TourListItem => Boolean(item))
+}
 
 
 export default function TourList() {
+  const searchParams = useSearchParams()
+  const productTypeParam = searchParams.get('productType')
+  const productType = productTypeParam === '2' ? 2 : 1
+
+  const DEFAULT_PRICE_MIN = 1
+  const DEFAULT_PRICE_MAX = 20000
+  const DEFAULT_DURATION_MIN = 1
+  const DEFAULT_DURATION_MAX = 30
+
+  const [filters, setFilters] = useState({
+    sectorIds: [] as string[],
+    priceMin: DEFAULT_PRICE_MIN,
+    priceMax: DEFAULT_PRICE_MAX,
+    durationMin: DEFAULT_DURATION_MIN,
+    durationMax: DEFAULT_DURATION_MAX,
+  })
+  const [sectorsData, setSectorsData] = useState<unknown | null>(null)
+  const [listError, setListError] = useState(false)
+  const [sectorsError, setSectorsError] = useState(false)
+
+  const sectorOptions = useMemo(() => extractSectors(sectorsData), [sectorsData])
+  const selectedSectorOptions = useMemo(
+    () => sectorOptions.filter((sector) => filters.sectorIds.includes(String(sector.id))),
+    [filters.sectorIds, sectorOptions]
+  )
+
+  const listPayload = useMemo(
+    () => ({
+      search: '',
+      tourIds: '',
+      sectorIds: filters.sectorIds.length ? filters.sectorIds.join(',') : '',
+      startDuration: filters.durationMin,
+      endDuration: filters.durationMax,
+      startPrice: filters.priceMin,
+      endPrice: filters.priceMax,
+      date: '',
+      type: productType,
+      sort: 2,
+      sortType: 1,
+      currentPage: 0,
+      pageSize: 10,
+    }),
+    [filters, productType]
+  )
+
+  const [tourListData, setTourListData] = useState<unknown | null>(null)
+
+  useEffect(() => {
+    let isActive = true
+
+    const fetchList = async () => {
+      try {
+        if (isActive) {
+          setListError(false)
+        }
+        const res = await fetch('/api/tour/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(listPayload),
+        })
+        const data = await parseJsonResponse(res)
+        if (isActive) {
+          setTourListData(data)
+        }
+      } catch (error) {
+        console.error('Tour list fetch error:', error)
+        if (isActive) {
+          setListError(true)
+        }
+      }
+    }
+
+    fetchList()
+
+    return () => {
+      isActive = false
+    }
+  }, [listPayload])
+
+  useEffect(() => {
+    let isActive = true
+
+    const fetchSectors = async () => {
+      try {
+        if (isActive) {
+          setSectorsError(false)
+        }
+        const res = await fetch('/api/sectors', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        })
+        const data = await parseJsonResponse(res)
+        if (isActive) {
+          setSectorsData(data)
+        }
+      } catch (error) {
+        console.error('Sector fetch error:', error)
+        if (isActive) {
+          setSectorsError(true)
+        }
+      }
+    }
+
+    fetchSectors()
+
+    return () => {
+      isActive = false
+    }
+  }, [])
+
+  const resolvedTourListItems = resolveTourListItems(tourListData)
+  const totalRows = extractTotalRows(tourListData)
+  const displayTotalRows = totalRows ?? resolvedTourListItems.length
+  const showApiNotice = listError || sectorsError
+
   return (
     <>
       <Header />
@@ -32,6 +301,8 @@ export default function TourList() {
             </div>
           </div>
 
+          <ApiMaintenanceNotice visible={showApiNotice} />
+
           {/* Tour List Section Start */}
           <section className="tour-list-section section-padding">
             <div className="container">
@@ -42,202 +313,112 @@ export default function TourList() {
                       <div className="tour-main-sideber">
                         <div className="tour-sidebar-items">
                           <div className="widget-title">
-                            <h4>Filter by Price</h4>
+                            <h4>Destination</h4>
                           </div>
-                          <div className="price-filter-wrap">
-                            <div className="price-slider-range"></div>
-                            <div className="price">
-                              <span>Price </span>
-                              <input type="text" id="price" readOnly />
+                          <div className="form-clt">
+                            <div className="destination-filter">
+                              {sectorOptions.map((sector) => (
+                                <button
+                                  key={sector.id}
+                                  type="button"
+                                  className={`destination-pill${filters.sectorIds.includes(String(sector.id)) ? ' is-active' : ''}`}
+                                  onClick={() => {
+                                    const idValue = String(sector.id)
+                                    setFilters((prev) => {
+                                      if (prev.sectorIds.includes(idValue)) {
+                                        return { ...prev, sectorIds: prev.sectorIds.filter((id) => id !== idValue) }
+                                      }
+                                      return { ...prev, sectorIds: [...prev.sectorIds, idValue] }
+                                    })
+                                  }}
+                                >
+                                  {sector.name}
+                                </button>
+                              ))}
                             </div>
                           </div>
                         </div>
                         <div className="tour-sidebar-items">
                           <div className="widget-title">
-                            <h4>By Activities</h4>
+                            <h4>Price Range</h4>
                           </div>
-                          <ul className="radio-filter">
-                            <li>
-                              <input className="form-check-input" type="radio" defaultChecked name="ByActivities" id="activity1" />
-                              <label htmlFor="activity1">Sea Beach <span>18</span></label>
-                            </li>
-                            <li>
-                              <input className="form-check-input" type="radio" name="ByActivities" id="activity2" />
-                              <label htmlFor="activity2">Car Parking <span>29</span></label>
-                            </li>
-                            <li>
-                              <input className="form-check-input" type="radio" name="ByActivities" id="activity3" />
-                              <label htmlFor="activity3">Laundry Service <span>23</span></label>
-                            </li>
-                            <li>
-                              <input className="form-check-input" type="radio" name="ByActivities" id="activity4" />
-                              <label htmlFor="activity4">Outdoor Seating <span>25</span></label>
-                            </li>
-                            <li>
-                              <input className="form-check-input" type="radio" name="ByActivities" id="activity5" />
-                              <label htmlFor="activity5">Reservations <span>26</span></label>
-                            </li>
-                            <li>
-                              <input className="form-check-input" type="radio" name="ByActivities" id="activity6" />
-                              <label htmlFor="activity6">Hiking <span>28</span></label>
-                            </li>
-                          </ul>
+                          <div className="range-filter">
+                            <div className="range-values">
+                              <span>${filters.priceMin}</span>
+                              <span>${filters.priceMax}</span>
+                            </div>
+                            <div className="range-inputs">
+                              <input
+                                type="range"
+                                min={DEFAULT_PRICE_MIN}
+                                max={DEFAULT_PRICE_MAX}
+                                value={filters.priceMin}
+                                onChange={(event) => {
+                                  const value = Number(event.target.value)
+                                  setFilters((prev) => ({
+                                    ...prev,
+                                    priceMin: value,
+                                    priceMax: Math.max(prev.priceMax, value),
+                                  }))
+                                }}
+                              />
+                              <input
+                                type="range"
+                                min={DEFAULT_PRICE_MIN}
+                                max={DEFAULT_PRICE_MAX}
+                                value={filters.priceMax}
+                                onChange={(event) => {
+                                  const value = Number(event.target.value)
+                                  setFilters((prev) => ({
+                                    ...prev,
+                                    priceMin: Math.min(prev.priceMin, value),
+                                    priceMax: value,
+                                  }))
+                                }}
+                              />
+                            </div>
+                          </div>
                         </div>
                         <div className="tour-sidebar-items">
                           <div className="widget-title">
-                            <h4>Tour Types</h4>
+                            <h4>Duration (Days)</h4>
                           </div>
-                          <ul className="radio-filter">
-                            <li>
-                              <input className="form-check-input" type="radio" defaultChecked name="ByActivities" id="activity7" />
-                              <label htmlFor="activity7">Daily Tours</label>
-                            </li>
-                            <li>
-                              <input className="form-check-input" type="radio" name="ByActivities" id="activity8" />
-                              <label htmlFor="activity8">Group Tours</label>
-                            </li>
-                            <li>
-                              <input className="form-check-input" type="radio" name="ByActivities" id="activity9" />
-                              <label htmlFor="activity9">Family Tours</label>
-                            </li>
-                            <li>
-                              <input className="form-check-input" type="radio" name="ByActivities" id="activity10" />
-                              <label htmlFor="activity10">Package Tours</label>
-                            </li>
-                            <li>
-                              <input className="form-check-input" type="radio" name="ByActivities" id="activity11" />
-                              <label htmlFor="activity11">Holiday Tours</label>
-                            </li>
-                            <li>
-                              <input className="form-check-input" type="radio" name="ByActivities" id="activity12" />
-                              <label htmlFor="activity12">Private Tours</label>
-                            </li>
-                          </ul>
-                        </div>
-                        <div className="tour-sidebar-items">
-                          <div className="widget-title">
-                            <h4>By Languages</h4>
+                          <div className="range-filter">
+                            <div className="range-values">
+                              <span>{filters.durationMin} days</span>
+                              <span>{filters.durationMax} days</span>
+                            </div>
+                            <div className="range-inputs">
+                              <input
+                                type="range"
+                                min={DEFAULT_DURATION_MIN}
+                                max={DEFAULT_DURATION_MAX}
+                                value={filters.durationMin}
+                                onChange={(event) => {
+                                  const value = Number(event.target.value)
+                                  setFilters((prev) => ({
+                                    ...prev,
+                                    durationMin: value,
+                                    durationMax: Math.max(prev.durationMax, value),
+                                  }))
+                                }}
+                              />
+                              <input
+                                type="range"
+                                min={DEFAULT_DURATION_MIN}
+                                max={DEFAULT_DURATION_MAX}
+                                value={filters.durationMax}
+                                onChange={(event) => {
+                                  const value = Number(event.target.value)
+                                  setFilters((prev) => ({
+                                    ...prev,
+                                    durationMin: Math.min(prev.durationMin, value),
+                                    durationMax: value,
+                                  }))
+                                }}
+                              />
+                            </div>
                           </div>
-                          <ul className="radio-filter">
-                            <li>
-                              <input className="form-check-input" type="radio" defaultChecked name="ByLanguages" id="language13" />
-                              <label htmlFor="language13">American</label>
-                            </li>
-                            <li>
-                              <input className="form-check-input" type="radio" name="ByLanguages" id="language14" />
-                              <label htmlFor="language14">English</label>
-                            </li>
-                            <li>
-                              <input className="form-check-input" type="radio" name="ByLanguages" id="language15" />
-                              <label htmlFor="language15">German</label>
-                            </li>
-                            <li>
-                              <input className="form-check-input" type="radio" name="ByLanguages" id="language16" />
-                              <label htmlFor="language16">Japanese</label>
-                            </li>
-                            <li>
-                              <input className="form-check-input" type="radio" name="ByLanguages" id="language17" />
-                              <label htmlFor="language17">Vietnamese</label>
-                            </li>
-                            <li>
-                              <input className="form-check-input" type="radio" name="ByLanguages" id="language18" />
-                              <label htmlFor="language18">French</label>
-                            </li>
-                          </ul>
-                        </div>
-                        <div className="tour-sidebar-items">
-                          <div className="widget-title">
-                            <h4>Duration</h4>
-                          </div>
-                          <ul className="radio-filter">
-                            <li>
-                              <input className="form-check-input" type="radio" defaultChecked name="Duration" id="duration19" />
-                              <label htmlFor="duration19">0 - 2 hours</label>
-                            </li>
-                            <li>
-                              <input className="form-check-input" type="radio" name="Duration" id="duration20" />
-                              <label htmlFor="duration20">2 - 4 hours</label>
-                            </li>
-                            <li>
-                              <input className="form-check-input" type="radio" name="Duration" id="duration21" />
-                              <label htmlFor="duration21">4 - 8 hours</label>
-                            </li>
-                            <li>
-                              <input className="form-check-input" type="radio" name="Duration" id="duration22" />
-                              <label htmlFor="duration22">Fulda (+8 hours)</label>
-                            </li>
-                            <li>
-                              <input className="form-check-input" type="radio" name="Duration" id="duration23" />
-                              <label htmlFor="duration23">Multi days</label>
-                            </li>
-                          </ul>
-                        </div>
-                        <div className="tour-sidebar-items border-none">
-                          <div className="widget-title">
-                            <h4>By Reviews</h4>
-                          </div>
-                          <ul className="radio-filter">
-                            <li>
-                              <input className="form-check-input" type="radio" defaultChecked name="ByReviews" id="review24" />
-                              <label htmlFor="review24">
-                                <span className="ratting">
-                                  <i className="fas fa-star"></i>
-                                  <i className="fas fa-star"></i>
-                                  <i className="fas fa-star"></i>
-                                  <i className="fas fa-star"></i>
-                                  <i className="fas fa-star"></i>
-                                </span>
-                              </label>
-                            </li>
-                            <li>
-                              <input className="form-check-input" type="radio" name="ByReviews" id="review25" />
-                              <label htmlFor="review25">
-                                <span className="ratting">
-                                  <i className="fas fa-star"></i>
-                                  <i className="fas fa-star"></i>
-                                  <i className="fas fa-star"></i>
-                                  <i className="fas fa-star"></i>
-                                  <i className="fas fa-star-half-alt white"></i>
-                                </span>
-                              </label>
-                            </li>
-                            <li>
-                              <input className="form-check-input" type="radio" name="ByReviews" id="review26" />
-                              <label htmlFor="review26">
-                                <span className="ratting">
-                                  <i className="fas fa-star"></i>
-                                  <i className="fas fa-star"></i>
-                                  <i className="fas fa-star"></i>
-                                  <i className="fas fa-star white"></i>
-                                  <i className="fas fa-star-half-alt white"></i>
-                                </span>
-                              </label>
-                            </li>
-                            <li>
-                              <input className="form-check-input" type="radio" name="ByReviews" id="review27" />
-                              <label htmlFor="review27">
-                                <span className="ratting">
-                                  <i className="fas fa-star"></i>
-                                  <i className="fas fa-star"></i>
-                                  <i className="fas fa-star white"></i>
-                                  <i className="fas fa-star white"></i>
-                                  <i className="fas fa-star-half-alt white"></i>
-                                </span>
-                              </label>
-                            </li>
-                            <li>
-                              <input className="form-check-input" type="radio" name="ByReviews" id="review28" />
-                              <label htmlFor="review28">
-                                <span className="ratting">
-                                  <i className="fas fa-star"></i>
-                                  <i className="fas fa-star white"></i>
-                                  <i className="fas fa-star white"></i>
-                                  <i className="fas fa-star white"></i>
-                                  <i className="fas fa-star-half-alt white"></i>
-                                </span>
-                              </label>
-                            </li>
-                          </ul>
                         </div>
                       </div>
                       <div className="tour-sidebar-bg-image-items">
@@ -253,6 +434,34 @@ export default function TourList() {
                     </div>
                   </div>
                   <div className="col-lg-8 order-1 order-xl-2">
+                    <div className="tour-active-filters">
+                      <div className="filter-summary">
+                        <span className="filter-label">Price:</span>
+                        <span className="filter-value">
+                          ${filters.priceMin} - ${filters.priceMax}
+                        </span>
+                        <span className="filter-label">Duration:</span>
+                        <span className="filter-value">
+                          {filters.durationMin} - {filters.durationMax} days
+                        </span>
+                        {selectedSectorOptions.map((sector) => (
+                          <button
+                            key={`selected-${sector.id}`}
+                            type="button"
+                            className="destination-pill filter-chip"
+                            onClick={() =>
+                              setFilters((prev) => ({
+                                ...prev,
+                                sectorIds: prev.sectorIds.filter((id) => id !== String(sector.id)),
+                              }))
+                            }
+                          >
+                            {sector.name}
+                            <span className="filter-chip-remove">x</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                     <div className="tour-list-wrap">
                       <div className="list-wrap">
                         <ul className="nav">
@@ -267,718 +476,110 @@ export default function TourList() {
                             </a>
                           </li>
                         </ul>
-                        <p>34 Tours found</p>
+                        <p>{displayTotalRows} Tours found</p>
                       </div>
-                      <div className="right-item">
-                        <h6>Sort By</h6>
-                        <div className="form-clt">
-                          <div className="nice-select" tabIndex={0}>
-                            <span className="current">
-                              Bali, Indonesia
-                            </span>
-                            <ul className="list">
-                              <li data-value="1" className="option selected focus">
-                                Bali, Indonesia
-                              </li>
-                              <li data-value="1" className="option">
-                                Ella, Sri Lanka
-                              </li>
-                              <li data-value="1" className="option">
-                                Soria, Castilla
-                              </li>
-                              <li data-value="1" className="option">
-                                Giza, Egypt
-                              </li>
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
+                      {/* Sort By hidden per request */}
                     </div>
                     <div className="tab-content">
                       <div id="grid" className="tab-pane fade">
                         <div className="row">
-                          <div className="col-xl-6 col-lg-6 col-md-6">
-                            <div className="tour-place-item">
-                              <div className="tour-place-image">
-                                <img src="/assets/img/home-1/tour/tour-8.jpg" alt="img" />
-                                <span>10% Off</span>
-                                <div className="icon">
-                                  <i className="fa-regular fa-heart"></i>
-                                </div>
-                              </div>
-                              <div className="tour-place-content">
-                                <div className="rating-item">
-                                  <div className="star">
-                                    <span>Rating</span>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-sharp fa-solid fa-star-half-stroke"></i>
+                          {resolvedTourListItems.map((item) => (
+                            <div key={`grid-${item.id}`} className="col-xl-6 col-lg-6 col-md-6">
+                              <div className="tour-place-item">
+                                <div className={`tour-place-image${item.image ? '' : ' is-empty'}`}>
+                                  {item.image ? <img src={item.image} alt="img" /> : null}
+                                  {item.badge ? <span>{item.badge}</span> : null}
+                                  <div className="icon">
+                                    <i className="fa-regular fa-heart"></i>
                                   </div>
-                                  <h5><span>Tours Price</span>$49.00</h5>
                                 </div>
-                                <h3>
-                                  <a href="/tour-details">
-                                    Relinking Beach in Nusa panada island, Bali, Indonesia
-                                  </a>
-                                </h3>
-                                <ul className="tour-list">
-                                  <li>
-                                    <i className="fa-regular fa-location-dot"></i>
-                                    Bali, Indonesia
-                                  </li>
-                                  <li>
-                                    <i className="fa-regular fa-clock"></i>
-                                    1 - 3 days
-                                  </li>
-                                  <li>
-                                    <i className="fa-regular fa-users"></i>
-                                    3 persons
-                                  </li>
-                                </ul>
+                                <div className="tour-place-content">
+                                  <div className="rating-item">
+                                    {item.productCode ? <div className="product-code">{item.productCode}</div> : null}
+                                    {item.price ? (
+                                      <h5>
+                                        <span>{item.priceLabel}</span>
+                                        {item.price}
+                                      </h5>
+                                    ) : null}
+                                  </div>
+                                  {item.title ? (
+                                    <h3>
+                                      {item.href ? <a href={item.href}>{item.title}</a> : <span>{item.title}</span>}
+                                    </h3>
+                                  ) : null}
+                                  <ul className="tour-list">
+                                    {item.location ? (
+                                      <li>
+                                        <i className="fa-regular fa-location-dot"></i>
+                                        {item.location}
+                                      </li>
+                                    ) : null}
+                                    {item.duration ? (
+                                      <li>
+                                        <i className="fa-regular fa-clock"></i>
+                                        {item.duration}
+                                      </li>
+                                    ) : null}
+                                  </ul>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          <div className="col-xl-6 col-lg-6 col-md-6">
-                            <div className="tour-place-item">
-                              <div className="tour-place-image">
-                                <img src="/assets/img/home-1/tour/tour-9.jpg" alt="img" />
-                                <div className="icon">
-                                  <i className="fa-regular fa-heart"></i>
-                                </div>
-                              </div>
-                              <div className="tour-place-content">
-                                <div className="rating-item">
-                                  <div className="star">
-                                    <span>Rating</span>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-sharp fa-solid fa-star-half-stroke"></i>
-                                  </div>
-                                  <h5><span>Tours Price</span>$49.00</h5>
-                                </div>
-                                <h3>
-                                  <a href="/tour-details">
-                                    Scenic Kayaking Setup Along <br /> Duero River, Soria
-                                  </a>
-                                </h3>
-                                <ul className="tour-list">
-                                  <li>
-                                    <i className="fa-regular fa-location-dot"></i>
-                                    Soria, Castilla
-                                  </li>
-                                  <li>
-                                    <i className="fa-regular fa-clock"></i>
-                                    1 - 3 days
-                                  </li>
-                                  <li>
-                                    <i className="fa-regular fa-users"></i>
-                                    3 persons
-                                  </li>
-                                </ul>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="col-xl-6 col-lg-6 col-md-6">
-                            <div className="tour-place-item">
-                              <div className="tour-place-image">
-                                <img src="/assets/img/home-1/tour/tour-10.jpg" alt="img" />
-                                <span>13% Off</span>
-                                <div className="icon">
-                                  <i className="fa-regular fa-heart"></i>
-                                </div>
-                              </div>
-                              <div className="tour-place-content">
-                                <div className="rating-item">
-                                  <div className="star">
-                                    <span>Rating</span>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-sharp fa-solid fa-star-half-stroke"></i>
-                                  </div>
-                                  <h5><span>Tours Price</span>$49.00</h5>
-                                </div>
-                                <h3>
-                                  <a href="/tour-details">
-                                    Camel safaris along desert dunes near roads and small villages
-                                  </a>
-                                </h3>
-                                <ul className="tour-list">
-                                  <li>
-                                    <i className="fa-regular fa-location-dot"></i>
-                                    Giza, Egypt
-                                  </li>
-                                  <li>
-                                    <i className="fa-regular fa-clock"></i>
-                                    1 - 3 days
-                                  </li>
-                                  <li>
-                                    <i className="fa-regular fa-users"></i>
-                                    3 persons
-                                  </li>
-                                </ul>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="col-xl-6 col-lg-6 col-md-6">
-                            <div className="tour-place-item">
-                              <div className="tour-place-image">
-                                <img src="/assets/img/home-1/tour/tour-11.jpg" alt="img" />
-                                <div className="icon">
-                                  <i className="fa-regular fa-heart"></i>
-                                </div>
-                              </div>
-                              <div className="tour-place-content">
-                                <div className="rating-item">
-                                  <div className="star">
-                                    <span>Rating</span>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-sharp fa-solid fa-star-half-stroke"></i>
-                                  </div>
-                                  <h5><span>Tours Price</span>$49.00</h5>
-                                </div>
-                                <h3>
-                                  <a href="/tour-details">
-                                    Tourists Visits the Aqueduct in Segovia Spain
-                                  </a>
-                                </h3>
-                                <ul className="tour-list">
-                                  <li>
-                                    <i className="fa-regular fa-location-dot"></i>
-                                    Segovia, CL, Spain
-                                  </li>
-                                  <li>
-                                    <i className="fa-regular fa-clock"></i>
-                                    1 - 3 days
-                                  </li>
-                                  <li>
-                                    <i className="fa-regular fa-users"></i>
-                                    3 persons
-                                  </li>
-                                </ul>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="col-xl-6 col-lg-6 col-md-6">
-                            <div className="tour-place-item">
-                              <div className="tour-place-image">
-                                <img src="/assets/img/home-1/tour/tour-12.jpg" alt="img" />
-                                <div className="icon">
-                                  <i className="fa-regular fa-heart"></i>
-                                </div>
-                              </div>
-                              <div className="tour-place-content">
-                                <div className="rating-item">
-                                  <div className="star">
-                                    <span>Rating</span>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-sharp fa-solid fa-star-half-stroke"></i>
-                                  </div>
-                                  <h5><span>Tours Price</span>$49.00</h5>
-                                </div>
-                                <h3>
-                                  <a href="/tour-details">
-                                    Train on Nine Arches Bridge in <br /> Sri Lanka
-                                  </a>
-                                </h3>
-                                <ul className="tour-list">
-                                  <li>
-                                    <i className="fa-regular fa-location-dot"></i>
-                                    Ella, Sri Lanka
-                                  </li>
-                                  <li>
-                                    <i className="fa-regular fa-clock"></i>
-                                    1 - 3 days
-                                  </li>
-                                  <li>
-                                    <i className="fa-regular fa-users"></i>
-                                    3 persons
-                                  </li>
-                                </ul>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="col-xl-6 col-lg-6 col-md-6">
-                            <div className="tour-place-item">
-                              <div className="tour-place-image">
-                                <img src="/assets/img/home-1/tour/tour-13.jpg" alt="img" />
-                                <span>8% Off</span>
-                                <div className="icon">
-                                  <i className="fa-regular fa-heart"></i>
-                                </div>
-                              </div>
-                              <div className="tour-place-content">
-                                <div className="rating-item">
-                                  <div className="star">
-                                    <span>Rating</span>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-sharp fa-solid fa-star-half-stroke"></i>
-                                  </div>
-                                  <h5><span>Tours Price</span>$49.00</h5>
-                                </div>
-                                <h3>
-                                  <a href="/tour-details">
-                                    White buildings with blue <br /> accents near the Atlantic shore.
-                                  </a>
-                                </h3>
-                                <ul className="tour-list">
-                                  <li>
-                                    <i className="fa-regular fa-location-dot"></i>
-                                    Galle, Sri Lanka
-                                  </li>
-                                  <li>
-                                    <i className="fa-regular fa-clock"></i>
-                                    1 - 3 days
-                                  </li>
-                                  <li>
-                                    <i className="fa-regular fa-users"></i>
-                                    3 persons
-                                  </li>
-                                </ul>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="col-xl-6 col-lg-6 col-md-6">
-                            <div className="tour-place-item">
-                              <div className="tour-place-image">
-                                <img src="/assets/img/home-1/tour/tour-14.jpg" alt="img" />
-                                <div className="icon">
-                                  <i className="fa-regular fa-heart"></i>
-                                </div>
-                              </div>
-                              <div className="tour-place-content">
-                                <div className="rating-item">
-                                  <div className="star">
-                                    <span>Rating</span>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-sharp fa-solid fa-star-half-stroke"></i>
-                                  </div>
-                                  <h5><span>Tours Price</span>$49.00</h5>
-                                </div>
-                                <h3>
-                                  <a href="/tour-details">
-                                    Man Sitting on Rocks next to <br /> Creek in Mountains
-                                  </a>
-                                </h3>
-                                <ul className="tour-list">
-                                  <li>
-                                    <i className="fa-regular fa-location-dot"></i>
-                                    Nepal
-                                  </li>
-                                  <li>
-                                    <i className="fa-regular fa-clock"></i>
-                                    1 - 3 days
-                                  </li>
-                                  <li>
-                                    <i className="fa-regular fa-users"></i>
-                                    3 persons
-                                  </li>
-                                </ul>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="col-xl-6 col-lg-6 col-md-6">
-                            <div className="tour-place-item">
-                              <div className="tour-place-image">
-                                <img src="/assets/img/home-1/tour/tour-15.jpg" alt="img" />
-                                <span>23% Off</span>
-                                <div className="icon">
-                                  <i className="fa-regular fa-heart"></i>
-                                </div>
-                              </div>
-                              <div className="tour-place-content">
-                                <div className="rating-item">
-                                  <div className="star">
-                                    <span>Rating</span>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-sharp fa-solid fa-star-half-stroke"></i>
-                                  </div>
-                                  <h5><span>Tours Price</span>$49.00</h5>
-                                </div>
-                                <h3>
-                                  <a href="/tour-details">
-                                    Aerial Photography of Cinque <br /> Terre in Italy
-                                  </a>
-                                </h3>
-                                <ul className="tour-list">
-                                  <li>
-                                    <i className="fa-regular fa-location-dot"></i>
-                                    Liguria, Italy
-                                  </li>
-                                  <li>
-                                    <i className="fa-regular fa-clock"></i>
-                                    1 - 3 days
-                                  </li>
-                                  <li>
-                                    <i className="fa-regular fa-users"></i>
-                                    3 persons
-                                  </li>
-                                </ul>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="col-xl-6 col-lg-6 col-md-6">
-                            <div className="tour-place-item">
-                              <div className="tour-place-image">
-                                <img src="/assets/img/home-1/tour/tour-16.jpg" alt="img" />
-                                <div className="icon">
-                                  <i className="fa-regular fa-heart"></i>
-                                </div>
-                              </div>
-                              <div className="tour-place-content">
-                                <div className="rating-item">
-                                  <div className="star">
-                                    <span>Rating</span>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-sharp fa-solid fa-star-half-stroke"></i>
-                                  </div>
-                                  <h5><span>Tours Price</span>$49.00</h5>
-                                </div>
-                                <h3>
-                                  <a href="/tour-details">
-                                    Aerial Photography of Cinque <br /> Terre in Italy
-                                  </a>
-                                </h3>
-                                <ul className="tour-list">
-                                  <li>
-                                    <i className="fa-regular fa-location-dot"></i>
-                                    Liguria, Italy
-                                  </li>
-                                  <li>
-                                    <i className="fa-regular fa-clock"></i>
-                                    1 - 3 days
-                                  </li>
-                                  <li>
-                                    <i className="fa-regular fa-users"></i>
-                                    3 persons
-                                  </li>
-                                </ul>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="col-xl-6 col-lg-6 col-md-6">
-                            <div className="tour-place-item">
-                              <div className="tour-place-image">
-                                <img src="/assets/img/home-1/tour/tour-8.jpg" alt="img" />
-                                <span>10% Off</span>
-                                <div className="icon">
-                                  <i className="fa-regular fa-heart"></i>
-                                </div>
-                              </div>
-                              <div className="tour-place-content">
-                                <div className="rating-item">
-                                  <div className="star">
-                                    <span>Rating</span>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-solid fa-star"></i>
-                                    <i className="fa-sharp fa-solid fa-star-half-stroke"></i>
-                                  </div>
-                                  <h5><span>Tours Price</span>$49.00</h5>
-                                </div>
-                                <h3>
-                                  <a href="/tour-details">
-                                    Relinking Beach in Nusa panada island, Bali, Indonesia
-                                  </a>
-                                </h3>
-                                <ul className="tour-list">
-                                  <li>
-                                    <i className="fa-regular fa-location-dot"></i>
-                                    Bali, Indonesia
-                                  </li>
-                                  <li>
-                                    <i className="fa-regular fa-clock"></i>
-                                    1 - 3 days
-                                  </li>
-                                  <li>
-                                    <i className="fa-regular fa-users"></i>
-                                    3 persons
-                                  </li>
-                                </ul>
-                              </div>
-                            </div>
-                          </div>
+                          ))}
                         </div>
                       </div>
                       <div id="list" className="tab-pane fade show active">
-                        <div className="tour-list-box-items">
-                          <div className="tour-image">
-                            <img src="/assets/img/inner-page/tour-list/tour-01.jpg" alt="img" />
-                            <span>Featured</span>
-                            <div className="icon">
-                              <i className="fa-regular fa-heart"></i>
+                        {resolvedTourListItems.map((item) => (
+                          <div key={`list-${item.id}`} className="tour-list-box-items">
+                            <div className={`tour-image${item.image ? '' : ' is-empty'}`}>
+                              {item.image ? <img src={item.image} alt="img" /> : null}
+                              {item.badge ? <span>{item.badge}</span> : null}
+                              <div className="icon">
+                                <i className="fa-regular fa-heart"></i>
+                              </div>
+                            </div>
+                            <div className="tour-content">
+                              {item.title ? (
+                                <h3>
+                                  {item.href ? <a href={item.href}>{item.title}</a> : <span>{item.title}</span>}
+                                </h3>
+                              ) : null}
+                              <ul>
+                                {item.location ? (
+                                  <li>
+                                    <i className="fa-regular fa-location-dot"></i>
+                                    {item.location}
+                                  </li>
+                                ) : null}
+                                {item.duration ? (
+                                  <li>
+                                    <i className="fa-regular fa-timer"></i>
+                                    {item.duration}
+                                  </li>
+                                ) : null}
+                              </ul>
+                              <div className="bottom-list-items">
+                                {item.price ? (
+                                  <div className="list-1">
+                                    <p>Start Price</p>
+                                    <h4>{item.price}</h4>
+                                  </div>
+                                ) : null}
+                                {item.productCode ? (
+                                  <div className="list-2">
+                                    <p>Product Code</p>
+                                    <span className="product-code">{item.productCode}</span>
+                                  </div>
+                                ) : null}
+                                {item.href ? (
+                                  <a href={item.href} className="theme-btn">
+                                    View Tour
+                                  </a>
+                                ) : null}
+                              </div>
                             </div>
                           </div>
-                          <div className="tour-content">
-                            <h3><a href="/tour-details">White Canopy Tent on White Building Near Ocean</a></h3>
-                            <ul>
-                              <li>
-                                <i className="fa-regular fa-location-dot"></i>
-                                Santorini, Greece
-                              </li>
-                              <li>
-                                <i className="fa-regular fa-timer"></i>
-                                1 - 3 days
-                              </li>
-                              <li>
-                                <i className="fa-solid fa-users"></i>
-                                1 - 5
-                              </li>
-                            </ul>
-                            <div className="bottom-list-items">
-                              <div className="list-1">
-                                <p>Start Price</p>
-                                <h4>$49.00</h4>
-                              </div>
-                              <div className="list-2">
-                                <p>Rating</p>
-                                <span><i className="fa-solid fa-star-sharp"></i>4.8 (190k+)</span>
-                              </div>
-                              <a href="/tour-details" className="theme-btn">View Tour</a>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="tour-list-box-items">
-                          <div className="tour-image">
-                            <img src="/assets/img/inner-page/tour-list/tour-02.jpg" alt="img" />
-                            <div className="icon">
-                              <i className="fa-regular fa-heart"></i>
-                            </div>
-                          </div>
-                          <div className="tour-content">
-                            <h3><a href="/tour-details">Man And Woman Standing On Deck, Maldives</a></h3>
-                            <ul>
-                              <li>
-                                <i className="fa-regular fa-location-dot"></i>
-                                Santorini, Greece
-                              </li>
-                              <li>
-                                <i className="fa-regular fa-timer"></i>
-                                1 - 3 days
-                              </li>
-                              <li>
-                                <i className="fa-solid fa-users"></i>
-                                1 - 5
-                              </li>
-                            </ul>
-                            <div className="bottom-list-items">
-                              <div className="list-1">
-                                <p>Start Price</p>
-                                <h4>$49.00</h4>
-                              </div>
-                              <div className="list-2">
-                                <p>Rating</p>
-                                <span><i className="fa-solid fa-star-sharp"></i>4.8 (190k+)</span>
-                              </div>
-                              <a href="/tour-details" className="theme-btn">View Tour</a>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="tour-list-box-items">
-                          <div className="tour-image">
-                            <img src="/assets/img/inner-page/tour-list/tour-03.jpg" alt="img" />
-                            <div className="icon">
-                              <i className="fa-regular fa-heart"></i>
-                            </div>
-                          </div>
-                          <div className="tour-content">
-                            <h3><a href="/tour-details">Relinking Beach in Nusa panada island, Bali, Indonesia</a></h3>
-                            <ul>
-                              <li>
-                                <i className="fa-regular fa-location-dot"></i>
-                                Santorini, Greece
-                              </li>
-                              <li>
-                                <i className="fa-regular fa-timer"></i>
-                                1 - 3 days
-                              </li>
-                              <li>
-                                <i className="fa-solid fa-users"></i>
-                                1 - 5
-                              </li>
-                            </ul>
-                            <div className="bottom-list-items">
-                              <div className="list-1">
-                                <p>Start Price</p>
-                                <h4>$49.00</h4>
-                              </div>
-                              <div className="list-2">
-                                <p>Rating</p>
-                                <span><i className="fa-solid fa-star-sharp"></i>4.8 (190k+)</span>
-                              </div>
-                              <a href="/tour-details" className="theme-btn">View Tour</a>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="tour-list-box-items">
-                          <div className="tour-image">
-                            <img src="/assets/img/inner-page/tour-list/tour-04.jpg" alt="img" />
-                            <div className="icon">
-                              <i className="fa-regular fa-heart"></i>
-                            </div>
-                          </div>
-                          <div className="tour-content">
-                            <h3><a href="/tour-details">Turquoise Sea off the Coast of Bali, Indonesia</a></h3>
-                            <ul>
-                              <li>
-                                <i className="fa-regular fa-location-dot"></i>
-                                Santorini, Greece
-                              </li>
-                              <li>
-                                <i className="fa-regular fa-timer"></i>
-                                1 - 3 days
-                              </li>
-                              <li>
-                                <i className="fa-solid fa-users"></i>
-                                1 - 5
-                              </li>
-                            </ul>
-                            <div className="bottom-list-items">
-                              <div className="list-1">
-                                <p>Start Price</p>
-                                <h4>$49.00</h4>
-                              </div>
-                              <div className="list-2">
-                                <p>Rating</p>
-                                <span><i className="fa-solid fa-star-sharp"></i>4.8 (190k+)</span>
-                              </div>
-                              <a href="/tour-details" className="theme-btn">View Tour</a>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="tour-list-box-items">
-                          <div className="tour-image">
-                            <img src="/assets/img/inner-page/tour-list/tour-05.jpg" alt="img" />
-                            <span>Featured</span>
-                            <div className="icon">
-                              <i className="fa-regular fa-heart"></i>
-                            </div>
-                          </div>
-                          <div className="tour-content">
-                            <h3><a href="/tour-details">Blue Train on Rails in Sri Lanka Idalgashinna, UP, Sri Lanka</a></h3>
-                            <ul>
-                              <li>
-                                <i className="fa-regular fa-location-dot"></i>
-                                Santorini, Greece
-                              </li>
-                              <li>
-                                <i className="fa-regular fa-timer"></i>
-                                1 - 3 days
-                              </li>
-                              <li>
-                                <i className="fa-solid fa-users"></i>
-                                1 - 5
-                              </li>
-                            </ul>
-                            <div className="bottom-list-items">
-                              <div className="list-1">
-                                <p>Start Price</p>
-                                <h4>$49.00</h4>
-                              </div>
-                              <div className="list-2">
-                                <p>Rating</p>
-                                <span><i className="fa-solid fa-star-sharp"></i>4.8 (190k+)</span>
-                              </div>
-                              <a href="/tour-details" className="theme-btn">View Tour</a>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="tour-list-box-items">
-                          <div className="tour-image">
-                            <img src="/assets/img/inner-page/tour-list/tour-06.jpg" alt="img" />
-                            <div className="icon">
-                              <i className="fa-regular fa-heart"></i>
-                            </div>
-                          </div>
-                          <div className="tour-content">
-                            <h3><a href="/tour-details">Traditional oriental shrine against forest on mountain</a></h3>
-                            <ul>
-                              <li>
-                                <i className="fa-regular fa-location-dot"></i>
-                                Santorini, Greece
-                              </li>
-                              <li>
-                                <i className="fa-regular fa-timer"></i>
-                                1 - 3 days
-                              </li>
-                              <li>
-                                <i className="fa-solid fa-users"></i>
-                                1 - 5
-                              </li>
-                            </ul>
-                            <div className="bottom-list-items">
-                              <div className="list-1">
-                                <p>Start Price</p>
-                                <h4>$49.00</h4>
-                              </div>
-                              <div className="list-2">
-                                <p>Rating</p>
-                                <span><i className="fa-solid fa-star-sharp"></i>4.8 (190k+)</span>
-                              </div>
-                              <a href="/tour-details" className="theme-btn">View Tour</a>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="tour-list-box-items">
-                          <div className="tour-image">
-                            <img src="/assets/img/inner-page/tour-list/tour-07.jpg" alt="img" />
-                            <div className="icon">
-                              <i className="fa-regular fa-heart"></i>
-                            </div>
-                          </div>
-                          <div className="tour-content">
-                            <h3><a href="/tour-details">White buildings in blue accents near the Atlantic shore.</a></h3>
-                            <ul>
-                              <li>
-                                <i className="fa-regular fa-location-dot"></i>
-                                Santorini, Greece
-                              </li>
-                              <li>
-                                <i className="fa-regular fa-timer"></i>
-                                1 - 3 days
-                              </li>
-                              <li>
-                                <i className="fa-solid fa-users"></i>
-                                1 - 5
-                              </li>
-                            </ul>
-                            <div className="bottom-list-items">
-                              <div className="list-1">
-                                <p>Start Price</p>
-                                <h4>$49.00</h4>
-                              </div>
-                              <div className="list-2">
-                                <p>Rating</p>
-                                <span><i className="fa-solid fa-star-sharp"></i>4.8 (190k+)</span>
-                              </div>
-                              <a href="/tour-details" className="theme-btn">View Tour</a>
-                            </div>
-                          </div>
-                        </div>
+                        ))}
                       </div>
                     </div>
                     <div className="page-nav-wrap">
@@ -1013,7 +614,7 @@ export default function TourList() {
                       </div>
                       <div className="section-title mb-0">
                         <h2 className="sec-title text-white text-anim">
-                          Adventure Is Calling 鈥?Are You Ready?
+                          Adventure Is Calling éˆ?Are You Ready?
                         </h2>
                       </div>
                       <p className="text wow fadeInUp" data-wow-delay=".3s">
@@ -1034,6 +635,15 @@ export default function TourList() {
     </>
   )
 }
+
+
+
+
+
+
+
+
+
 
 
 
