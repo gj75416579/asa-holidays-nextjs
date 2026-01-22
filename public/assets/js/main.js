@@ -591,7 +591,56 @@
 
       
  //>> Nice Select Start <<//
+                const initNiceSelectSearch = function () {
+            $('select').each(function () {
+                const $select = $(this);
+                const optionCount = $select.find('option').length;
+                const $niceSelect = $select.next('.nice-select');
+
+                if (!$niceSelect.length) {
+                    return;
+                }
+
+                const $list = $niceSelect.find('ul.list');
+                if (!$list.length) {
+                    return;
+                }
+
+                $list.find('.nice-select-search').remove();
+
+                if (optionCount <= 10) {
+                    return;
+                }
+
+                const $searchItem = $('<li class="nice-select-search"></li>');
+                const $input = $('<input type="text" placeholder="Search..." />');
+
+                $searchItem.append($input);
+                $list.prepend($searchItem);
+
+                $input.on('click', function (event) {
+                    event.stopPropagation();
+                });
+
+                $input.on('keyup', function () {
+                    const term = $(this).val().toString().toLowerCase();
+                    $list.find('li.option').each(function () {
+                        const text = $(this).text().toLowerCase();
+                        $(this).toggle(text.indexOf(term) !== -1);
+                    });
+                });
+
+                $niceSelect.off('click.niceSelectSearch').on('click.niceSelectSearch', function () {
+                    setTimeout(function () {
+                        $input.trigger('focus');
+                    }, 0);
+                });
+            });
+        };
+
+        window.initNiceSelectSearch = initNiceSelectSearch;
         $('select').niceSelect();
+        initNiceSelectSearch();
       /* ================================
        Custom Accordion Js Start
     ================================ */
@@ -676,7 +725,7 @@
                 }
             });
             $("#price").val("$ " + $(".price-slider-range").slider("values", 0) +
-                " - $ " + $(".price-slider-range").slider("values", 1));
+                " - $ " + $(".price-slider-range").slider("values", 1));
     }
 
     //>> GSAP Text Animation Safe Init <<//
@@ -708,7 +757,7 @@
         animatedTextElements.forEach(element => {
             let animationSplitText = new SplitText(element, { type: "chars, words" });
 
-            // ScrollTrigger দিয়ে section এ ঢুকলে animation শুরু হবে
+            // ScrollTrigger: start animation when section enters view
             ScrollTrigger.create({
                 trigger: element,
                 start: "top 85%",
@@ -739,8 +788,8 @@
             smoothTouch: 0.1,
             normalizeScroll: false,
             ignoreMobileResize: true,
-        });
-    }
+               });
+        }
 
     }); // End Document Ready Function
 
@@ -759,4 +808,6 @@
 
    
   
-  })(jQuery); // End jQuery
+  })(jQuery); // End jQuery
+
+

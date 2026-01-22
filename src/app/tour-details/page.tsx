@@ -25,6 +25,8 @@ type TourDetail = {
 type DepartureItem = {
   id: number | string
   tourId?: number
+  priceCodeId?: number
+  priceCode?: string
   tourCode?: string
   code?: string
   flightStartDate?: string
@@ -115,6 +117,23 @@ const formatPriceDisplay = (value: unknown) => {
     return '-'
   }
   return `$${numberValue.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
+}
+
+const encodeUtf8Base64 = (value: string) =>
+  btoa(
+    encodeURIComponent(value).replace(/%([0-9A-F]{2})/g, (_, code) => String.fromCharCode(Number.parseInt(code, 16)))
+  )
+
+const toHex = (value: string) =>
+  value
+    .split('')
+    .map((char) => char.charCodeAt(0).toString(16).padStart(2, '0'))
+    .join('')
+
+const encodeTourParam = (payload: Record<string, unknown>) => {
+  const json = JSON.stringify(payload)
+  const base64 = encodeUtf8Base64(json)
+  return toHex(base64)
 }
 
 const toNumber = (value: unknown) => {
@@ -226,11 +245,13 @@ const resolveDepartures = (data: unknown): DepartureItem[] => {
       }
       const idValue = typeof item.id === 'number' ? item.id : typeof item.code === 'string' ? item.code : 'departure'
 
-      return {
-        id: idValue,
-        tourId: typeof item.tourId === 'number' ? item.tourId : undefined,
-        tourCode: typeof item.tourCode === 'string' ? item.tourCode : undefined,
-        code: typeof item.code === 'string' ? item.code : undefined,
+        return {
+          id: idValue,
+          tourId: typeof item.tourId === 'number' ? item.tourId : undefined,
+          priceCodeId: typeof item.priceCodeId === 'number' ? item.priceCodeId : undefined,
+          priceCode: typeof item.priceCode === 'string' ? item.priceCode : undefined,
+          tourCode: typeof item.tourCode === 'string' ? item.tourCode : undefined,
+          code: typeof item.code === 'string' ? item.code : undefined,
         flightStartDate: typeof item.flightStartDate === 'string' ? item.flightStartDate.trim() : undefined,
         flightEndDate: typeof item.flightEndDate === 'string' ? item.flightEndDate.trim() : undefined,
         startDate: typeof item.startDate === 'string' ? item.startDate.trim() : undefined,
@@ -467,7 +488,14 @@ export default function TourDetails() {
     const dateEnd = departure.flightEndDate || departure.endDate || ''
     const dateRange = dateStart && dateEnd ? `${dateStart} - ${dateEnd}` : dateStart || dateEnd || 'TBA'
     const tourCode = departure.tourCode || departure.code || ''
-    const bookingUrl = `/contact?tourId=${departure.tourId ?? ''}&departureId=${departure.id}&type=${priceType}`
+    const bookingTourId = departure.tourId ?? resolvedDetail.id
+    const bookingPayload: Record<string, unknown> = {
+      tourId: bookingTourId ?? undefined,
+      tourCodeId: departure.id ?? departure.priceCodeId ?? undefined,
+      departureId: departure.id ?? undefined,
+      type: priceType === 'full' ? 1 : 2,
+    }
+    const bookingUrl = `/booking?tour=${encodeTourParam(bookingPayload)}`
 
     return (
       <div className={`departure-card ${isOpen ? 'is-open' : ''}`}>

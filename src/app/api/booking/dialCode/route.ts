@@ -3,6 +3,7 @@ import { getData } from '@/lib/api/server'
 
 export async function GET() {
   if (!process.env.API_BASE_URL || !process.env.COMPANY_ID) {
+    console.error('Environment variables missing')
     return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
   }
 

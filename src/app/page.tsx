@@ -44,7 +44,7 @@ const homeApiInitialData: HomeApiData = {
 }
 
 const apiMode = process.env.NEXT_PUBLIC_API_MODE ?? 'dev'
-const shouldFallback = apiMode !== 'prod'
+const shouldFallback = apiMode !== 'dev'
 
 const heroSlides = [
   {
