@@ -1460,7 +1460,7 @@ export default function Home() {
                           ) : null}
                         </div>
                         {item.title ? (
-                          <h3>
+                          <h3 title={[item.title, item.titleLine2].filter(Boolean).join(' ')}>
                             {item.href ? (
                               <a href={item.href}>{item.title}</a>
                             ) : (

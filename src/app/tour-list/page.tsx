@@ -504,7 +504,7 @@ export default function TourList() {
                                     ) : null}
                                   </div>
                                   {item.title ? (
-                                    <h3>
+                                    <h3 title={item.title}>
                                       {item.href ? <a href={item.href}>{item.title}</a> : <span>{item.title}</span>}
                                     </h3>
                                   ) : null}
@@ -540,7 +540,7 @@ export default function TourList() {
                             </div>
                             <div className="tour-content">
                               {item.title ? (
-                                <h3>
+                                <h3 title={item.title}>
                                   {item.href ? <a href={item.href}>{item.title}</a> : <span>{item.title}</span>}
                                 </h3>
                               ) : null}

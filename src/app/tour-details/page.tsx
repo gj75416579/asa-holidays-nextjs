@@ -11,6 +11,7 @@ type TourDetail = {
   id: number | null
   title: string
   location: string
+  sector: string
   duration: string
   overviewHtml: string
   highlightsHtml: string
@@ -23,10 +24,50 @@ type TourDetail = {
 
 type DepartureItem = {
   id: number | string
-  startDate: string
-  endDate: string
-  price: string
-  seatsLeft: string
+  tourId?: number
+  tourCode?: string
+  code?: string
+  flightStartDate?: string
+  flightEndDate?: string
+  startDate?: string
+  endDate?: string
+  capacity?: number
+  reserved?: number
+  sold?: number
+  landSold?: number
+  tourLeader?: number
+  tourManager?: number
+  sglFare?: number
+  twnFare?: number
+  trpFare?: number
+  chdWithBedFare?: number
+  chdHalfTwnFare?: number
+  chdWithOutBedFare?: number
+  infantFare?: number
+  grSglFare?: number
+  grTwnFare?: number
+  grTrpFare?: number
+  grChdWithBedFare?: number
+  grChdHalfTwnFare?: number
+  grChdWithOutBedFare?: number
+  grInfantFare?: number
+  adultTax?: number
+  childTax?: number
+  flights?: Record<string, unknown>[]
+}
+
+type RelatedTourItem = {
+  id: number | string
+  image: string
+  badge?: string
+  productCode?: string
+  priceLabel?: string
+  price?: string
+  title: string
+  location: string
+  duration: string
+  href?: string
+  delay?: string
 }
 
 const tourDetailFallback = {
@@ -68,12 +109,51 @@ const formatPrice = (value: unknown) => {
   return `$${numberValue.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
 }
 
+const formatPriceDisplay = (value: unknown) => {
+  const numberValue = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(numberValue) || numberValue <= 0) {
+    return '-'
+  }
+  return `$${numberValue.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
+}
+
+const toNumber = (value: unknown) => {
+  const numberValue = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(numberValue) ? numberValue : 0
+}
+
 const parseJsonResponse = async (res: Response) => {
   const text = await res.text()
   if (!res.ok) {
     throw new Error(text || `HTTP ${res.status}`)
   }
   return text ? JSON.parse(text) : {}
+}
+
+const extractList = (data: unknown): Record<string, unknown>[] => {
+  if (Array.isArray(data)) {
+    return data as Record<string, unknown>[]
+  }
+  if (!isRecord(data)) {
+    return []
+  }
+
+  const candidates = [data.data, data.list, data.items, data.records, data.rows, data.result]
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) {
+      return candidate as Record<string, unknown>[]
+    }
+    if (isRecord(candidate)) {
+      const nestedCandidates = [candidate.data, candidate.list, candidate.items, candidate.records, candidate.rows, candidate.result]
+      for (const nestedCandidate of nestedCandidates) {
+        if (Array.isArray(nestedCandidate)) {
+          return nestedCandidate as Record<string, unknown>[]
+        }
+      }
+    }
+  }
+
+  return []
 }
 
 const resolveSeoId = async (uri: string) => {
@@ -98,6 +178,7 @@ const resolveTourDetail = (data: unknown, fallback: typeof tourDetailFallback, f
     id: null,
     title: fallbackEnabled ? fallback.title : '',
     location: fallbackEnabled ? fallback.location : '',
+    sector: fallbackEnabled ? fallback.location : '',
     duration: fallbackEnabled ? fallback.duration : '',
     overviewHtml: '',
     highlightsHtml: '',
@@ -121,6 +202,7 @@ const resolveTourDetail = (data: unknown, fallback: typeof tourDetailFallback, f
     id: typeof record.id === 'number' ? record.id : null,
     title: titleValue || (fallbackEnabled ? fallback.title : ''),
     location: locationValue || (fallbackEnabled ? fallback.location : ''),
+    sector: locationValue || (fallbackEnabled ? fallback.location : ''),
     duration: durationValue || (fallbackEnabled ? fallback.duration : ''),
     overviewHtml: getLocalizedText(record.shortDescription),
     highlightsHtml: getLocalizedText(record.highlights),
@@ -130,17 +212,6 @@ const resolveTourDetail = (data: unknown, fallback: typeof tourDetailFallback, f
     mapImage: typeof record.sectorMap === 'string' ? record.sectorMap.trim() : '',
     productType: typeof record.productType === 'number' ? record.productType : 1,
   }
-}
-
-const pickDeparturePrice = (record: Record<string, unknown>) => {
-  const candidates = [record.twnFare, record.sglFare, record.grTwnFare, record.grSglFare, record.misc]
-  for (const candidate of candidates) {
-    const formatted = formatPrice(candidate)
-    if (formatted) {
-      return formatted
-    }
-  }
-  return ''
 }
 
 const resolveDepartures = (data: unknown): DepartureItem[] => {
@@ -153,24 +224,169 @@ const resolveDepartures = (data: unknown): DepartureItem[] => {
       if (!isRecord(item)) {
         return null
       }
-
-      const startDate = typeof item.startDate === 'string' ? item.startDate.trim() : ''
-      const endDate = typeof item.endDate === 'string' ? item.endDate.trim() : ''
-      const seatsLeft =
-        typeof item.capacity === 'number' && typeof item.sold === 'number'
-          ? String(Math.max(item.capacity - item.sold, 0))
-          : ''
-      const price = pickDeparturePrice(item)
+      const idValue = typeof item.id === 'number' ? item.id : typeof item.code === 'string' ? item.code : 'departure'
 
       return {
-        id: typeof item.id === 'number' ? item.id : startDate || endDate || 'departure',
-        startDate,
-        endDate,
-        price,
-        seatsLeft,
+        id: idValue,
+        tourId: typeof item.tourId === 'number' ? item.tourId : undefined,
+        tourCode: typeof item.tourCode === 'string' ? item.tourCode : undefined,
+        code: typeof item.code === 'string' ? item.code : undefined,
+        flightStartDate: typeof item.flightStartDate === 'string' ? item.flightStartDate.trim() : undefined,
+        flightEndDate: typeof item.flightEndDate === 'string' ? item.flightEndDate.trim() : undefined,
+        startDate: typeof item.startDate === 'string' ? item.startDate.trim() : undefined,
+        endDate: typeof item.endDate === 'string' ? item.endDate.trim() : undefined,
+        capacity: typeof item.capacity === 'number' ? item.capacity : undefined,
+        reserved: typeof item.reserved === 'number' ? item.reserved : undefined,
+        sold: typeof item.sold === 'number' ? item.sold : undefined,
+        landSold: typeof item.landSold === 'number' ? item.landSold : undefined,
+        tourLeader: typeof item.tourLeader === 'number' ? item.tourLeader : undefined,
+        tourManager: typeof item.tourManager === 'number' ? item.tourManager : undefined,
+        sglFare: typeof item.sglFare === 'number' ? item.sglFare : undefined,
+        twnFare: typeof item.twnFare === 'number' ? item.twnFare : undefined,
+        trpFare: typeof item.trpFare === 'number' ? item.trpFare : undefined,
+        chdWithBedFare: typeof item.chdWithBedFare === 'number' ? item.chdWithBedFare : undefined,
+        chdHalfTwnFare: typeof item.chdHalfTwnFare === 'number' ? item.chdHalfTwnFare : undefined,
+        chdWithOutBedFare: typeof item.chdWithOutBedFare === 'number' ? item.chdWithOutBedFare : undefined,
+        infantFare: typeof item.infantFare === 'number' ? item.infantFare : undefined,
+        grSglFare: typeof item.grSglFare === 'number' ? item.grSglFare : undefined,
+        grTwnFare: typeof item.grTwnFare === 'number' ? item.grTwnFare : undefined,
+        grTrpFare: typeof item.grTrpFare === 'number' ? item.grTrpFare : undefined,
+        grChdWithBedFare: typeof item.grChdWithBedFare === 'number' ? item.grChdWithBedFare : undefined,
+        grChdHalfTwnFare: typeof item.grChdHalfTwnFare === 'number' ? item.grChdHalfTwnFare : undefined,
+        grChdWithOutBedFare: typeof item.grChdWithOutBedFare === 'number' ? item.grChdWithOutBedFare : undefined,
+        grInfantFare: typeof item.grInfantFare === 'number' ? item.grInfantFare : undefined,
+        adultTax: typeof item.adultTax === 'number' ? item.adultTax : undefined,
+        childTax: typeof item.childTax === 'number' ? item.childTax : undefined,
+        flights: Array.isArray(item.flights) ? (item.flights as Record<string, unknown>[]) : undefined,
       }
     })
-    .filter((item): item is DepartureItem => Boolean(item))
+    .filter((item): item is DepartureItem => Boolean(item && item.id))
+}
+
+type DeparturePriceSet = {
+  sglFare?: number
+  twnFare?: number
+  trpFare?: number
+  chdWithBedFare?: number
+  chdHalfTwnFare?: number
+  chdWithOutBedFare?: number
+  infantFare?: number
+  adultTax?: number
+  childTax?: number
+}
+
+const getDeparturePrices = (departure: DepartureItem, priceType: 'full' | 'land'): DeparturePriceSet => {
+  if (priceType === 'land') {
+    return {
+      sglFare: departure.grSglFare,
+      twnFare: departure.grTwnFare,
+      trpFare: departure.grTrpFare,
+      chdWithBedFare: departure.grChdWithBedFare,
+      chdHalfTwnFare: departure.grChdHalfTwnFare,
+      chdWithOutBedFare: departure.grChdWithOutBedFare,
+      infantFare: departure.grInfantFare,
+      adultTax: 0,
+      childTax: 0,
+    }
+  }
+
+  return {
+    sglFare: departure.sglFare,
+    twnFare: departure.twnFare,
+    trpFare: departure.trpFare,
+    chdWithBedFare: departure.chdWithBedFare,
+    chdHalfTwnFare: departure.chdHalfTwnFare,
+    chdWithOutBedFare: departure.chdWithOutBedFare,
+    infantFare: departure.infantFare,
+    adultTax: departure.adultTax,
+    childTax: departure.childTax,
+  }
+}
+
+const pickFromPrice = (prices: DeparturePriceSet) => {
+  const candidates = [
+    prices.twnFare,
+    prices.sglFare,
+    prices.trpFare,
+    prices.chdWithBedFare,
+    prices.chdHalfTwnFare,
+    prices.chdWithOutBedFare,
+    prices.infantFare,
+  ]
+  for (const candidate of candidates) {
+    if (typeof candidate === 'number' && candidate > 0) {
+      return formatPrice(candidate)
+    }
+  }
+  return ''
+}
+
+const getAvailability = (departure: DepartureItem) => {
+  const capacity = toNumber(departure.capacity)
+  const reserved = toNumber(departure.reserved)
+  const sold = toNumber(departure.sold)
+  const landSold = toNumber(departure.landSold)
+  const tourLeader = toNumber(departure.tourLeader)
+  const tourManager = toNumber(departure.tourManager)
+  const salesQty = capacity - reserved - sold + landSold
+  const available = salesQty - tourLeader - tourManager
+
+  if (available <= 0) {
+    return { label: 'Sold Out', status: 'sold-out', available }
+  }
+  if (available <= 9) {
+    return { label: 'Selling Fast', status: 'selling-fast', available }
+  }
+  return { label: 'Available', status: 'available', available }
+}
+
+const resolveRelatedTours = (data: unknown): RelatedTourItem[] => {
+  const list = extractList(data)
+  if (!list.length) {
+    return []
+  }
+
+  return list
+    .map((item, index) => {
+      if (!isRecord(item)) {
+        return null
+      }
+
+      const title = getLocalizedText(item.name)
+      const location = typeof item.sector === 'string' ? item.sector.trim() : ''
+      const duration = formatDuration(item.duration)
+      const image = typeof item.cover === 'string' ? item.cover.trim() : ''
+      const badge = typeof item.badge === 'string' ? item.badge.trim() : ''
+      const productCode = typeof item.productCode === 'string' ? item.productCode.trim() : ''
+      const price = formatPrice(item.price)
+      const uriValue = typeof item.uri === 'string' ? item.uri.trim() : ''
+      const idValue =
+        typeof item.id === 'number'
+          ? item.id
+          : productCode
+            ? productCode
+            : `related-${index + 1}`
+      const hrefValue = uriValue
+        ? `/tour-details?uri=${encodeURIComponent(uriValue)}`
+        : typeof item.id === 'number'
+          ? `/tour-details?id=${item.id}`
+          : ''
+
+      return {
+        id: idValue,
+        image,
+        badge,
+        productCode,
+        priceLabel: price ? 'From' : '',
+        price,
+        title,
+        location,
+        duration,
+        href: hrefValue,
+        delay: `.${2 + index * 2}s`,
+      }
+    })
+    .filter((item): item is RelatedTourItem => Boolean(item && item.title))
 }
 export default function TourDetails() {
   const searchParams = useSearchParams()
@@ -179,8 +395,10 @@ export default function TourDetails() {
 
   const [detailData, setDetailData] = useState<unknown | null>(null)
   const [departuresData, setDeparturesData] = useState<unknown | null>(null)
+  const [relatedData, setRelatedData] = useState<unknown | null>(null)
   const [detailError, setDetailError] = useState(false)
   const [departuresError, setDeparturesError] = useState(false)
+  const [relatedError, setRelatedError] = useState(false)
 
   useEffect(() => {
     let isActive = true
@@ -209,6 +427,7 @@ export default function TourDetails() {
 
         const detailRes = await fetch(`/api/tour/detail?id=${detailId}`)
         const detailJson = await parseJsonResponse(detailRes)
+        console.log('Tour detail API data:', detailJson)
         if (isActive) {
           setDetailData(detailJson)
         }
@@ -229,8 +448,147 @@ export default function TourDetails() {
 
   const resolvedDetail = resolveTourDetail(detailData, tourDetailFallback, shouldFallback)
   const departures = resolveDepartures(departuresData)
+  const relatedTours = resolveRelatedTours(relatedData)
   const isGroupTour = resolvedDetail.productType === 1
-  const showApiNotice = detailError || departuresError
+  const showApiNotice = detailError || departuresError || relatedError
+  const emptyNotice = <div className="tour-empty-notice">No information available for this tour.</div>
+  const mapLocation = resolvedDetail.sector.trim()
+  const hasMapLocation = Boolean(mapLocation)
+  const hasMapImage = Boolean(resolvedDetail.mapImage)
+  const callPhone = '63035303'
+
+  const DepartureCard = ({ departure }: { departure: DepartureItem }) => {
+    const [isOpen, setIsOpen] = useState(false)
+    const [priceType, setPriceType] = useState<'full' | 'land'>('full')
+    const availability = getAvailability(departure)
+    const prices = getDeparturePrices(departure, priceType)
+    const fromPrice = pickFromPrice(prices)
+    const dateStart = departure.flightStartDate || departure.startDate || ''
+    const dateEnd = departure.flightEndDate || departure.endDate || ''
+    const dateRange = dateStart && dateEnd ? `${dateStart} - ${dateEnd}` : dateStart || dateEnd || 'TBA'
+    const tourCode = departure.tourCode || departure.code || ''
+    const bookingUrl = `/contact?tourId=${departure.tourId ?? ''}&departureId=${departure.id}&type=${priceType}`
+
+    return (
+      <div className={`departure-card ${isOpen ? 'is-open' : ''}`}>
+        <div className="departure-header">
+          <div className="departure-info">
+            <div className="departure-dates">{dateRange}</div>
+            {tourCode ? <div className="departure-code">{tourCode}</div> : null}
+          </div>
+          <div className="departure-meta">
+            <span className={`departure-badge ${availability.status}`}>{availability.label}</span>
+            {fromPrice ? <div className="departure-from">From {fromPrice}</div> : null}
+          </div>
+          <button
+            type="button"
+            className="departure-toggle"
+            onClick={() => setIsOpen((prev) => !prev)}
+            aria-expanded={isOpen}
+            aria-label={isOpen ? 'Collapse departure' : 'Expand departure'}
+          >
+            {isOpen ? '-' : '+'}
+          </button>
+        </div>
+        {isOpen ? (
+          <div className="departure-body">
+            <div className="departure-toggle-group">
+              <button
+                type="button"
+                className={priceType === 'full' ? 'is-active' : ''}
+                onClick={() => setPriceType('full')}
+              >
+                Full Tour
+              </button>
+              <button
+                type="button"
+                className={priceType === 'land' ? 'is-active' : ''}
+                onClick={() => setPriceType('land')}
+              >
+                Land Tour
+              </button>
+            </div>
+            <div className="departure-prices">
+              <div className="price-row">
+                <span>Single Fare</span>
+                <span>{formatPriceDisplay(prices.sglFare)}</span>
+              </div>
+              <div className="price-row">
+                <span>Twin Fare</span>
+                <span>{formatPriceDisplay(prices.twnFare)}</span>
+              </div>
+              <div className="price-row">
+                <span>Triple Fare</span>
+                <span>{formatPriceDisplay(prices.trpFare)}</span>
+              </div>
+              <div className="price-row">
+                <span>Child w/Bed</span>
+                <span>{formatPriceDisplay(prices.chdWithBedFare)}</span>
+              </div>
+              <div className="price-row">
+                <span>Child w/o Bed</span>
+                <span>{formatPriceDisplay(prices.chdWithOutBedFare)}</span>
+              </div>
+              <div className="price-row">
+                <span>Infant Fare</span>
+                <span>{formatPriceDisplay(prices.infantFare)}</span>
+              </div>
+              <div className="price-row">
+                <span>Adult Tax</span>
+                <span>{formatPriceDisplay(prices.adultTax)}</span>
+              </div>
+              <div className="price-row">
+                <span>Child Tax</span>
+                <span>{formatPriceDisplay(prices.childTax)}</span>
+              </div>
+            </div>
+            {departure.flights && departure.flights.length ? (
+              <div className="departure-flights">
+                <div className="departure-section-title">Flight Schedule</div>
+                <div className="departure-flight-list">
+                  {departure.flights.map((flight, index) => {
+                    const flightRecord = flight as Record<string, unknown>
+                    const flightDate = typeof flightRecord.departureDate === 'string' ? flightRecord.departureDate : ''
+                    const flightSector = typeof flightRecord.sector === 'string' ? flightRecord.sector : ''
+                    const flightNo = typeof flightRecord.flightNo === 'string' ? flightRecord.flightNo : ''
+                    const etd = typeof flightRecord.etd === 'string' ? flightRecord.etd : ''
+                    const eta = typeof flightRecord.eta === 'string' ? flightRecord.eta : ''
+
+                    return (
+                      <div key={`${departure.id}-flight-${index}`} className="departure-flight-item">
+                        <div>{flightDate}</div>
+                        <div>{flightSector}</div>
+                        <div>{flightNo}</div>
+                        <div>{etd && eta ? `${etd} - ${eta}` : etd || eta}</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ) : null}
+            <div className="departure-actions">
+              {availability.status === 'sold-out' ? (
+                <button type="button" className="theme-btn is-disabled" disabled>
+                  Sold Out
+                </button>
+              ) : availability.status === 'selling-fast' ? (
+                <a href={`tel:${callPhone}`} className="theme-btn outline">
+                  Call Us
+                </a>
+              ) : (
+                <a href={bookingUrl} className="theme-btn">
+                  Book Now
+                </a>
+              )}
+              <div className="departure-availability">
+                {availability.available > 0 ? `${availability.available} seats left` : 'No seats left'}
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    )
+  }
 
   useEffect(() => {
     let isActive = true
@@ -272,6 +630,39 @@ export default function TourDetails() {
       isActive = false
     }
   }, [resolvedDetail.id, isGroupTour])
+
+  useEffect(() => {
+    let isActive = true
+
+    if (!resolvedDetail.id) {
+      setRelatedData(null)
+      return
+    }
+
+    const fetchRelated = async () => {
+      try {
+        if (isActive) {
+          setRelatedError(false)
+        }
+        const res = await fetch(`/api/tour/link/${resolvedDetail.id}`)
+        const data = await parseJsonResponse(res)
+        if (isActive) {
+          setRelatedData(data)
+        }
+      } catch (error) {
+        console.error('Related tours fetch error:', error)
+        if (isActive) {
+          setRelatedError(true)
+        }
+      }
+    }
+
+    fetchRelated()
+
+    return () => {
+      isActive = false
+    }
+  }, [resolvedDetail.id])
 
   return (
     <>
@@ -357,204 +748,43 @@ export default function TourDetails() {
                     <div className="col-lg-8 col-12">
                       <div className="tour-left-content">
                         <h3>Tours Overview</h3>
-{resolvedDetail.overviewHtml ? (
-  <div className="tour-richtext mt-3 mb-5" dangerouslySetInnerHTML={{ __html: resolvedDetail.overviewHtml }} />
-) : shouldFallback ? (
-  <>
-    <p className="mt-3 mb-3">
-      Bali, often called &quot;The Island of Gods&quot;, is one of the world&apos;s most captivating travel destinations. Located in Indonesia, this tropical paradise is famous for its pristine beaches, lush rice terraces, vibrant nightlife, and deeply spiritual culture. Whether you&apos;re seeking adventure, relaxation, or cultural immersion, Bali offers an experience like no other.
-    </p>
-    <p className="mb-5">
-      Visitors can unwind on stunning beaches like Kuta, Seminyak, and Nusa Dua, or escape to bud for peaceful retreat surrounded by rice fields, art galleries, and yoga centers. Adventure seekers can explore volcano hikes at Mount Batur, diving in crystal-clear waters, or surfing world-class waves. Bali is also rich in tradition, with thousands of temples, colorful ceremonies, and warm hospitality from locals.
-    </p>
-  </>
-) : null}
+                        {resolvedDetail.overviewHtml ? (
+                          <div className="tour-richtext mt-3 mb-5" dangerouslySetInnerHTML={{ __html: resolvedDetail.overviewHtml }} />
+                        ) : (
+                          <div className="mt-3 mb-5">{emptyNotice}</div>
+                        )}
                         <div className="row g-4 mb-5">
                           <div className="col-lg-6">
                             <div className="list-item">
                               <h3>Included and Excluded</h3>
-{resolvedDetail.inclusionsHtml ? (
-  <div className="tour-richtext" dangerouslySetInnerHTML={{ __html: resolvedDetail.inclusionsHtml }} />
-) : shouldFallback ? (
-  <ul className="list">
-    <li>
-      <i className="fa-solid fa-check"></i>
-      Pick and Drop Services
-    </li>
-    <li>
-      <i className="fa-solid fa-check"></i>
-      1 Meal Per Day
-    </li>
-    <li>
-      <i className="fa-solid fa-check"></i>
-      Cruise Dinner &amp; Music Event
-    </li>
-    <li>
-      <i className="fa-solid fa-check"></i>
-      Visit 7 Best Places in the City
-    </li>
-    <li>
-      <i className="fa-solid fa-check"></i>
-      Bottled Water on Buses
-    </li>
-    <li>
-      <i className="fa-solid fa-check"></i>
-      Transportation Luxury Tour Bus
-    </li>
-  </ul>
-) : null}
+                              {resolvedDetail.inclusionsHtml ? (
+                                <div className="tour-richtext" dangerouslySetInnerHTML={{ __html: resolvedDetail.inclusionsHtml }} />
+                              ) : (
+                                emptyNotice
+                              )}
                             </div>
                           </div>
                           <div className="col-lg-6">
                             <div className="list-item">
                               <h3>Excluded</h3>
-{resolvedDetail.exclusionsHtml ? (
-  <div className="tour-richtext" dangerouslySetInnerHTML={{ __html: resolvedDetail.exclusionsHtml }} />
-) : shouldFallback ? (
-  <ul className="list">
-    <li>
-      <i className="fa-solid fa-xmark"></i>
-      Gratuities
-    </li>
-    <li>
-      <i className="fa-solid fa-xmark"></i>
-      Hotel pickup and drop-off
-    </li>
-    <li>
-      <i className="fa-solid fa-xmark"></i>
-      Lunch, Food &amp; Drinks
-    </li>
-    <li>
-      <i className="fa-solid fa-xmark"></i>
-      Optional upgrade to a glass
-    </li>
-    <li>
-      <i className="fa-solid fa-xmark"></i>
-      Additional Services
-    </li>
-    <li>
-      <i className="fa-solid fa-xmark"></i>
-      Insurance
-    </li>
-  </ul>
-) : null}
+                              {resolvedDetail.exclusionsHtml ? (
+                                <div className="tour-richtext" dangerouslySetInnerHTML={{ __html: resolvedDetail.exclusionsHtml }} />
+                              ) : (
+                                emptyNotice
+                              )}
                             </div>
                           </div>
                         </div>
                         <h3>Top Highlights</h3>
-{resolvedDetail.highlightsHtml ? (
-  <div className="tour-richtext mt-3" dangerouslySetInnerHTML={{ __html: resolvedDetail.highlightsHtml }} />
-) : shouldFallback ? (
-  <>
-    <p className="mt-3">
-      Bali is more than just a tropical destination¨¦?£¤?¡±?t&apos;s a paradise filled with unforgettable experiences. from its sacred temples perched on dramatic cliffs to golden beaches that stretch for miles, every corner of the island offers something unique.
-    </p>
-    <ul className="list-2">
-      <li>
-        <i className="fa-solid fa-check"></i>
-        Explore iconic sites like Tanah Lot, Uluwatu, and Besakih Temple.
-      </li>
-      <li>
-        <i className="fa-solid fa-check"></i>
-        Relax on Kuta, Seminyak, Nusa Dua, and Jimbaran Bay.
-      </li>
-      <li>
-        <i className="fa-solid fa-check"></i>
-        Discover rice terraces, art markets, yoga retreats, and monkey forests.
-      </li>
-      <li>
-        <i className="fa-solid fa-check"></i>
-        Hike an active volcano for breathtaking sunrise views.
-      </li>
-      <li>
-        <i className="fa-solid fa-check"></i>
-        Experience beach clubs, rooftop bars, and live music in Seminyak and Canggu.
-      </li>
-      <li>
-        <i className="fa-solid fa-check"></i>
-        Visit Tegenungan, Gitgit, and Sekumpul waterfalls for adventure and serenity.
-      </li>
-    </ul>
-  </>
-) : null}
-                        <h3>Itinerary</h3>
-{resolvedDetail.itineraryHtml ? (
-  <div className="tour-richtext" dangerouslySetInnerHTML={{ __html: resolvedDetail.itineraryHtml }} />
-) : shouldFallback ? (
-  <div className="accordion-two" id="faq-accordion-two">
-    <div className="accordion-item">
-      <h5 className="accordion-header">
-        <button className="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwoOne" aria-expanded="false" aria-controls="collapseTwoOne">
-          Day 1 - Arrive at campground
-        </button>
-      </h5>
-      <div id="collapseTwoOne" className="accordion-collapse collapse" data-bs-parent="#faq-accordion-two">
-        <div className="accordion-body">
-          <p>
-            The early start ensures you can fully immerse yourself in the tranquility of nature before the world fully awakens. As the morning light filters through the trees, you&apos;ll experience the crisp, fresh air and the peaceful sounds of the forest. The trail ahead offers both a physical challenge promise of breathtaking.
-          </p>
-        </div>
-      </div>
-    </div>
-    <div className="accordion-item">
-      <h5 className="accordion-header">
-        <button className="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwoTwo" aria-expanded="false" aria-controls="collapseTwoTwo">
-          Day 2 - Wake up early and embark on a day hike
-        </button>
-      </h5>
-      <div id="collapseTwoTwo" className="accordion-collapse collapse" data-bs-parent="#faq-accordion-two">
-        <div className="accordion-body">
-          <p>
-            The early start ensures you can fully immerse yourself in the tranquility of nature before the world fully awakens. As the morning light filters through the trees, you&apos;ll experience the crisp, fresh air and the peaceful sounds of the forest. The trail ahead offers both a physical challenge promise of breathtaking.
-          </p>
-        </div>
-      </div>
-    </div>
-    <div className="accordion-item">
-      <h5 className="accordion-header">
-        <button className="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwoThree" aria-expanded="false" aria-controls="collapseTwoThree">
-          Day 3 - Join a guided ranger-led nature walk
-        </button>
-      </h5>
-      <div id="collapseTwoThree" className="accordion-collapse collapse" data-bs-parent="#faq-accordion-two">
-        <div className="accordion-body">
-          <p>
-            The early start ensures you can fully immerse yourself in the tranquility of nature before the world fully awakens. As the morning light filters through the trees, you&apos;ll experience the crisp, fresh air and the peaceful sounds of the forest. The trail ahead offers both a physical challenge promise of breathtaking.
-          </p>
-        </div>
-      </div>
-    </div>
-    <div className="accordion-item">
-      <h5 className="accordion-header">
-        <button className="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwoFour" aria-expanded="false" aria-controls="collapseTwoFour">
-          Day 4 - Take a break from hiking
-        </button>
-      </h5>
-      <div id="collapseTwoFour" className="accordion-collapse collapse" data-bs-parent="#faq-accordion-two">
-        <div className="accordion-body">
-          <p>
-            The early start ensures you can fully immerse yourself in the tranquility of nature before the world fully awakens. As the morning light filters through the trees, you&apos;ll experience the crisp, fresh air and the peaceful sounds of the forest. The trail ahead offers both a physical challenge promise of breathtaking.
-          </p>
-        </div>
-      </div>
-    </div>
-    <div className="accordion-item">
-      <h5 className="accordion-header">
-        <button className="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwoFive" aria-expanded="false" aria-controls="collapseTwoFive">
-          Day 5 - Pack a lunch and embark on a longer hike
-        </button>
-      </h5>
-      <div id="collapseTwoFive" className="accordion-collapse collapse" data-bs-parent="#faq-accordion-two">
-        <div className="accordion-body">
-          <p>
-            The early start ensures you can fully immerse yourself in the tranquility of nature before the world fully awakens. As the morning light filters through the trees, you&apos;ll experience the crisp, fresh air and the peaceful sounds of the forest. The trail ahead offers both a physical challenge promise of breathtaking.
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-) : null}
-<h3>Frequently Asked Questions</h3>
+                        {resolvedDetail.highlightsHtml ? (
+                          <div className="tour-richtext mt-3" dangerouslySetInnerHTML={{ __html: resolvedDetail.highlightsHtml }} />
+                        ) : (
+                          <div className="mt-3">{emptyNotice}</div>
+                        )}
+                        {/* Itinerary hidden for now */}
+                        {/* Frequently Asked Questions hidden for now */}
+                        {/*
+                        <h3>Frequently Asked Questions</h3>
                         <div className="accordion-one mt-25 mb-60" id="faq-accordion">
                           <div className="accordion-item">
                             <h5 className="accordion-header">
@@ -625,26 +855,29 @@ export default function TourDetails() {
                             </div>
                           </div>
                         </div>
-                        {resolvedDetail.mapImage || shouldFallback ? (
-  <>
-    <h3>Maps</h3>
-    <div className="map-items">
-      <div className="googpemap">
-        {resolvedDetail.mapImage ? (
-          <img src={resolvedDetail.mapImage} alt="map" />
-        ) : (
-          <iframe
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d6678.7619084840835!2d144.9618311901502!3d-37.81450084255415!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x6ad642b4758afc1d%3A0x3119cc820fdfc62e!2sEnvato!5e0!3m2!1sen!2sbd!4v1641984054261!5m2!1sen!2sbd"
-            style={{ border: 0 }}
-            allowFullScreen
-            loading="lazy"
-          ></iframe>
-        )}
-      </div>
-    </div>
-  </>
-) : null}
-<h3>Clients Reviews</h3>
+                        */}
+                        {hasMapLocation || hasMapImage ? (
+                          <>
+                            <h3>Maps</h3>
+                            <div className="map-items">
+                              <div className="googpemap">
+                                {hasMapLocation ? (
+                                  <iframe
+                                    src={`https://www.google.com/maps?q=${encodeURIComponent(mapLocation)}&output=embed`}
+                                    style={{ border: 0 }}
+                                    allowFullScreen
+                                    loading="lazy"
+                                  ></iframe>
+                                ) : hasMapImage ? (
+                                  <img src={resolvedDetail.mapImage} alt="map" />
+                                ) : null}
+                              </div>
+                            </div>
+                          </>
+                        ) : null}
+                        {/* Clients Reviews hidden for now */}
+                        {/*
+                        <h3>Clients Reviews</h3>
                         <div className="courses-reviews-box-items">
                           <div className="courses-reviews-box">
                             <div className="reviews-box">
@@ -727,81 +960,34 @@ export default function TourDetails() {
                             </div>
                           </div>
                         </div>
-                        <h3>Add Reviews</h3>
-                        <div className="contact-box">
-                          <h4>Leave Feedback</h4>
-                          <form action="contact.php" id="contact-form1" method="POST" className="contact-form-items">
-                            <div className="row g-4">
-                              <div className="col-lg-6">
-                                <div className="form-clt">
-                                  <span>Name</span>
-                                  <input type="text" name="name" id="name331" placeholder="Full Name" />
-                                </div>
-                              </div>
-                              <div className="col-lg-6">
-                                <div className="form-clt">
-                                  <span>Phone</span>
-                                  <input type="text" name="name" id="name22" placeholder="Phone Number" />
-                                </div>
-                              </div>
-                              <div className="col-lg-12">
-                                <div className="form-clt">
-                                  <span>Email</span>
-                                  <input type="text" name="name" id="email11" placeholder="Your email" />
-                                </div>
-                              </div>
-                              <div className="col-lg-12">
-                                <div className="form-clt">
-                                  <span>Comments</span>
-                                  <textarea name="message" id="message1" placeholder="Type your message"></textarea>
-                                </div>
-                              </div>
-                              <div className="col-lg-8">
-                                <button type="submit" className="theme-btn">
-                                  Send Your Reviews
-                                </button>
-                              </div>
-                            </div>
-                          </form>
-                        </div>
+                        */}
+                        {/* Add Reviews hidden for now */}
                       </div>
                     </div>
                     <div className="col-lg-4 col-12">
                       <div className="tour-details-side">
                         <div className="tour-details-sidebar sticky-style">
                           <div className="tour-sidebar-items">
-  <h3>{isGroupTour ? 'Departure Dates' : 'Tour Enquiry'}</h3>
-  {isGroupTour ? (
-    <>
-      {departures.length ? (
-        <ul className="departure-list">
-          {departures.map((departure) => (
-            <li key={`departure-${departure.id}`}>
-              <div className="departure-date">
-                <span>{departure.startDate}</span>
-                {departure.endDate ? <span> - {departure.endDate}</span> : null}
-              </div>
-              {departure.price ? <div className="departure-price">{departure.price}</div> : null}
-              {departure.seatsLeft ? <div className="departure-seats">Seats left: {departure.seatsLeft}</div> : null}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text">No departures available yet.</p>
-      )}
-      <a href="/contact" className="theme-btn">
-        Book Now
-      </a>
-    </>
-  ) : (
-    <>
-      <p className="text">This tour is for enquiry only. Please contact us for availability.</p>
-      <a href="/contact" className="theme-btn">
-        Enquiry Now
-      </a>
-    </>
-  )}
-</div>
+                            <h3>{isGroupTour ? 'Price & Departure' : 'Tour Enquiry'}</h3>
+                            {isGroupTour ? (
+                              departures.length ? (
+                                <div className="departure-card-list">
+                                  {departures.map((departure) => (
+                                    <DepartureCard key={`departure-${departure.id}`} departure={departure} />
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text">No departures available yet.</p>
+                              )
+                            ) : (
+                              <>
+                                <p className="text">This tour is for enquiry only. Please contact us for availability.</p>
+                                <a href="/contact" className="theme-btn">
+                                  Enquiry Now
+                                </a>
+                              </>
+                            )}
+                          </div>
 <div className="widget-contact">
                             <h3>Need Help?</h3>
                             <ul className="list-style-one">
@@ -829,140 +1015,59 @@ export default function TourDetails() {
           </section>
 
           {/* Tour Grid Section Start */}
-          <section className="tour-grid-section section-padding pt-0 fix">
+          <section className="tour-grid-section related-tours-section section-padding pt-0 fix">
             <div className="container">
               <div className="section-title text-center">
                 <h2 className="text-anim">Related Trips You Might Also Like</h2>
               </div>
               <div className="row">
-                <div className="col-xl-4 col-lg-6 col-md-6 wow fadeInUp" data-wow-delay=".2s">
-                  <div className="tour-place-item">
-                    <div className="tour-place-image">
-                      <img src="/assets/img/home-1/tour/tour-8.jpg" alt="img" />
-                      <span>10% Off</span>
-                      <div className="icon">
-                        <i className="fa-regular fa-heart"></i>
-                      </div>
-                    </div>
-                    <div className="tour-place-content">
-                      <div className="rating-item">
-                        <div className="star">
-                          <span>Rating</span>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-sharp fa-solid fa-star-half-stroke"></i>
+                {relatedTours.length ? (
+                  relatedTours.map((item) => (
+                    <div key={item.id} className="col-xl-3 col-lg-6 col-md-6 wow fadeInUp" data-wow-delay={item.delay}>
+                      <div className="tour-place-item">
+                        <div className={`tour-place-image${item.image ? '' : ' is-empty'}`}>
+                          {item.image ? <img src={item.image} alt="img" /> : null}
+                          {item.badge ? <span>{item.badge}</span> : null}
+                          <div className="icon">
+                            <i className="fa-regular fa-heart"></i>
+                          </div>
                         </div>
-                        <h5><span>Tours Price</span>$49.00</h5>
-                      </div>
-                      <h3>
-                        <a href="/tour-details">
-                          Relinking Beach in Nusa panada island, Bali, Indonesia
-                        </a>
-                      </h3>
-                      <ul className="tour-list">
-                        <li>
-                          <i className="fa-regular fa-location-dot"></i>
-                          Bali, Indonesia
-                        </li>
-                        <li>
-                          <i className="fa-regular fa-clock"></i>
-                          1 - 3 days
-                        </li>
-                        <li>
-                          <i className="fa-regular fa-users"></i>
-                          3 persons
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-xl-4 col-lg-6 col-md-6 wow fadeInUp" data-wow-delay=".4s">
-                  <div className="tour-place-item">
-                    <div className="tour-place-image">
-                      <img src="/assets/img/home-1/tour/tour-9.jpg" alt="img" />
-                      <div className="icon">
-                        <i className="fa-regular fa-heart"></i>
-                      </div>
-                    </div>
-                    <div className="tour-place-content">
-                      <div className="rating-item">
-                        <div className="star">
-                          <span>Rating</span>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-sharp fa-solid fa-star-half-stroke"></i>
+                        <div className="tour-place-content">
+                          <div className="rating-item">
+                            {item.productCode ? <div className="product-code">{item.productCode}</div> : null}
+                            {item.price ? (
+                              <h5>
+                                <span>{item.priceLabel}</span>
+                                {item.price}
+                              </h5>
+                            ) : null}
+                          </div>
+                          {item.title ? (
+                            <h3 title={item.title}>
+                              {item.href ? <a href={item.href}>{item.title}</a> : <span>{item.title}</span>}
+                            </h3>
+                          ) : null}
+                          <ul className="tour-list">
+                            {item.location ? (
+                              <li>
+                                <i className="fa-regular fa-location-dot"></i>
+                                {item.location}
+                              </li>
+                            ) : null}
+                            {item.duration ? (
+                              <li>
+                                <i className="fa-regular fa-clock"></i>
+                                {item.duration}
+                              </li>
+                            ) : null}
+                          </ul>
                         </div>
-                        <h5><span>Tours Price</span>$49.00</h5>
-                      </div>
-                      <h3>
-                        <a href="/tour-details">
-                          Scenic Kayaking Setup Along <br /> Duero River, Soria
-                        </a>
-                      </h3>
-                      <ul className="tour-list">
-                        <li>
-                          <i className="fa-regular fa-location-dot"></i>
-                          Soria, Castilla
-                        </li>
-                        <li>
-                          <i className="fa-regular fa-clock"></i>
-                          1 - 3 days
-                        </li>
-                        <li>
-                          <i className="fa-regular fa-users"></i>
-                          3 persons
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-xl-4 col-lg-6 col-md-6 wow fadeInUp" data-wow-delay=".6s">
-                  <div className="tour-place-item">
-                    <div className="tour-place-image">
-                      <img src="/assets/img/home-1/tour/tour-10.jpg" alt="img" />
-                      <span>13% Off</span>
-                      <div className="icon">
-                        <i className="fa-regular fa-heart"></i>
                       </div>
                     </div>
-                    <div className="tour-place-content">
-                      <div className="rating-item">
-                        <div className="star">
-                          <span>Rating</span>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-solid fa-star"></i>
-                          <i className="fa-sharp fa-solid fa-star-half-stroke"></i>
-                        </div>
-                        <h5><span>Tours Price</span>$49.00</h5>
-                      </div>
-                      <h3>
-                        <a href="/tour-details">
-                          Camel safaris along desert dunes near roads and small villages
-                        </a>
-                      </h3>
-                      <ul className="tour-list">
-                        <li>
-                          <i className="fa-regular fa-location-dot"></i>
-                          Giza, Egypt
-                        </li>
-                        <li>
-                          <i className="fa-regular fa-clock"></i>
-                          1 - 3 days
-                        </li>
-                        <li>
-                          <i className="fa-regular fa-users"></i>
-                          3 persons
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
+                  ))
+                ) : (
+                  <div className="col-12 text-center">{emptyNotice}</div>
+                )}
               </div>
             </div>
           </section>
