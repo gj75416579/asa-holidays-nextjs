@@ -1,6 +1,6 @@
 'use client';
 
-import Header from '@/templete/Header'
+import Header from '@/templete/HeaderWithSuspense'
 import Footer from '@/templete/Footer'
 
 
@@ -45,7 +45,7 @@ export default function About() {
                         </h2>
                       </div>
                       <p className="text wow fadeInUp" data-wow-delay=".5s">
-                        We believe travel is more than just a trip鈥攊t&apos;s an experience that shapes your life. Our mission is to create unforgettable journeys that combine adventure, comfort, and authentic cultural encounters.
+                        We believe travel is more than just a trip閳ユ攰t&apos;s an experience that shapes your life. Our mission is to create unforgettable journeys that combine adventure, comfort, and authentic cultural encounters.
                       </p>
                       <div className="about-item">
                         <div className="about-image wow img-custom-anim-left">
@@ -537,7 +537,7 @@ export default function About() {
                       </div>
                       <div className="section-title mb-0">
                         <h2 className="sec-title text-white text-anim">
-                          Adventure Is Calling 鈥?Are You Ready?
+                          Adventure Is Calling 閳?Are You Ready?
                         </h2>
                       </div>
                       <p className="text wow fadeInUp" data-wow-delay=".3s">
@@ -558,6 +558,7 @@ export default function About() {
     </>
   );
 }
+
 
 
 

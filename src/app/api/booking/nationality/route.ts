@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getData } from '@/lib/api/server'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   if (!process.env.API_BASE_URL || !process.env.COMPANY_ID) {
     console.error('Environment variables missing')
@@ -15,3 +17,4 @@ export async function GET() {
     return NextResponse.json({ error: 'Failed to fetch nationalities' }, { status: 500 })
   }
 }
+

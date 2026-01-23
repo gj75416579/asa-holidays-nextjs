@@ -1,12 +1,22 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 
-import Header from '@/templete/Header'
+import Header from '@/templete/HeaderWithSuspense'
 import Footer from '@/templete/Footer'
 import ApiMaintenanceNotice from '@/templete/ApiMaintenanceNotice'
 import { AirwallexButton, useCheckPaymentStatus } from '@/templete/Airwallex'
+
+export const dynamic = 'force-dynamic'
+
+export default function BookingPage() {
+  return (
+    <Suspense fallback={null}>
+      <BookingPageContent />
+    </Suspense>
+  )
+}
 
 type RoomSelection = {
   adults: number
@@ -441,64 +451,85 @@ const resolveDepartures = (data: unknown): DepartureItem[] => {
     return []
   }
 
-  return data.data.pageData
-    .map((item) => {
-      if (!isRecord(item)) {
-        return null
-      }
+  const departures: DepartureItem[] = []
 
-      const idValue = typeof item.id === 'number' ? item.id : typeof item.code === 'string' ? item.code : ''
-      if (!idValue) {
-        return null
-      }
+  data.data.pageData.forEach((item) => {
+    if (!isRecord(item)) {
+      return
+    }
 
-      const flights = Array.isArray(item.flights)
-        ? item.flights
-          .map((flight) => {
-            if (!isRecord(flight)) {
-              return null
-            }
+    const idValue = typeof item.id === 'number' ? item.id : typeof item.code === 'string' ? item.code : ''
+    if (!idValue) {
+      return
+    }
 
-            return {
-              id: typeof flight.id === 'number' ? flight.id : undefined,
-              sector: typeof flight.sector === 'string' ? flight.sector : undefined,
-              flightNo: typeof flight.flightNo === 'string' ? flight.flightNo : undefined,
-              departureDate: typeof flight.departureDate === 'string' ? flight.departureDate : undefined,
-              etd: typeof flight.etd === 'string' ? flight.etd : undefined,
-              eta: typeof flight.eta === 'string' ? flight.eta : undefined,
-              zone: typeof flight.zone === 'number' ? flight.zone : undefined,
-            }
-          })
-          .filter((flight): flight is FlightItem => Boolean(flight))
-        : []
+    const flights = Array.isArray(item.flights)
+      ? item.flights
+        .map((flight) => {
+          if (!isRecord(flight)) {
+            return null
+          }
 
-      return {
-        id: idValue,
-        tourId: typeof item.tourId === 'number' ? item.tourId : undefined,
-        priceCodeId: typeof item.priceCodeId === 'number' ? item.priceCodeId : undefined,
-        priceCode: typeof item.priceCode === 'string' ? item.priceCode : undefined,
-        tourCode: typeof item.tourCode === 'string' ? item.tourCode : undefined,
-        code: typeof item.code === 'string' ? item.code : undefined,
-        flightStartDate: typeof item.flightStartDate === 'string' ? item.flightStartDate.trim() : undefined,
-        flightEndDate: typeof item.flightEndDate === 'string' ? item.flightEndDate.trim() : undefined,
-        startDate: typeof item.startDate === 'string' ? item.startDate.trim() : undefined,
-        endDate: typeof item.endDate === 'string' ? item.endDate.trim() : undefined,
-        sglFare: typeof item.sglFare === 'number' ? item.sglFare : undefined,
-        twnFare: typeof item.twnFare === 'number' ? item.twnFare : undefined,
-        trpFare: typeof item.trpFare === 'number' ? item.trpFare : undefined,
-        chdWithBedFare: typeof item.chdWithBedFare === 'number' ? item.chdWithBedFare : undefined,
-        chdWithOutBedFare: typeof item.chdWithOutBedFare === 'number' ? item.chdWithOutBedFare : undefined,
-        infantFare: typeof item.infantFare === 'number' ? item.infantFare : undefined,
-        grSglFare: typeof item.grSglFare === 'number' ? item.grSglFare : undefined,
-        grTwnFare: typeof item.grTwnFare === 'number' ? item.grTwnFare : undefined,
-        grTrpFare: typeof item.grTrpFare === 'number' ? item.grTrpFare : undefined,
-        grChdWithBedFare: typeof item.grChdWithBedFare === 'number' ? item.grChdWithBedFare : undefined,
-        grChdWithOutBedFare: typeof item.grChdWithOutBedFare === 'number' ? item.grChdWithOutBedFare : undefined,
-        grInfantFare: typeof item.grInfantFare === 'number' ? item.grInfantFare : undefined,
-        flights: flights.length ? flights : undefined,
-      }
+          const flightItem: FlightItem = {}
+
+          if (typeof flight.id === 'number') {
+            flightItem.id = flight.id
+          }
+          if (typeof flight.sector === 'string') {
+            flightItem.sector = flight.sector
+          }
+          if (typeof flight.flightNo === 'string') {
+            flightItem.flightNo = flight.flightNo
+          }
+          if (typeof flight.departureDate === 'string') {
+            flightItem.departureDate = flight.departureDate
+          }
+          if (typeof flight.etd === 'string') {
+            flightItem.etd = flight.etd
+          }
+          if (typeof flight.eta === 'string') {
+            flightItem.eta = flight.eta
+          }
+          if (typeof flight.zone === 'number') {
+            flightItem.zone = flight.zone
+          }
+
+          if (!Object.keys(flightItem).length) {
+            return null
+          }
+
+          return flightItem
+        })
+        .filter((flight): flight is FlightItem => Boolean(flight))
+      : []
+    departures.push({
+      id: idValue,
+      tourId: typeof item.tourId === 'number' ? item.tourId : undefined,
+      priceCodeId: typeof item.priceCodeId === 'number' ? item.priceCodeId : undefined,
+      priceCode: typeof item.priceCode === 'string' ? item.priceCode : undefined,
+      tourCode: typeof item.tourCode === 'string' ? item.tourCode : undefined,
+      code: typeof item.code === 'string' ? item.code : undefined,
+      flightStartDate: typeof item.flightStartDate === 'string' ? item.flightStartDate.trim() : undefined,
+      flightEndDate: typeof item.flightEndDate === 'string' ? item.flightEndDate.trim() : undefined,
+      startDate: typeof item.startDate === 'string' ? item.startDate.trim() : undefined,
+      endDate: typeof item.endDate === 'string' ? item.endDate.trim() : undefined,
+      sglFare: typeof item.sglFare === 'number' ? item.sglFare : undefined,
+      twnFare: typeof item.twnFare === 'number' ? item.twnFare : undefined,
+      trpFare: typeof item.trpFare === 'number' ? item.trpFare : undefined,
+      chdWithBedFare: typeof item.chdWithBedFare === 'number' ? item.chdWithBedFare : undefined,
+      chdWithOutBedFare: typeof item.chdWithOutBedFare === 'number' ? item.chdWithOutBedFare : undefined,
+      infantFare: typeof item.infantFare === 'number' ? item.infantFare : undefined,
+      grSglFare: typeof item.grSglFare === 'number' ? item.grSglFare : undefined,
+      grTwnFare: typeof item.grTwnFare === 'number' ? item.grTwnFare : undefined,
+      grTrpFare: typeof item.grTrpFare === 'number' ? item.grTrpFare : undefined,
+      grChdWithBedFare: typeof item.grChdWithBedFare === 'number' ? item.grChdWithBedFare : undefined,
+      grChdWithOutBedFare: typeof item.grChdWithOutBedFare === 'number' ? item.grChdWithOutBedFare : undefined,
+      grInfantFare: typeof item.grInfantFare === 'number' ? item.grInfantFare : undefined,
+      flights: flights.length ? flights : undefined,
     })
-    .filter((item): item is DepartureItem => Boolean(item))
+  })
+
+  return departures
 }
 
 const CountdownTimer = ({ targetDate, onExpire }: { targetDate: string; onExpire?: () => void }) => {
@@ -927,7 +958,7 @@ const validatePassportExpiry = (expiryValue: string, returnDate: Date | null) =>
   return null
 }
 
-export default function BookingPage() {
+function BookingPageContent() {
   const searchParams = useSearchParams()
   const encodedTourParam = searchParams.get('tour')
   const decodedTour = parseEncodedTourParam(encodedTourParam)
@@ -1129,8 +1160,9 @@ export default function BookingPage() {
         }
       }
       if (isRecord(savedFormData)) {
-        if (isRecord(savedFormData.primaryContact)) {
-          setPrimaryContact((prev) => ({ ...prev, ...savedFormData.primaryContact }))
+        const savedPrimaryContact = savedFormData.primaryContact
+        if (isRecord(savedPrimaryContact)) {
+          setPrimaryContact((prev) => ({ ...prev, ...savedPrimaryContact }))
         }
         if (Array.isArray(savedFormData.travellers)) {
           setTravellers(savedFormData.travellers as TravellerInfo[])
@@ -2160,8 +2192,8 @@ export default function BookingPage() {
       return
     }
     const selects = jquery('select')
-    selects.each(function () {
-      const select = jquery(this)
+    selects.each((index: number, element: HTMLElement) => {
+      const select = jquery(element)
       if (select.next('.nice-select').length) {
         select.niceSelect('update')
       } else {
@@ -3217,7 +3249,7 @@ export default function BookingPage() {
 
                         {reviewHasPaxs ? (
                           <div className="booking-review-block">
-                            {reviewDetails.rooms.map((room, roomIndex) => {
+                            {reviewDetails?.rooms?.map((room, roomIndex) => {
                               const roomRecord = isRecord(room) ? room : null
                               const roomSequence = roomRecord && typeof roomRecord.sequence === 'number' ? roomRecord.sequence : roomIndex + 1
                               const paxs = roomRecord && Array.isArray(roomRecord.paxs) ? roomRecord.paxs : []
@@ -3928,3 +3960,12 @@ export default function BookingPage() {
     </>
   )
 }
+
+
+
+
+
+
+
+
+

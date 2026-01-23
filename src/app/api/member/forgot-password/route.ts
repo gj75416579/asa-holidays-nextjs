@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     const body = await request.json()
   const authHeader = request.headers.get('Authorization') || body.Authorization
     const payload = { data: JSON.stringify(body) }
-    const headers = authHeader ? { Authorization: authHeader } : {}
+    const headers = authHeader ? { Authorization: authHeader } : undefined
     const data = await postData('member/b2c/reset-password-request', payload, headers)
     return NextResponse.json(data)
   } catch (error) {

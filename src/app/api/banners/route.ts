@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { postDataJson } from '@/lib/api/server'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: Request) {
   if (!process.env.API_BASE_URL || !process.env.COMPANY_ID) {
     return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
@@ -16,3 +18,4 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Failed to fetch banners' }, { status: 500 })
   }
 }
+

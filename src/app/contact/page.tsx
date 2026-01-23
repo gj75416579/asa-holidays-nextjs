@@ -1,6 +1,6 @@
 'use client';
 
-import Header from '@/templete/Header'
+import Header from '@/templete/HeaderWithSuspense'
 import Footer from '@/templete/Footer'
 
 
@@ -196,6 +196,7 @@ export default function Contact() {
     </>
   );
 }
+
 
 
 
