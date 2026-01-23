@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import Header from '@/templete/Header'
 import Footer from '@/templete/Footer'
 import ApiMaintenanceNotice from '@/templete/ApiMaintenanceNotice'
+import { AirwallexButton, useCheckPaymentStatus } from '@/templete/Airwallex'
 
 type RoomSelection = {
   adults: number
@@ -944,6 +945,8 @@ export default function BookingPage() {
   const tourCodeIdParam =
     (decodedTour?.tourCodeId !== undefined ? String(decodedTour.tourCodeId) : null) ??
     searchParams.get('tourCodeId')
+  const paymentGateway = searchParams.get('gateway')
+  const paymentIntentId = searchParams.get('id') ?? searchParams.get('payment_intent_id')
 
   const parsedTourId = tourIdParam ? Number(tourIdParam) : NaN
   const tourId = Number.isFinite(parsedTourId) ? parsedTourId : null
@@ -1013,6 +1016,11 @@ export default function BookingPage() {
   const [tourError, setTourError] = useState(false)
   const [departureError, setDepartureError] = useState(false)
   const [tourInfoError, setTourInfoError] = useState(false)
+  const shouldCheckPayment = paymentGateway === 'airwallex' && Boolean(paymentIntentId)
+  const paymentStatusResult = useCheckPaymentStatus(shouldCheckPayment ? paymentIntentId : null)
+  const paymentStatus = paymentStatusResult.status
+  const paymentStatusMessage = paymentStatusResult.message
+  const paymentStatusLoading = paymentStatusResult.isLoading
 
   useEffect(() => {
     if (!tourId) {
@@ -1152,6 +1160,63 @@ export default function BookingPage() {
       isActive = false
     }
   }, [tourId, initialTourCodeId])
+
+  useEffect(() => {
+    if (!shouldCheckPayment) {
+      return
+    }
+    if (currentStep < 4) {
+      setCurrentStep(4)
+    }
+  }, [shouldCheckPayment, currentStep])
+
+  useEffect(() => {
+    if (!shouldCheckPayment || !paymentIntentId) {
+      return
+    }
+    let isActive = true
+
+    const lookupBookingId = async () => {
+      try {
+        const res = await fetch('/api/booking/getBookingIDByPayment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ transaction_id: paymentIntentId }),
+        })
+        const json = await parseJsonResponse(res)
+        const nextId = isRecord(json) ? Number(json.data) : NaN
+        if (!Number.isFinite(nextId)) {
+          return
+        }
+        if (isActive) {
+          setBookingId(nextId)
+          await refreshBookingDetails(nextId)
+        }
+      } catch (error) {
+        console.error('Payment booking lookup error:', error)
+      }
+    }
+
+    lookupBookingId()
+
+    return () => {
+      isActive = false
+    }
+  }, [shouldCheckPayment, paymentIntentId])
+
+  useEffect(() => {
+    if (!shouldCheckPayment) {
+      return
+    }
+    if (paymentStatus === 'success') {
+      if (bookingId) {
+        refreshBookingDetails(bookingId)
+      }
+      setCurrentStep(5)
+    }
+  }, [paymentStatus, shouldCheckPayment, bookingId])
 
   useEffect(() => {
     if (!storageReady) {
@@ -1375,6 +1440,41 @@ export default function BookingPage() {
       balanceValue,
     }
   }, [bookingDetailData, transaction])
+
+  const airwallexBookingData = useMemo(() => {
+    const details = bookingDetailData && isRecord(bookingDetailData.details) ? bookingDetailData.details : null
+    const tranx = details && isRecord(details.tranx) ? details.tranx : null
+    const currency =
+      (isRecord(paymentInfo) && typeof paymentInfo.currency === 'string' ? paymentInfo.currency : '') ||
+      (tranx && typeof tranx.currencyFrom === 'string' ? tranx.currencyFrom : '') ||
+      (transaction && typeof transaction.currencyFrom === 'string' ? transaction.currencyFrom : '')
+
+    if (isRecord(paymentInfo)) {
+      const payload = { ...paymentInfo } as Record<string, unknown>
+      if (currency && typeof payload.currency !== 'string') {
+        payload.currency = currency
+      }
+      if (bookingDetailData && typeof bookingDetailData.ref === 'string' && typeof payload.ref !== 'string') {
+        payload.ref = bookingDetailData.ref
+      }
+      return payload
+    }
+
+    const payload: Record<string, unknown> = {}
+    if (bookingDetailData && typeof bookingDetailData.paymentOrderId !== 'undefined') {
+      payload.paymentOrderId = bookingDetailData.paymentOrderId
+    }
+    if (tranx && typeof tranx.deposit !== 'undefined') {
+      payload.amount = tranx.deposit
+    }
+    if (currency) {
+      payload.currency = currency
+    }
+    if (bookingDetailData && typeof bookingDetailData.ref === 'string') {
+      payload.ref = bookingDetailData.ref
+    }
+    return Object.keys(payload).length ? payload : null
+  }, [bookingDetailData, paymentInfo, transaction])
 
   const reviewDetails = useMemo(() => {
     if (!bookingDetailData || !isRecord(bookingDetailData)) {
@@ -1798,9 +1898,11 @@ export default function BookingPage() {
           status: true,
         }),
       })
-      const json = await parseJsonResponse(res)
-      if (json?.success === false) {
-        setDiscountMessage(json.error || 'Failed to apply promo code.')
+      const text = await res.text()
+      const json = text ? JSON.parse(text) : {}
+      const apiError = getApiErrorMessage(json) ?? (typeof json?.error === 'string' ? json.error : null)
+      if (!res.ok || apiError || json?.success === false) {
+        setDiscountMessage(apiError || 'Failed to apply promo code.')
         return
       }
       setAppliedDiscounts((prev) => (prev.includes(code) ? prev : [...prev, code]))
@@ -1809,7 +1911,8 @@ export default function BookingPage() {
       await refreshBookingDetails()
     } catch (error) {
       console.error('Booking discount error:', error)
-      setDiscountMessage('Failed to apply promo code.')
+      const message = error instanceof Error ? error.message : 'Failed to apply promo code.'
+      setDiscountMessage(message)
     } finally {
       setIsApplyingDiscount(false)
     }
@@ -1840,13 +1943,20 @@ export default function BookingPage() {
           status: false,
         }),
       })
-      await parseJsonResponse(res)
+      const text = await res.text()
+      const json = text ? JSON.parse(text) : {}
+      const apiError = getApiErrorMessage(json) ?? (typeof json?.error === 'string' ? json.error : null)
+      if (!res.ok || apiError || json?.success === false) {
+        setDiscountMessage(apiError || 'Failed to remove promo code.')
+        return
+      }
       setAppliedDiscounts((prev) => prev.filter((item) => item !== code))
       setDiscountMessage('Promo code removed.')
       await refreshBookingDetails()
     } catch (error) {
       console.error('Booking discount remove error:', error)
-      setDiscountMessage('Failed to remove promo code.')
+      const message = error instanceof Error ? error.message : 'Failed to remove promo code.'
+      setDiscountMessage(message)
     } finally {
       setIsApplyingDiscount(false)
     }
@@ -2291,13 +2401,13 @@ export default function BookingPage() {
   const toggleSameAsPrimary = (index: number, nextValue: boolean) => {
     setTravellers((prev) =>
       prev.map((traveller, tIndex) => {
-        if (tIndex !== index) {
-          return traveller
-        }
         if (!nextValue) {
-          return { ...traveller, sameAsPrimary: false }
+          return tIndex === index ? { ...traveller, sameAsPrimary: false } : traveller
         }
-        return { ...applyPrimaryToTraveller(traveller), sameAsPrimary: true }
+        if (tIndex === index) {
+          return { ...applyPrimaryToTraveller(traveller), sameAsPrimary: true }
+        }
+        return { ...traveller, sameAsPrimary: false }
       })
     )
   }
@@ -2539,7 +2649,25 @@ export default function BookingPage() {
         })
         const submitJson = await parseJsonResponse(submitRes)
         if (isRecord(submitJson) && isRecord(submitJson.data)) {
-          setPaymentInfo(isRecord(submitJson.data.payment) ? submitJson.data.payment : submitJson.data)
+          const submitData = submitJson.data
+          const paymentData = isRecord(submitData.payment) ? submitData.payment : null
+          const tranxCurrency =
+            isRecord(submitData.tranx) && typeof submitData.tranx.currencyFrom === 'string'
+              ? submitData.tranx.currencyFrom
+              : ''
+          if (paymentData) {
+            const nextPayment = { ...paymentData } as Record<string, unknown>
+            if (tranxCurrency && typeof nextPayment.currency !== 'string') {
+              nextPayment.currency = tranxCurrency
+            }
+            setPaymentInfo(nextPayment)
+          } else {
+            const nextPayment = { ...submitData } as Record<string, unknown>
+            if (tranxCurrency && typeof nextPayment.currency !== 'string') {
+              nextPayment.currency = tranxCurrency
+            }
+            setPaymentInfo(nextPayment)
+          }
           if (typeof submitJson.data.ref === 'string') {
             setBookingRef(submitJson.data.ref)
             setPaymentMessage(`Booking reference: ${submitJson.data.ref}`)
@@ -2875,8 +3003,10 @@ export default function BookingPage() {
                             return (
                               <div key={`traveller-${index}`} className="booking-traveller-card">
                                 <div className="booking-traveller-header">
-                                  <h4>Traveller {index + 1}</h4>
-                                  <span className="booking-traveller-type">{getTravellerTypeLabel(travellerTypes[index] ?? 'ADT')}</span>
+                                  <h4>
+                                    Traveller {index + 1}{' '}
+                                    <span className="booking-traveller-type">({getTravellerTypeLabel(travellerTypes[index] ?? 'ADT')})</span>
+                                  </h4>
                                   <label className="booking-traveller-sync">
                                     <input
                                       type="checkbox"
@@ -3200,6 +3330,15 @@ export default function BookingPage() {
                     {currentStep === 4 && (
                       <div className="booking-step-content booking-payment">
                         <h3>Payment</h3>
+                        {paymentStatusMessage ? (
+                          <div className="booking-payment-note">
+                            <p className="text">{paymentStatusMessage}{paymentStatusLoading ? ' ...' : ''}</p>
+                          </div>
+                        ) : paymentMessage ? (
+                          <div className="booking-payment-note">
+                            <p className="text">{paymentMessage}</p>
+                          </div>
+                        ) : null}
                         {bookingDetailData && isRecord(bookingDetailData) && typeof bookingDetailData.ref === 'string' ? (
                           <div className="booking-payment-ref">
                             Booking Ref: <strong>{bookingDetailData.ref}</strong>
@@ -3502,6 +3641,16 @@ export default function BookingPage() {
                           />
                           By proceeding with the payment, you agree to ASA Holidays&apos; <a href="/terms" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a> and <a href="/privacy" target="_blank" rel="noopener noreferrer">Data Protection Policy</a>.
                         </label>
+
+                        {(!paymentStatus || paymentStatus === 'failed' || paymentStatus === 'error') ? (
+                          <div className="booking-payment-actions">
+                            <AirwallexButton
+                              tourParam={encodedTourParam}
+                              bookingData={airwallexBookingData}
+                              disabled={!paymentTermsAccepted}
+                            />
+                          </div>
+                        ) : null}
                       </div>
                     )}
 
@@ -3540,15 +3689,15 @@ export default function BookingPage() {
                         </button>
                       ) : null}
 
-                      {currentStep < 5 ? (
+                      {currentStep < 5 && currentStep !== 4 ? (
                         <button type="button" className="theme-btn" onClick={handleNextStep} disabled={isSubmitting}>
-                          {currentStep === 4 ? (isSubmitting ? 'Processing...' : 'Pay Now') : 'Continue'}
+                          Continue
                         </button>
-                      ) : (
+                      ) : currentStep >= 5 ? (
                         <a href="/tour-list" className="theme-btn">
                           Back to Tours
                         </a>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 </div>

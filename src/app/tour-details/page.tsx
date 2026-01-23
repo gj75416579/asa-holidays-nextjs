@@ -496,6 +496,33 @@ export default function TourDetails() {
       type: priceType === 'full' ? 1 : 2,
     }
     const bookingUrl = `/booking?tour=${encodeTourParam(bookingPayload)}`
+    const enquiryParams = new URLSearchParams()
+    if (resolvedDetail.title) {
+      enquiryParams.set('tourName', resolvedDetail.title)
+    }
+    if (tourCode) {
+      enquiryParams.set('tourCode', tourCode)
+    }
+    if (departure.priceCode) {
+      enquiryParams.set('productCode', departure.priceCode)
+    }
+    if (dateStart) {
+      enquiryParams.set('departureDate', dateStart)
+    }
+    if (bookingTourId) {
+      enquiryParams.set('tourId', String(bookingTourId))
+    }
+    if (departure.id) {
+      enquiryParams.set('departureId', String(departure.id))
+    }
+    if (departure.priceCodeId) {
+      enquiryParams.set('tourCodeId', String(departure.priceCodeId))
+    }
+    enquiryParams.set('type', '2')
+    const enquiryQuery = enquiryParams.toString()
+    const enquiryUrl = enquiryQuery ? `/enquiry?${enquiryQuery}` : '/enquiry'
+    const actionUrl = priceType === 'land' ? enquiryUrl : bookingUrl
+    const actionLabel = priceType === 'land' ? 'Enquiry Now' : 'Book Now'
 
     return (
       <div className={`departure-card ${isOpen ? 'is-open' : ''}`}>
@@ -604,8 +631,8 @@ export default function TourDetails() {
                   Call Us
                 </a>
               ) : (
-                <a href={bookingUrl} className="theme-btn">
-                  Book Now
+                <a href={actionUrl} className="theme-btn">
+                  {actionLabel}
                 </a>
               )}
               <div className="departure-availability">

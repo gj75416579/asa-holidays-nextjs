@@ -1,12 +1,18 @@
 'use client'
 
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 
 export default function Header() {
   const pathname = usePathname() || '/'
+  const searchParams = useSearchParams()
+  const productTypeParam = searchParams.get('productType')
+  const isTourList = pathname.startsWith('/tour-list')
   const isHome = pathname === '/'
-  const isGroupTours = pathname.startsWith('/tour-grid') || pathname.startsWith('/tour-details')
-  const isFreeEasy = pathname.startsWith('/tour-list')
+  const isGroupTours =
+    pathname.startsWith('/tour-details') ||
+    pathname.startsWith('/tour-grid') ||
+    (isTourList && productTypeParam !== '2')
+  const isFreeEasy = isTourList && productTypeParam === '2'
   const isCruises = pathname.startsWith('/destination')
   const isAbout = pathname === '/about' || pathname.startsWith('/team') || pathname.startsWith('/gallery') || pathname.startsWith('/faq')
   const isContact = pathname.startsWith('/contact')
@@ -148,21 +154,10 @@ export default function Header() {
                           <a href="/">Home</a>
                         </li>
                         <li className={isGroupTours ? 'active' : ''}>
-                          <a href="/tour-grid">
-                            Group Tours
-                            <i className="fa-solid fa-chevron-down"></i>
-                          </a>
-                          <ul className="submenu">
-                            <li><a href="/tour-grid">Europe Tours</a></li>
-                            <li><a href="/tour-grid">China Tours</a></li>
-                            <li><a href="/tour-grid">Japan Tours</a></li>
-                            <li><a href="/tour-grid">Korea Tours</a></li>
-                            <li><a href="/tour-grid">Australia Tours</a></li>
-                            <li><a href="/tour-grid">View All Tours</a></li>
-                          </ul>
+                          <a href="/tour-list?productType=1">Group Tours</a>
                         </li>
                         <li className={isFreeEasy ? 'active' : ''}>
-                          <a href="/tour-list">Free &amp; Easy</a>
+                          <a href="/tour-list?productType=2">Free &amp; Easy</a>
                         </li>
                         <li className={isCruises ? 'active' : ''}>
                           <a href="/destination">Cruises</a>

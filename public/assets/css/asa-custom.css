@@ -339,6 +339,19 @@
   font-weight: 600;
 }
 
+/* Tour Card Image Consistency */
+.tour-place-item .tour-place-image,
+.tour-list-wrapper .tour-list-box-items .tour-image {
+  aspect-ratio: 4 / 3;
+  min-height: 220px;
+  background: #eef3f8;
+}
+
+.tour-place-item .tour-place-image img,
+.tour-list-wrapper .tour-list-box-items .tour-image img {
+  object-fit: cover;
+}
+
 /* Tour List Image Placeholder */
 .tour-list-wrapper .tour-list-box-items .tour-image.is-empty {
   aspect-ratio: 4 / 3;
@@ -571,6 +584,12 @@
   min-height: 220px;
   background: linear-gradient(135deg, #eef3f8 0%, #dfe7f0 100%);
   border: 1px solid var(--border);
+}
+
+/* Pagination disabled state */
+.page-nav-wrap .page-numbers.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Tour rich text */

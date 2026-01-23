@@ -49,6 +49,36 @@ const extractTotalRows = (data: unknown): number | null => {
   return null
 }
 
+const extractPageMeta = (data: unknown, fallbackPageSize: number) => {
+  const fallback = {
+    currentPage: 0,
+    totalPage: 1,
+    pageSize: fallbackPageSize,
+    totalRows: 0,
+  }
+  if (!isRecord(data)) {
+    return fallback
+  }
+  const dataNode = isRecord(data.data) ? data.data : null
+  if (!dataNode) {
+    return fallback
+  }
+  const currentPage = typeof dataNode.currentPage === 'number' ? dataNode.currentPage : fallback.currentPage
+  const pageSize =
+    typeof dataNode.pageSize === 'number' && Number.isFinite(dataNode.pageSize) && dataNode.pageSize > 0
+      ? dataNode.pageSize
+      : fallback.pageSize
+  const totalRows =
+    typeof dataNode.totalRows === 'number' && Number.isFinite(dataNode.totalRows) ? dataNode.totalRows : fallback.totalRows
+  const totalPage =
+    typeof dataNode.totalPage === 'number' && Number.isFinite(dataNode.totalPage) && dataNode.totalPage > 0
+      ? dataNode.totalPage
+      : totalRows > 0
+        ? Math.ceil(totalRows / pageSize)
+        : fallback.totalPage
+  return { currentPage, totalPage, pageSize, totalRows }
+}
+
 const extractSectors = (data: unknown): SectorOption[] => {
   if (!isRecord(data) || !Array.isArray(data.data)) {
     return []
@@ -166,6 +196,7 @@ export default function TourList() {
   const DEFAULT_PRICE_MAX = 20000
   const DEFAULT_DURATION_MIN = 1
   const DEFAULT_DURATION_MAX = 30
+  const PAGE_SIZE = 10
 
   const [filters, setFilters] = useState({
     sectorIds: [] as string[],
@@ -174,6 +205,7 @@ export default function TourList() {
     durationMin: DEFAULT_DURATION_MIN,
     durationMax: DEFAULT_DURATION_MAX,
   })
+  const [currentPage, setCurrentPage] = useState(0)
   const [sectorsData, setSectorsData] = useState<unknown | null>(null)
   const [listError, setListError] = useState(false)
   const [sectorsError, setSectorsError] = useState(false)
@@ -197,13 +229,33 @@ export default function TourList() {
       type: productType,
       sort: 2,
       sortType: 1,
-      currentPage: 0,
-      pageSize: 10,
+      currentPage,
+      pageSize: PAGE_SIZE,
     }),
-    [filters, productType]
+    [filters, productType, currentPage]
   )
 
   const [tourListData, setTourListData] = useState<unknown | null>(null)
+  const pageMeta = useMemo(() => extractPageMeta(tourListData, PAGE_SIZE), [tourListData, PAGE_SIZE])
+  const totalPages = pageMeta.totalPage
+  const activePage = Math.min(Math.max(currentPage, 0), Math.max(totalPages - 1, 0))
+
+  useEffect(() => {
+    if (currentPage !== activePage) {
+      setCurrentPage(activePage)
+    }
+  }, [activePage, currentPage])
+
+  useEffect(() => {
+    setCurrentPage(0)
+  }, [
+    productType,
+    filters.sectorIds.join(','),
+    filters.priceMin,
+    filters.priceMax,
+    filters.durationMin,
+    filters.durationMax,
+  ])
 
   useEffect(() => {
     let isActive = true
@@ -236,6 +288,27 @@ export default function TourList() {
       isActive = false
     }
   }, [listPayload])
+
+  const pageNumbers = useMemo(() => {
+    if (totalPages <= 1) {
+      return []
+    }
+    const maxButtons = 5
+    let start = Math.max(activePage - Math.floor(maxButtons / 2), 0)
+    let end = Math.min(start + maxButtons - 1, totalPages - 1)
+    if (end - start + 1 < maxButtons) {
+      start = Math.max(end - maxButtons + 1, 0)
+    }
+    return Array.from({ length: end - start + 1 }, (_, index) => start + index)
+  }, [activePage, totalPages])
+
+  const handlePageChange = (nextPage: number) => {
+    if (nextPage < 0 || nextPage >= totalPages || nextPage === activePage) {
+      return
+    }
+    setCurrentPage(nextPage)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   useEffect(() => {
     let isActive = true
@@ -582,15 +655,43 @@ export default function TourList() {
                         ))}
                       </div>
                     </div>
-                    <div className="page-nav-wrap">
-                      <ul>
-                        <li><a className="page-numbers active" href="#"><i className="fa-solid fa-chevron-left"></i></a></li>
-                        <li><a className="page-numbers" href="#">1</a></li>
-                        <li><a className="page-numbers" href="#">2</a></li>
-                        <li><a className="page-numbers" href="#">3</a></li>
-                        <li><a className="page-numbers style-2" href="#"><i className="fa-solid fa-chevron-right"></i></a></li>
-                      </ul>
-                    </div>
+                    {totalPages > 1 ? (
+                      <div className="page-nav-wrap">
+                        <ul>
+                          <li>
+                            <button
+                              type="button"
+                              className={`page-numbers${activePage === 0 ? ' disabled' : ''}`}
+                              onClick={() => handlePageChange(activePage - 1)}
+                              disabled={activePage === 0}
+                            >
+                              <i className="fa-solid fa-chevron-left"></i>
+                            </button>
+                          </li>
+                          {pageNumbers.map((page) => (
+                            <li key={`page-${page}`}>
+                              <button
+                                type="button"
+                                className={`page-numbers${page === activePage ? ' active' : ''}`}
+                                onClick={() => handlePageChange(page)}
+                              >
+                                {page + 1}
+                              </button>
+                            </li>
+                          ))}
+                          <li>
+                            <button
+                              type="button"
+                              className={`page-numbers style-2${activePage >= totalPages - 1 ? ' disabled' : ''}`}
+                              onClick={() => handlePageChange(activePage + 1)}
+                              disabled={activePage >= totalPages - 1}
+                            >
+                              <i className="fa-solid fa-chevron-right"></i>
+                            </button>
+                          </li>
+                        </ul>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </div>
