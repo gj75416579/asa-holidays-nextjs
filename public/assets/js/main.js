@@ -591,7 +591,68 @@
 
       
  //>> Nice Select Start <<//
+                const initNiceSelectSearch = function () {
+            $('select').each(function () {
+                const $select = $(this);
+                const optionCount = $select.find('option').length;
+                const $niceSelect = $select.next('.nice-select');
+
+                if (!$niceSelect.length) {
+                    return;
+                }
+
+                const $list = $niceSelect.find('ul.list');
+                if (!$list.length) {
+                    return;
+                }
+
+                $list.find('.nice-select-search').remove();
+
+                if (optionCount <= 10) {
+                    return;
+                }
+
+                const $searchItem = $('<li class="nice-select-search"></li>');
+                const $input = $('<input type="text" placeholder="Search..." />');
+
+                $searchItem.append($input);
+                $list.prepend($searchItem);
+
+                $input.on('click', function (event) {
+                    event.stopPropagation();
+                });
+
+                $input.on('keyup', function () {
+                    const term = $(this).val().toString().toLowerCase();
+                    $list.find('li.option').each(function () {
+                        const text = $(this).text().toLowerCase();
+                        $(this).toggle(text.indexOf(term) !== -1);
+                    });
+                });
+
+                $niceSelect.off('click.niceSelectSearch').on('click.niceSelectSearch', function () {
+                    setTimeout(function () {
+                        $input.trigger('focus');
+                    }, 0);
+                });
+            });
+        };
+
+        window.initNiceSelectSearch = initNiceSelectSearch;
         $('select').niceSelect();
+        initNiceSelectSearch();
+        $(document).off('click.reactSelectSync').on('click.reactSelectSync', '.nice-select .option:not(.disabled)', function () {
+            var select = $(this).closest('.nice-select').prev('select')[0];
+            if (!select) {
+                return;
+            }
+            if (select.getAttribute('data-react-select') !== 'true') {
+                return;
+            }
+            setTimeout(function () {
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            }, 0);
+        });
       /* ================================
        Custom Accordion Js Start
     ================================ */
@@ -665,7 +726,7 @@
 
     //>> Price Slider Start <<//
     
-    if ($('.price-slider-range').length) {
+    if ($('.price-slider-range').length && $.fn && typeof $.fn.slider === "function") {
             $(".price-slider-range").slider({
                 range: true,
                 min: 5,
@@ -676,11 +737,29 @@
                 }
             });
             $("#price").val("$ " + $(".price-slider-range").slider("values", 0) +
-                " - $ " + $(".price-slider-range").slider("values", 1));
+                " - $ " + $(".price-slider-range").slider("values", 1));
     }
 
-
+    //>> GSAP Text Animation Safe Init <<//
     if ($(".text-anim").length) {
+        $(".text-anim").css({ opacity: 1, visibility: "visible" });
+    }
+
+    if (typeof gsap !== "undefined") {
+        let gsapPlugins = [];
+        if (typeof ScrollTrigger !== "undefined") gsapPlugins.push(ScrollTrigger);
+        if (typeof ScrollSmoother !== "undefined") gsapPlugins.push(ScrollSmoother);
+        if (typeof SplitText !== "undefined") gsapPlugins.push(SplitText);
+
+        if (gsapPlugins.length) {
+            gsap.registerPlugin(...gsapPlugins);
+            gsap.config({
+                nullTargetWarn: false,
+            });
+        }
+    }
+
+    if ($(".text-anim").length && typeof gsap !== "undefined" && typeof SplitText !== "undefined" && typeof ScrollTrigger !== "undefined") {
         let staggerAmount = 0.03,
             translateXValue = 20,
             delayValue = 0.1,
@@ -690,7 +769,7 @@
         animatedTextElements.forEach(element => {
             let animationSplitText = new SplitText(element, { type: "chars, words" });
 
-            // ScrollTrigger দিয়ে section এ ঢুকলে animation শুরু হবে
+            // ScrollTrigger: start animation when section enters view
             ScrollTrigger.create({
                 trigger: element,
                 start: "top 85%",
@@ -712,13 +791,7 @@
  /* ================================
        Smooth Scroller And Title Animation Js Start
     ================================ */
-    if ($('#smooth-wrapper').length && $('#smooth-content').length) {
-        gsap.registerPlugin(ScrollTrigger, ScrollSmoother, SplitText);
-
-        gsap.config({
-            nullTargetWarn: false,
-        });
-
+    if ($('#smooth-wrapper').length && $('#smooth-content').length && typeof gsap !== "undefined" && typeof ScrollSmoother !== "undefined") {
         let smoother = ScrollSmoother.create({
             wrapper: "#smooth-wrapper",
             content: "#smooth-content",
@@ -727,8 +800,8 @@
             smoothTouch: 0.1,
             normalizeScroll: false,
             ignoreMobileResize: true,
-        });
-    }
+               });
+        }
 
     }); // End Document Ready Function
 
@@ -747,4 +820,6 @@
 
    
   
-  })(jQuery); // End jQuery
+  })(jQuery); // End jQuery
+
+
