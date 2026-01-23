@@ -8,9 +8,9 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json()
-  const authHeader = request.headers.get('Authorization') || body.Authorization
+    const authHeader = request.headers.get('Authorization') || body.Authorization
     const payload = { data: JSON.stringify(body) }
-    const headers = authHeader ? { Authorization: authHeader } : {}
+    const headers = authHeader ? { Authorization: authHeader } : undefined
     const data = await postData('member/b2c/activity', payload, headers)
     return NextResponse.json(data)
   } catch (error) {

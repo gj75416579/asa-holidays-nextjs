@@ -337,6 +337,8 @@
 .tour-list-wrapper .tour-list-box-items .bottom-list-items .product-code {
   color: var(--theme);
   font-weight: 600;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* Tour Card Image Consistency */
@@ -345,6 +347,65 @@
   aspect-ratio: 4 / 3;
   min-height: 220px;
   background: #eef3f8;
+}
+
+/* Tour List List-Mode Image Sizing */
+.tour-list-wrapper .tour-list-box-items .tour-image {
+  flex: 0 0 370px;
+  width: 370px;
+}
+
+@media (max-width: 1199px) {
+  .tour-list-wrapper .tour-list-box-items .tour-image {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+}
+
+/* Tour List List-Mode Content Alignment */
+.tour-list-wrapper .tour-list-box-items {
+  align-items: stretch;
+}
+
+.tour-list-wrapper .tour-list-box-items .tour-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  flex: 1;
+  min-width: 0;
+  max-width: none;
+}
+
+.tour-list-wrapper .tour-list-box-items .tour-content .bottom-list-items {
+  margin-top: auto;
+  padding-top: 20px;
+  display: grid;
+  grid-template-columns: minmax(110px, 1fr) minmax(110px, 1fr) max-content;
+  align-items: center;
+  column-gap: 16px;
+  row-gap: 10px;
+}
+
+.tour-list-wrapper .tour-list-box-items .tour-content .bottom-list-items .list-1,
+.tour-list-wrapper .tour-list-box-items .tour-content .bottom-list-items .list-2 {
+  min-width: 0;
+}
+
+.tour-list-wrapper .tour-list-box-items .tour-content .bottom-list-items .theme-btn {
+  justify-self: end;
+  white-space: nowrap;
+}
+
+@media (max-width: 575px) {
+  .tour-list-wrapper .tour-list-box-items .tour-content .bottom-list-items {
+    padding-top: 16px;
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+
+  .tour-list-wrapper .tour-list-box-items .tour-content .bottom-list-items .theme-btn {
+    justify-self: start;
+  }
 }
 
 .tour-place-item .tour-place-image img,

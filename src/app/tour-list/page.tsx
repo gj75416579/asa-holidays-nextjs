@@ -1,11 +1,21 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 
-import Header from '@/templete/Header'
+import Header from '@/templete/HeaderWithSuspense'
 import Footer from '@/templete/Footer'
 import ApiMaintenanceNotice from '@/templete/ApiMaintenanceNotice'
+
+export const dynamic = 'force-dynamic'
+
+export default function TourList() {
+  return (
+    <Suspense fallback={null}>
+      <TourListContent />
+    </Suspense>
+  )
+}
 
 type TourListItem = {
   id: number | string
@@ -136,58 +146,59 @@ const resolveTourListItems = (data: unknown): TourListItem[] => {
     return []
   }
 
-  return list
-    .map((item, index) => {
-      if (!isRecord(item)) {
-        return null
-      }
+  const items: TourListItem[] = []
 
-      const nameValue =
-        typeof item.name === 'string'
-          ? item.name.trim()
-          : isRecord(item.name) && typeof item.name.EN === 'string'
-            ? item.name.EN.trim()
-            : ''
-      const sectorValue = typeof item.sector === 'string' ? item.sector.trim() : ''
-      const priceValue = formatPrice(item.price)
-      const durationValue = formatDuration(item.duration)
-      const imageValue = typeof item.cover === 'string' ? item.cover.trim() : ''
-      const productCodeValue = typeof item.productCode === 'string' ? item.productCode.trim() : ''
-      const uriValue = typeof item.uri === 'string' ? item.uri.trim() : ''
-      const idValue =
-        typeof item.id === 'number'
-          ? item.id
-          : typeof productCodeValue === 'string' && productCodeValue
-            ? productCodeValue
-            : `tour-${index + 1}`
-      const hrefValue = uriValue
-        ? `/tour-details?uri=${encodeURIComponent(uriValue)}`
-        : typeof item.id === 'number'
-          ? `/tour-details?id=${item.id}`
+  list.forEach((item, index) => {
+    if (!isRecord(item)) {
+      return
+    }
+
+    const nameValue =
+      typeof item.name === 'string'
+        ? item.name.trim()
+        : isRecord(item.name) && typeof item.name.EN === 'string'
+          ? item.name.EN.trim()
           : ''
-      const tagBadge = Array.isArray(item.tags)
-        ? item.tags.find((tag) => isRecord(tag) && typeof tag.groupName === 'string' && tag.groupName === 'Promo Tag')
-        : null
-      const badgeValue = tagBadge && typeof tagBadge.name === 'string' ? tagBadge.name.trim() : ''
+    const sectorValue = typeof item.sector === 'string' ? item.sector.trim() : ''
+    const priceValue = formatPrice(item.price)
+    const durationValue = formatDuration(item.duration)
+    const imageValue = typeof item.cover === 'string' ? item.cover.trim() : ''
+    const productCodeValue = typeof item.productCode === 'string' ? item.productCode.trim() : ''
+    const uriValue = typeof item.uri === 'string' ? item.uri.trim() : ''
+    const idValue =
+      typeof item.id === 'number'
+        ? item.id
+        : typeof productCodeValue === 'string' && productCodeValue
+          ? productCodeValue
+          : `tour-${index + 1}`
+    const hrefValue = uriValue
+      ? `/tour-details?uri=${encodeURIComponent(uriValue)}`
+      : typeof item.id === 'number'
+        ? `/tour-details?id=${item.id}`
+        : ''
+    const tagBadge = Array.isArray(item.tags)
+      ? item.tags.find((tag) => isRecord(tag) && typeof tag.groupName === 'string' && tag.groupName === 'Promo Tag')
+      : null
+    const badgeValue = tagBadge && typeof tagBadge.name === 'string' ? tagBadge.name.trim() : ''
 
-      return {
-        id: idValue,
-        image: imageValue,
-        badge: badgeValue,
-        title: nameValue,
-        location: sectorValue,
-        duration: durationValue,
-        price: priceValue,
-        priceLabel: priceValue ? 'From' : '',
-        productCode: productCodeValue,
-        href: hrefValue,
-      }
+    items.push({
+      id: idValue,
+      image: imageValue,
+      badge: badgeValue,
+      title: nameValue,
+      location: sectorValue,
+      duration: durationValue,
+      price: priceValue,
+      priceLabel: priceValue ? 'From' : '',
+      productCode: productCodeValue,
+      href: hrefValue,
     })
-    .filter((item): item is TourListItem => Boolean(item))
+  })
+
+  return items
 }
 
-
-export default function TourList() {
+function TourListContent() {
   const searchParams = useSearchParams()
   const productTypeParam = searchParams.get('productType')
   const productType = productTypeParam === '2' ? 2 : 1
@@ -715,7 +726,7 @@ export default function TourList() {
                       </div>
                       <div className="section-title mb-0">
                         <h2 className="sec-title text-white text-anim">
-                          Adventure Is Calling éˆ?Are You Ready?
+                          Adventure Is Calling é??Are You Ready?
                         </h2>
                       </div>
                       <p className="text wow fadeInUp" data-wow-delay=".3s">
@@ -736,6 +747,10 @@ export default function TourList() {
     </>
   )
 }
+
+
+
+
 
 
 

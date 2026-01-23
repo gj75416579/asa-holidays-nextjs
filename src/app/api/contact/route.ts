@@ -15,10 +15,13 @@ export async function POST(request: Request) {
     }
 
     if (recaptcha && process.env.RECAPTCHA_SECRET_KEY) {
+      const params = new URLSearchParams()
+      params.set('secret', process.env.RECAPTCHA_SECRET_KEY)
+      params.set('response', recaptcha)
       const verification = await fetch('https://www.google.com/recaptcha/api/siteverify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: secret=&response=
+        body: params.toString()
       })
       const result = await verification.json()
       if (!result.success) {

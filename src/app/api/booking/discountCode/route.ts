@@ -9,7 +9,11 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json()
-    const response = await postDataJson('api/b2c/tour-tranx/seize', body)
+    const response = await postDataJson<{
+      errorCode?: string
+      error?: string
+      data?: unknown
+    }>('api/b2c/tour-tranx/seize', body)
 
     if (response?.errorCode && response.errorCode !== '0') {
       if (response.errorCode === '36002') {

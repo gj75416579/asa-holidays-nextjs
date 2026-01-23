@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Authorization is required' }, { status: 401 })
   }
     const payload = { data: JSON.stringify(body) }
-    const headers = authHeader ? { Authorization: authHeader } : {}
+    const headers = authHeader ? { Authorization: authHeader } : undefined
     const data = await postData('member/b2c/change-password', payload, headers)
     return NextResponse.json(data)
   } catch (error) {

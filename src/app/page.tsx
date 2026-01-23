@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
-import Header from '@/templete/Header'
+import Header from '@/templete/HeaderWithSuspense'
 import Footer from '@/templete/Footer'
 import ApiMaintenanceNotice from '@/templete/ApiMaintenanceNotice'
 
@@ -13,6 +13,56 @@ type HomeApiData = {
   sectors: unknown | null
 }
 
+type TourSectionCard = {
+  id?: string
+  image?: string
+  badge?: string
+  title?: string
+  location?: string
+  href?: string
+  animationClass?: string
+  delay?: string
+  imageClass?: string
+  contentClass?: string
+  wrapperClass?: string
+}
+
+type ResolvedTourSection = {
+  leftLarge: TourSectionCard | null
+  leftStack: (TourSectionCard | null)[]
+  rightLarge: TourSectionCard | null
+  rightStack: (TourSectionCard | null)[]
+}
+type TourPlaceItem = {
+  id: string | number
+  image: string
+  badge?: string
+  productCode: string
+  priceLabel: string
+  price: string
+  title: string
+  titleLine2?: string
+  location: string
+  duration: string
+  group: string
+  delay: string
+  href?: string
+}
+
+type TourPlaceSection = {
+  subtitle: {
+    pre: string
+    count: string
+    suffix: string
+    post: string
+  }
+  rating: {
+    label: string
+    stars: number
+    halfStar: boolean
+  }
+  items: TourPlaceItem[]
+}
 const homeApiEndpoints = {
   hotTours: '/api/tour/hot-list',
   sectorLevels: '/api/tour/sector',
@@ -44,7 +94,7 @@ const homeApiInitialData: HomeApiData = {
 }
 
 const apiMode = process.env.NEXT_PUBLIC_API_MODE ?? 'dev'
-const shouldFallback = apiMode !== 'dev'
+const shouldFallback = apiMode !== 'prod'
 
 const heroSlides = [
   {
@@ -262,7 +312,7 @@ const aboutSection = {
   },
 }
 
-const tourPlaceSection = {
+const tourPlaceSection: TourPlaceSection = {
   subtitle: {
     pre: 'Discover our most loved destinations with',
     count: '200',
@@ -929,9 +979,9 @@ const resolveTourSection = (
   data: unknown,
   fallback: typeof tourSection,
   fallbackEnabled: boolean
-) => {
+): ResolvedTourSection => {
   const list = extractList(data)
-  const emptySection = {
+  const emptySection: ResolvedTourSection = {
     leftLarge: null,
     leftStack: [],
     rightLarge: null,
@@ -942,7 +992,7 @@ const resolveTourSection = (
     return fallbackEnabled ? fallback : emptySection
   }
 
-  const baseCards = [
+  const baseCards: TourSectionCard[] = [
     fallback.leftLarge,
     ...fallback.leftStack,
     fallback.rightLarge,
@@ -991,9 +1041,9 @@ const resolveTourSection = (
 
 const resolveTourPlaceSection = (
   data: unknown,
-  fallback: typeof tourPlaceSection,
+  fallback: TourPlaceSection,
   fallbackEnabled: boolean
-) => {
+): TourPlaceSection => {
   const list = extractList(data)
   if (!list.length) {
     return fallbackEnabled ? fallback : { ...fallback, items: [] }
@@ -1278,9 +1328,9 @@ export default function Home() {
                       </div>
                     ) : null}
                     <div className="col-xl-6 col-lg-6">
-                      {resolvedTourSection.leftStack.map((card) =>
+                      {resolvedTourSection.leftStack.map((card, index) =>
                         card ? (
-                          <div key={card.id} className={`tour-card-item ${card.wrapperClass ?? ''} ${card.animationClass}`.trim()} data-wow-delay={card.delay}>
+                          <div key={`stack-${index}`} className={`tour-card-item ${card.wrapperClass ?? ''} ${card.animationClass}`.trim()} data-wow-delay={card.delay}>
                             <div className={`tour-image ${card.imageClass ?? ''}`.trim()}>
                               {card.image ? <img src={card.image} alt="img" /> : null}
                               {card.badge ? <span>{card.badge}</span> : null}
@@ -1337,9 +1387,9 @@ export default function Home() {
                       </div>
                     ) : null}
                     <div className="col-xl-4 col-lg-6">
-                      {resolvedTourSection.rightStack.map((card) =>
+                      {resolvedTourSection.rightStack.map((card, index) =>
                         card ? (
-                          <div key={card.id} className={`tour-card-item ${card.wrapperClass ?? ''} ${card.animationClass}`.trim()} data-wow-delay={card.delay}>
+                          <div key={`stack-${index}`} className={`tour-card-item ${card.wrapperClass ?? ''} ${card.animationClass}`.trim()} data-wow-delay={card.delay}>
                             <div className={`tour-image ${card.imageClass ?? ''}`.trim()}>
                               {card.image ? <img src={card.image} alt="img" /> : null}
                               {card.badge ? <span>{card.badge}</span> : null}
@@ -1854,3 +1904,14 @@ export default function Home() {
     </>
   )
 }
+
+
+
+
+
+
+
+
+
+
+

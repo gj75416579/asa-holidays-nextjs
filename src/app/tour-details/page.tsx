@@ -1,11 +1,21 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 
-import Header from '@/templete/Header'
+import Header from '@/templete/HeaderWithSuspense'
 import Footer from '@/templete/Footer'
 import ApiMaintenanceNotice from '@/templete/ApiMaintenanceNotice'
+
+export const dynamic = 'force-dynamic'
+
+export default function TourDetails() {
+  return (
+    <Suspense fallback={null}>
+      <TourDetailsContent />
+    </Suspense>
+  )
+}
 
 type TourDetail = {
   id: number | null
@@ -238,50 +248,56 @@ const resolveDepartures = (data: unknown): DepartureItem[] => {
     return []
   }
 
-  return data.data.pageData
-    .map((item) => {
-      if (!isRecord(item)) {
-        return null
-      }
-      const idValue = typeof item.id === 'number' ? item.id : typeof item.code === 'string' ? item.code : 'departure'
+  const departures: DepartureItem[] = []
 
-        return {
-          id: idValue,
-          tourId: typeof item.tourId === 'number' ? item.tourId : undefined,
-          priceCodeId: typeof item.priceCodeId === 'number' ? item.priceCodeId : undefined,
-          priceCode: typeof item.priceCode === 'string' ? item.priceCode : undefined,
-          tourCode: typeof item.tourCode === 'string' ? item.tourCode : undefined,
-          code: typeof item.code === 'string' ? item.code : undefined,
-        flightStartDate: typeof item.flightStartDate === 'string' ? item.flightStartDate.trim() : undefined,
-        flightEndDate: typeof item.flightEndDate === 'string' ? item.flightEndDate.trim() : undefined,
-        startDate: typeof item.startDate === 'string' ? item.startDate.trim() : undefined,
-        endDate: typeof item.endDate === 'string' ? item.endDate.trim() : undefined,
-        capacity: typeof item.capacity === 'number' ? item.capacity : undefined,
-        reserved: typeof item.reserved === 'number' ? item.reserved : undefined,
-        sold: typeof item.sold === 'number' ? item.sold : undefined,
-        landSold: typeof item.landSold === 'number' ? item.landSold : undefined,
-        tourLeader: typeof item.tourLeader === 'number' ? item.tourLeader : undefined,
-        tourManager: typeof item.tourManager === 'number' ? item.tourManager : undefined,
-        sglFare: typeof item.sglFare === 'number' ? item.sglFare : undefined,
-        twnFare: typeof item.twnFare === 'number' ? item.twnFare : undefined,
-        trpFare: typeof item.trpFare === 'number' ? item.trpFare : undefined,
-        chdWithBedFare: typeof item.chdWithBedFare === 'number' ? item.chdWithBedFare : undefined,
-        chdHalfTwnFare: typeof item.chdHalfTwnFare === 'number' ? item.chdHalfTwnFare : undefined,
-        chdWithOutBedFare: typeof item.chdWithOutBedFare === 'number' ? item.chdWithOutBedFare : undefined,
-        infantFare: typeof item.infantFare === 'number' ? item.infantFare : undefined,
-        grSglFare: typeof item.grSglFare === 'number' ? item.grSglFare : undefined,
-        grTwnFare: typeof item.grTwnFare === 'number' ? item.grTwnFare : undefined,
-        grTrpFare: typeof item.grTrpFare === 'number' ? item.grTrpFare : undefined,
-        grChdWithBedFare: typeof item.grChdWithBedFare === 'number' ? item.grChdWithBedFare : undefined,
-        grChdHalfTwnFare: typeof item.grChdHalfTwnFare === 'number' ? item.grChdHalfTwnFare : undefined,
-        grChdWithOutBedFare: typeof item.grChdWithOutBedFare === 'number' ? item.grChdWithOutBedFare : undefined,
-        grInfantFare: typeof item.grInfantFare === 'number' ? item.grInfantFare : undefined,
-        adultTax: typeof item.adultTax === 'number' ? item.adultTax : undefined,
-        childTax: typeof item.childTax === 'number' ? item.childTax : undefined,
-        flights: Array.isArray(item.flights) ? (item.flights as Record<string, unknown>[]) : undefined,
-      }
+  data.data.pageData.forEach((item) => {
+    if (!isRecord(item)) {
+      return
+    }
+
+    const idValue = typeof item.id === 'number' ? item.id : typeof item.code === 'string' ? item.code : ''
+    if (!idValue) {
+      return
+    }
+
+    departures.push({
+      id: idValue,
+      tourId: typeof item.tourId === 'number' ? item.tourId : undefined,
+      priceCodeId: typeof item.priceCodeId === 'number' ? item.priceCodeId : undefined,
+      priceCode: typeof item.priceCode === 'string' ? item.priceCode : undefined,
+      tourCode: typeof item.tourCode === 'string' ? item.tourCode : undefined,
+      code: typeof item.code === 'string' ? item.code : undefined,
+      flightStartDate: typeof item.flightStartDate === 'string' ? item.flightStartDate.trim() : undefined,
+      flightEndDate: typeof item.flightEndDate === 'string' ? item.flightEndDate.trim() : undefined,
+      startDate: typeof item.startDate === 'string' ? item.startDate.trim() : undefined,
+      endDate: typeof item.endDate === 'string' ? item.endDate.trim() : undefined,
+      capacity: typeof item.capacity === 'number' ? item.capacity : undefined,
+      reserved: typeof item.reserved === 'number' ? item.reserved : undefined,
+      sold: typeof item.sold === 'number' ? item.sold : undefined,
+      landSold: typeof item.landSold === 'number' ? item.landSold : undefined,
+      tourLeader: typeof item.tourLeader === 'number' ? item.tourLeader : undefined,
+      tourManager: typeof item.tourManager === 'number' ? item.tourManager : undefined,
+      sglFare: typeof item.sglFare === 'number' ? item.sglFare : undefined,
+      twnFare: typeof item.twnFare === 'number' ? item.twnFare : undefined,
+      trpFare: typeof item.trpFare === 'number' ? item.trpFare : undefined,
+      chdWithBedFare: typeof item.chdWithBedFare === 'number' ? item.chdWithBedFare : undefined,
+      chdHalfTwnFare: typeof item.chdHalfTwnFare === 'number' ? item.chdHalfTwnFare : undefined,
+      chdWithOutBedFare: typeof item.chdWithOutBedFare === 'number' ? item.chdWithOutBedFare : undefined,
+      infantFare: typeof item.infantFare === 'number' ? item.infantFare : undefined,
+      grSglFare: typeof item.grSglFare === 'number' ? item.grSglFare : undefined,
+      grTwnFare: typeof item.grTwnFare === 'number' ? item.grTwnFare : undefined,
+      grTrpFare: typeof item.grTrpFare === 'number' ? item.grTrpFare : undefined,
+      grChdWithBedFare: typeof item.grChdWithBedFare === 'number' ? item.grChdWithBedFare : undefined,
+      grChdHalfTwnFare: typeof item.grChdHalfTwnFare === 'number' ? item.grChdHalfTwnFare : undefined,
+      grChdWithOutBedFare: typeof item.grChdWithOutBedFare === 'number' ? item.grChdWithOutBedFare : undefined,
+      grInfantFare: typeof item.grInfantFare === 'number' ? item.grInfantFare : undefined,
+      adultTax: typeof item.adultTax === 'number' ? item.adultTax : undefined,
+      childTax: typeof item.childTax === 'number' ? item.childTax : undefined,
+      flights: Array.isArray(item.flights) ? (item.flights as Record<string, unknown>[]) : undefined,
     })
-    .filter((item): item is DepartureItem => Boolean(item && item.id))
+  })
+
+  return departures
 }
 
 type DeparturePriceSet = {
@@ -367,49 +383,52 @@ const resolveRelatedTours = (data: unknown): RelatedTourItem[] => {
     return []
   }
 
-  return list
-    .map((item, index) => {
-      if (!isRecord(item)) {
-        return null
-      }
+  const related: RelatedTourItem[] = []
 
-      const title = getLocalizedText(item.name)
-      const location = typeof item.sector === 'string' ? item.sector.trim() : ''
-      const duration = formatDuration(item.duration)
-      const image = typeof item.cover === 'string' ? item.cover.trim() : ''
-      const badge = typeof item.badge === 'string' ? item.badge.trim() : ''
-      const productCode = typeof item.productCode === 'string' ? item.productCode.trim() : ''
-      const price = formatPrice(item.price)
-      const uriValue = typeof item.uri === 'string' ? item.uri.trim() : ''
-      const idValue =
-        typeof item.id === 'number'
-          ? item.id
-          : productCode
-            ? productCode
-            : `related-${index + 1}`
-      const hrefValue = uriValue
-        ? `/tour-details?uri=${encodeURIComponent(uriValue)}`
-        : typeof item.id === 'number'
-          ? `/tour-details?id=${item.id}`
-          : ''
+  list.forEach((item, index) => {
+    if (!isRecord(item)) {
+      return
+    }
 
-      return {
-        id: idValue,
-        image,
-        badge,
-        productCode,
-        priceLabel: price ? 'From' : '',
-        price,
-        title,
-        location,
-        duration,
-        href: hrefValue,
-        delay: `.${2 + index * 2}s`,
-      }
+    const title = getLocalizedText(item.name)
+    const location = typeof item.sector === 'string' ? item.sector.trim() : ''
+    const duration = formatDuration(item.duration)
+    const image = typeof item.cover === 'string' ? item.cover.trim() : ''
+    const badge = typeof item.badge === 'string' ? item.badge.trim() : ''
+    const productCode = typeof item.productCode === 'string' ? item.productCode.trim() : ''
+    const price = formatPrice(item.price)
+    const uriValue = typeof item.uri === 'string' ? item.uri.trim() : ''
+    const idValue =
+      typeof item.id === 'number'
+        ? item.id
+        : productCode
+          ? productCode
+          : `related-${index + 1}`
+    const hrefValue = uriValue
+      ? `/tour-details?uri=${encodeURIComponent(uriValue)}`
+      : typeof item.id === 'number'
+        ? `/tour-details?id=${item.id}`
+        : ''
+
+    related.push({
+      id: idValue,
+      image,
+      badge,
+      productCode,
+      priceLabel: price ? 'From' : '',
+      price,
+      title,
+      location,
+      duration,
+      href: hrefValue,
+      delay: `.${2 + index * 2}s`,
     })
-    .filter((item): item is RelatedTourItem => Boolean(item && item.title))
+  })
+
+  return related
 }
-export default function TourDetails() {
+
+function TourDetailsContent() {
   const searchParams = useSearchParams()
   const idParam = searchParams.get('id')
   const uriParam = searchParams.get('uri')
@@ -1165,6 +1184,11 @@ export default function TourDetails() {
     </>
   );
 }
+
+
+
+
+
 
 
 
