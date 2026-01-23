@@ -641,6 +641,18 @@
         window.initNiceSelectSearch = initNiceSelectSearch;
         $('select').niceSelect();
         initNiceSelectSearch();
+        $(document).off('click.reactSelectSync').on('click.reactSelectSync', '.nice-select .option:not(.disabled)', function () {
+            var select = $(this).closest('.nice-select').prev('select')[0];
+            if (!select) {
+                return;
+            }
+            if (select.getAttribute('data-react-select') !== 'true') {
+                return;
+            }
+            setTimeout(function () {
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            }, 0);
+        });
       /* ================================
        Custom Accordion Js Start
     ================================ */

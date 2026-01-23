@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 import Header from '@/templete/Header'
@@ -25,6 +25,7 @@ type TravellerInfo = {
   nationality: string
   passport: string
   passportExpiry: string
+  sameAsPrimary?: boolean
 }
 
 type ContactInfo = {
@@ -155,7 +156,7 @@ const fallbackDeparture: DepartureItem = {
 const titleOptions = ['MR', 'MRS', 'MS', 'MISS', 'MSTR']
 
 const createEmptyTraveller = (): TravellerInfo => ({
-  title: '',
+  title: 'MR',
   firstName: '',
   lastName: '',
   email: '',
@@ -165,6 +166,7 @@ const createEmptyTraveller = (): TravellerInfo => ({
   nationality: '',
   passport: '',
   passportExpiry: '',
+  sameAsPrimary: false,
 })
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null
@@ -212,12 +214,134 @@ const formatDate = (value: string) => {
   })
 }
 
+const formatPersonName = (title: string, firstName: string, lastName: string) => {
+  const prefix = title ? `${title}. ` : ''
+  const full = `${firstName ?? ''} ${lastName ?? ''}`.trim()
+  return `${prefix}${full}`.trim()
+}
+
+const parseBookingDateTime = (value: string) => {
+  if (!value) {
+    return null
+  }
+  const normalized = value.includes('T') ? value : value.replace(' ', 'T')
+  const withZone = /Z|[+-]\d{2}:\d{2}$/.test(normalized) ? normalized : `${normalized}+08:00`
+  const parsed = new Date(withZone)
+  if (Number.isNaN(parsed.getTime())) {
+    return null
+  }
+  return parsed
+}
+
+const getTourRedirectUrl = (detailData: unknown, tourId: number | null) => {
+  if (isRecord(detailData) && isRecord(detailData.data)) {
+    const record = detailData.data
+    if (typeof record.uri === 'string' && record.uri.trim()) {
+      return `/tour-details?uri=${encodeURIComponent(record.uri.trim())}`
+    }
+    if (typeof record.id === 'number' && Number.isFinite(record.id)) {
+      return `/tour-details?id=${record.id}`
+    }
+  }
+  if (tourId) {
+    return `/tour-details?id=${tourId}`
+  }
+  return '/tour-list'
+}
+
+const clearBookingUrlParams = (tourParam: string | null, fallbackId: string | null) => {
+  if (typeof window === 'undefined') {
+    return
+  }
+  try {
+    const url = new URL(window.location.href)
+    const tourValue = tourParam || url.searchParams.get('tour')
+    const tourIdValue = fallbackId || url.searchParams.get('tourId') || url.searchParams.get('id')
+    const departureIdValue = url.searchParams.get('departureId')
+    const tourCodeIdValue = url.searchParams.get('tourCodeId')
+    const typeValue = url.searchParams.get('type')
+
+    url.search = ''
+    if (tourValue) {
+      url.searchParams.set('tour', tourValue)
+    } else if (tourIdValue) {
+      url.searchParams.set('tourId', tourIdValue)
+      if (departureIdValue) {
+        url.searchParams.set('departureId', departureIdValue)
+      }
+      if (tourCodeIdValue) {
+        url.searchParams.set('tourCodeId', tourCodeIdValue)
+      }
+      if (typeValue) {
+        url.searchParams.set('type', typeValue)
+      }
+    }
+
+    window.history.replaceState({}, '', url.toString())
+  } catch (error) {
+    console.error('Booking URL cleanup error:', error)
+  }
+}
+
 const parseJsonResponse = async (res: Response) => {
   const text = await res.text()
   if (!res.ok) {
     throw new Error(text || `HTTP ${res.status}`)
   }
   return text ? JSON.parse(text) : {}
+}
+
+const BOOKING_STORAGE_PREFIX = 'asa-booking'
+const BOOKING_STORAGE_KEYS = {
+  bookingDetails: 'bookingDetails',
+  tourDetail: 'tourDetail',
+  tourInfo: 'tourInfo',
+  roomConfigs: 'roomConfigs',
+  rooms: 'rooms',
+  tripPrice: 'tripPrice',
+  currentStep: 'currentStep',
+  formData: 'formData',
+  userAppliedCodes: 'userAppliedCodes',
+}
+
+const bookingStorage = {
+  async getItem(key: string) {
+    if (typeof window === 'undefined') {
+      return null
+    }
+    try {
+      const raw = window.localStorage.getItem(`${BOOKING_STORAGE_PREFIX}:${key}`)
+      return raw ? JSON.parse(raw) : null
+    } catch {
+      return null
+    }
+  },
+  async setItem(key: string, value: unknown) {
+    if (typeof window === 'undefined') {
+      return
+    }
+    try {
+      window.localStorage.setItem(`${BOOKING_STORAGE_PREFIX}:${key}`, JSON.stringify(value))
+    } catch {
+      return
+    }
+  },
+  async removeItem(key: string) {
+    if (typeof window === 'undefined') {
+      return
+    }
+    try {
+      window.localStorage.removeItem(`${BOOKING_STORAGE_PREFIX}:${key}`)
+    } catch {
+      return
+    }
+  },
+}
+
+const clearSavedBookingState = async () => {
+  await Promise.all(
+    Object.values(BOOKING_STORAGE_KEYS).map((key) => bookingStorage.removeItem(key))
+  )
 }
 
 const getApiErrorMessage = (payload: unknown) => {
@@ -376,6 +500,52 @@ const resolveDepartures = (data: unknown): DepartureItem[] => {
     .filter((item): item is DepartureItem => Boolean(item))
 }
 
+const CountdownTimer = ({ targetDate, onExpire }: { targetDate: string; onExpire?: () => void }) => {
+  const [timeLeft, setTimeLeft] = useState('Loading...')
+  const expiredRef = useRef(false)
+
+  useEffect(() => {
+    const updateTimer = () => {
+      const target = parseBookingDateTime(targetDate)
+      if (!target) {
+        setTimeLeft('Loading...')
+        return
+      }
+      const now = new Date()
+      const diffMs = target.getTime() - now.getTime()
+      if (diffMs <= 0) {
+        setTimeLeft('Expired')
+        if (!expiredRef.current) {
+          expiredRef.current = true
+          onExpire?.()
+        }
+        return
+      }
+      const totalSeconds = Math.floor(diffMs / 1000)
+      const hours = Math.floor(totalSeconds / 3600)
+      const minutes = Math.floor((totalSeconds % 3600) / 60)
+      const seconds = totalSeconds % 60
+      if (hours > 0) {
+        setTimeLeft(`${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`)
+      } else {
+        setTimeLeft(`${minutes}:${seconds.toString().padStart(2, '0')}`)
+      }
+    }
+
+    updateTimer()
+    const timer = window.setInterval(updateTimer, 1000)
+    return () => window.clearInterval(timer)
+  }, [targetDate, onExpire])
+
+  const display = timeLeft === 'Expired'
+    ? timeLeft
+    : timeLeft.split(':').length === 3
+      ? `${timeLeft} hrs`
+      : `${timeLeft} mins`
+
+  return <span>{display}</span>
+}
+
 const getFromPrice = (departure: DepartureItem | null, priceType: 'full' | 'land') => {
   if (!departure) {
     return ''
@@ -404,6 +574,20 @@ const mergeRecords = (...records: Array<Record<string, unknown> | null>) => {
     }
   })
   return result
+}
+
+const buildTripPriceFromDetails = (details: Record<string, unknown>) => {
+  const transaction = mergeRecords(
+    isRecord(details.priceCode) ? (details.priceCode as Record<string, unknown>) : null,
+    isRecord(details.paxsInfo) ? (details.paxsInfo as Record<string, unknown>) : null,
+    isRecord(details.tranx) ? (details.tranx as Record<string, unknown>) : null
+  )
+  return {
+    transaction,
+    discount: details.discounts,
+    tier: details.grossTiers,
+    miscs: details.miscs,
+  }
 }
 
 const extractDiscountCodes = (details: Record<string, unknown>) => {
@@ -763,6 +947,8 @@ export default function BookingPage() {
 
   const parsedTourId = tourIdParam ? Number(tourIdParam) : NaN
   const tourId = Number.isFinite(parsedTourId) ? parsedTourId : null
+  const parsedTourCodeIdParam = tourCodeIdParam ? Number(tourCodeIdParam) : NaN
+  const initialTourCodeId = Number.isFinite(parsedTourCodeIdParam) ? parsedTourCodeIdParam : null
 
   const [currentStep, setCurrentStep] = useState(1)
   const [priceType, setPriceType] = useState<'full' | 'land'>(priceTypeParam === 'land' ? 'land' : 'full')
@@ -775,7 +961,7 @@ export default function BookingPage() {
     },
   ])
   const [primaryContact, setPrimaryContact] = useState<ContactInfo>({
-    title: '',
+    title: 'MR',
     firstName: '',
     lastName: '',
     email: '',
@@ -797,6 +983,7 @@ export default function BookingPage() {
   const [bookingRooms, setBookingRooms] = useState<BookingRoom[] | null>(null)
   const [bookingRef, setBookingRef] = useState<string | null>(null)
   const [expectedCancelTime, setExpectedCancelTime] = useState<string | null>(null)
+  const [bookingDetailData, setBookingDetailData] = useState<Record<string, unknown> | null>(null)
   const [paymentInfo, setPaymentInfo] = useState<Record<string, unknown> | null>(null)
   const [dialCodes, setDialCodes] = useState<DialCode[]>([])
   const [nationalities, setNationalities] = useState<Nationality[]>([])
@@ -809,8 +996,16 @@ export default function BookingPage() {
   const [roomConfigs, setRoomConfigs] = useState<RoomConfig[]>([])
   const [selectedRoomConfigs, setSelectedRoomConfigs] = useState<RoomConfig[]>([])
   const [roomConfigError, setRoomConfigError] = useState(false)
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+  const [storageReady, setStorageReady] = useState(false)
+  const [isPaymentContactOpen, setIsPaymentContactOpen] = useState(false)
+  const [isPaymentTravellerOpen, setIsPaymentTravellerOpen] = useState(false)
+  const [isPaymentPriceOpen, setIsPaymentPriceOpen] = useState(true)
+  const [paymentTermsAccepted, setPaymentTermsAccepted] = useState(false)
+  const formErrorRef = useRef<HTMLDivElement | null>(null)
   const roomsInitialized = useRef(false)
   const pricingInitialized = useRef(false)
+  const bookingRefreshInitialized = useRef(false)
 
   const [tourData, setTourData] = useState<unknown | null>(null)
   const [departureData, setDepartureData] = useState<unknown | null>(null)
@@ -818,6 +1013,251 @@ export default function BookingPage() {
   const [tourError, setTourError] = useState(false)
   const [departureError, setDepartureError] = useState(false)
   const [tourInfoError, setTourInfoError] = useState(false)
+
+  useEffect(() => {
+    if (!tourId) {
+      return
+    }
+    if (isRecord(tourData) && isRecord(tourData.data)) {
+      return
+    }
+    let isActive = true
+
+    const loadSavedState = async () => {
+      const [
+        savedBookingDetails,
+        savedTourDetail,
+        savedTourInfo,
+        savedRoomConfigs,
+        savedRooms,
+        savedTripPrice,
+        savedCurrentStep,
+        savedFormData,
+        savedUserAppliedCodes,
+      ] = await Promise.all([
+        bookingStorage.getItem(BOOKING_STORAGE_KEYS.bookingDetails),
+        bookingStorage.getItem(BOOKING_STORAGE_KEYS.tourDetail),
+        bookingStorage.getItem(BOOKING_STORAGE_KEYS.tourInfo),
+        bookingStorage.getItem(BOOKING_STORAGE_KEYS.roomConfigs),
+        bookingStorage.getItem(BOOKING_STORAGE_KEYS.rooms),
+        bookingStorage.getItem(BOOKING_STORAGE_KEYS.tripPrice),
+        bookingStorage.getItem(BOOKING_STORAGE_KEYS.currentStep),
+        bookingStorage.getItem(BOOKING_STORAGE_KEYS.formData),
+        bookingStorage.getItem(BOOKING_STORAGE_KEYS.userAppliedCodes),
+      ])
+
+      if (!isActive) {
+        return
+      }
+
+      const savedBookingId =
+        savedBookingDetails && typeof savedBookingDetails.id === 'number'
+          ? savedBookingDetails.id
+          : Number(savedBookingDetails?.id)
+      const hasActiveBooking = Number.isFinite(savedBookingId)
+      const hasMatchingTourDetail = isRecord(savedTourDetail) && typeof savedTourDetail.id === 'number'
+        ? savedTourDetail.id === tourId
+        : false
+      const hasMatchingTourInfo =
+        !initialTourCodeId ||
+        (isRecord(savedTourInfo) && typeof savedTourInfo.id === 'number' && savedTourInfo.id === initialTourCodeId)
+
+      if (hasActiveBooking && (!hasMatchingTourDetail || !hasMatchingTourInfo)) {
+        try {
+          await fetch('/api/booking/cancel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: savedBookingId }),
+          })
+        } catch (error) {
+          console.error('Booking cancel mismatch error:', error)
+        }
+        await clearSavedBookingState()
+        return
+      }
+
+      if (isRecord(savedTourDetail)) {
+        setTourData({ data: savedTourDetail })
+      }
+      if (isRecord(savedTourInfo)) {
+        setTourInfoData({ data: savedTourInfo })
+      }
+      if (Array.isArray(savedRoomConfigs)) {
+        setRoomConfigs(savedRoomConfigs as RoomConfig[])
+      }
+      if (Array.isArray(savedRooms)) {
+        setRooms(savedRooms as RoomSelection[])
+        roomsInitialized.current = true
+      }
+      if (savedTripPrice && isRecord(savedTripPrice)) {
+        setTripPrice(savedTripPrice)
+        pricingInitialized.current = true
+      }
+      if (hasActiveBooking) {
+        setBookingId(savedBookingId)
+        if (typeof savedBookingDetails.expectedCancelTime === 'string') {
+          setExpectedCancelTime(savedBookingDetails.expectedCancelTime)
+        }
+        if (isRecord(savedBookingDetails.data)) {
+          const detailData = savedBookingDetails.data as Record<string, unknown>
+          const details = isRecord(detailData.details) ? (detailData.details as Record<string, unknown>) : null
+          setBookingDetailData(detailData)
+          if (details && Array.isArray(details.rooms)) {
+            setBookingRooms(details.rooms as BookingRoom[])
+          }
+          if (!savedTripPrice && details) {
+            setTripPrice(buildTripPriceFromDetails(details))
+            pricingInitialized.current = true
+          }
+          if (details && isRecord(details.tranx) && typeof details.tranx.expectedCancelTime === 'string') {
+            setExpectedCancelTime(details.tranx.expectedCancelTime)
+          }
+          if (typeof detailData.ref === 'string') {
+            setBookingRef(detailData.ref)
+          }
+          if (details) {
+            setAppliedDiscounts(extractDiscountCodes(details))
+          }
+        }
+      }
+      if (isRecord(savedFormData)) {
+        if (isRecord(savedFormData.primaryContact)) {
+          setPrimaryContact((prev) => ({ ...prev, ...savedFormData.primaryContact }))
+        }
+        if (Array.isArray(savedFormData.travellers)) {
+          setTravellers(savedFormData.travellers as TravellerInfo[])
+        }
+      }
+      if (Array.isArray(savedUserAppliedCodes)) {
+        setAppliedDiscounts(savedUserAppliedCodes as string[])
+      }
+      if (typeof savedCurrentStep === 'number' || typeof savedCurrentStep === 'string') {
+        const nextStep = Number(savedCurrentStep)
+        if (Number.isFinite(nextStep)) {
+          const safeStep = Math.min(Math.max(nextStep, 1), steps.length)
+          if (safeStep === 1 || hasActiveBooking) {
+            setCurrentStep(safeStep)
+            if (hasActiveBooking && safeStep > 1) {
+              pricingInitialized.current = true
+            }
+          }
+        }
+      }
+      setStorageReady(true)
+    }
+
+    loadSavedState()
+
+    return () => {
+      isActive = false
+    }
+  }, [tourId, initialTourCodeId])
+
+  useEffect(() => {
+    if (!storageReady) {
+      return
+    }
+    if (isRecord(tourData) && isRecord(tourData.data)) {
+      bookingStorage.setItem(BOOKING_STORAGE_KEYS.tourDetail, tourData.data)
+    }
+  }, [storageReady, tourData])
+
+  useEffect(() => {
+    if (!storageReady) {
+      return
+    }
+    if (isRecord(tourInfoData) && isRecord(tourInfoData.data)) {
+      bookingStorage.setItem(BOOKING_STORAGE_KEYS.tourInfo, tourInfoData.data)
+    }
+  }, [storageReady, tourInfoData])
+
+  useEffect(() => {
+    if (!storageReady) {
+      return
+    }
+    if (roomConfigs.length) {
+      bookingStorage.setItem(BOOKING_STORAGE_KEYS.roomConfigs, roomConfigs)
+    }
+  }, [storageReady, roomConfigs])
+
+  useEffect(() => {
+    if (!storageReady) {
+      return
+    }
+    if (rooms.length) {
+      bookingStorage.setItem(BOOKING_STORAGE_KEYS.rooms, rooms)
+    }
+  }, [storageReady, rooms])
+
+  useEffect(() => {
+    if (!storageReady) {
+      return
+    }
+    if (tripPrice) {
+      bookingStorage.setItem(BOOKING_STORAGE_KEYS.tripPrice, tripPrice)
+    } else {
+      bookingStorage.removeItem(BOOKING_STORAGE_KEYS.tripPrice)
+    }
+  }, [storageReady, tripPrice])
+
+  useEffect(() => {
+    if (!storageReady) {
+      return
+    }
+    if (bookingId) {
+      bookingStorage.setItem(BOOKING_STORAGE_KEYS.bookingDetails, {
+        id: bookingId,
+        expectedCancelTime,
+        data: bookingDetailData,
+      })
+    } else {
+      bookingStorage.removeItem(BOOKING_STORAGE_KEYS.bookingDetails)
+    }
+  }, [storageReady, bookingId, expectedCancelTime, bookingDetailData])
+
+  useEffect(() => {
+    bookingRefreshInitialized.current = false
+  }, [bookingId])
+
+  useEffect(() => {
+    if (currentStep !== 3 || !bookingId || bookingDetailData) {
+      return
+    }
+    refreshBookingDetails(bookingId)
+  }, [bookingId, bookingDetailData, currentStep])
+
+  useEffect(() => {
+    if (!storageReady) {
+      return
+    }
+    bookingStorage.setItem(BOOKING_STORAGE_KEYS.formData, {
+      primaryContact,
+      travellers,
+    })
+  }, [storageReady, primaryContact, travellers])
+
+  useEffect(() => {
+    if (!storageReady) {
+      return
+    }
+    bookingStorage.setItem(BOOKING_STORAGE_KEYS.currentStep, currentStep)
+  }, [storageReady, currentStep])
+
+  useEffect(() => {
+    if (!storageReady) {
+      return
+    }
+    bookingStorage.setItem(BOOKING_STORAGE_KEYS.userAppliedCodes, appliedDiscounts)
+  }, [storageReady, appliedDiscounts])
+
+  useEffect(() => {
+    if (!tourId) {
+      return
+    }
+    if (bookingId || currentStep > 1) {
+      clearBookingUrlParams(encodedTourParam, tourIdParam)
+    }
+  }, [bookingId, currentStep, encodedTourParam, tourId, tourIdParam])
 
   const totalTravellers = useMemo(
     () =>
@@ -907,6 +1347,58 @@ export default function BookingPage() {
   }, [tripPrice])
 
   const transaction = useMemo(() => (isRecord(tripPrice?.transaction) ? tripPrice.transaction : null), [tripPrice])
+
+  const handleCountdownExpire = useCallback(() => {
+    clearSavedBookingState()
+    window.location.href = getTourRedirectUrl(tourData, tourId)
+  }, [tourData, tourId])
+
+  const showDiscountForm = currentStep === 2 || currentStep === 3
+
+  const paymentSummary = useMemo(() => {
+    const details = bookingDetailData && isRecord(bookingDetailData.details) ? bookingDetailData.details : null
+    const tranx = details && isRecord(details.tranx) ? details.tranx : null
+    const totalAmountValue = toNumber(
+      (tranx && (tranx.totalAmount ?? tranx.total)) ??
+      (bookingDetailData && (bookingDetailData.totalAmount ?? bookingDetailData.total)) ??
+      (transaction && (transaction.totalAmount ?? transaction.total))
+    )
+    const totalPaidValue = toNumber(
+      (tranx && tranx.totalPaid) ?? (bookingDetailData && bookingDetailData.totalPaid)
+    )
+    const depositValue = toNumber((tranx && (tranx.deposit ?? tranx.totalDeposit)) ?? 0)
+    const balanceValue = totalAmountValue - totalPaidValue
+    return {
+      totalAmountValue,
+      totalPaidValue,
+      depositValue,
+      balanceValue,
+    }
+  }, [bookingDetailData, transaction])
+
+  const reviewDetails = useMemo(() => {
+    if (!bookingDetailData || !isRecord(bookingDetailData)) {
+      return null
+    }
+    const details = isRecord(bookingDetailData.details) ? bookingDetailData.details : null
+    const purchaser = details && isRecord(details.purchaser) ? details.purchaser : null
+    const rooms = details && Array.isArray(details.rooms) ? details.rooms : []
+    return { purchaser, rooms }
+  }, [bookingDetailData])
+
+  const reviewHasPaxs = useMemo(() => {
+    if (!reviewDetails?.rooms?.length) {
+      return false
+    }
+    return reviewDetails.rooms.some((room) => isRecord(room) && Array.isArray(room.paxs) && room.paxs.length > 0)
+  }, [reviewDetails])
+
+  const renderReviewRow = (label: string, value: string) => (
+    <div className="booking-review-row">
+      <span className="booking-review-label">{label}</span>
+      <span className="booking-review-value">{value || '-'}</span>
+    </div>
+  )
 
   const formatSignedPrice = (value: number) => {
     if (!Number.isFinite(value) || value === 0) {
@@ -1215,34 +1707,39 @@ export default function BookingPage() {
     return paxs
   }
 
-  const refreshBookingDetails = async () => {
-    if (!bookingId) {
+  const refreshBookingDetails = async (overrideId?: number) => {
+    const activeBookingIdRaw = overrideId ?? bookingId
+    const activeBookingId =
+      typeof activeBookingIdRaw === 'number' ? activeBookingIdRaw : Number(activeBookingIdRaw)
+    if (!Number.isFinite(activeBookingId)) {
+      console.warn('Booking refresh skipped: invalid booking id', activeBookingIdRaw)
       return
     }
     setIsRefreshingBooking(true)
     try {
-      const res = await fetch(`/api/booking/queryDetail?id=${bookingId}`)
+      const res = await fetch(`/api/booking/queryDetail?id=${activeBookingId}`)
       const json = await parseJsonResponse(res)
       if (isRecord(json) && isRecord(json.data)) {
         const data = json.data
+        if (typeof data.id === 'number' && !bookingId) {
+          setBookingId(data.id)
+        }
+        setBookingDetailData(data)
         if (isRecord(data.details)) {
           const details = data.details
-          const transaction = mergeRecords(
-            isRecord(details.priceCode) ? details.priceCode : null,
-            isRecord(details.paxsInfo) ? details.paxsInfo : null,
-            isRecord(details.tranx) ? details.tranx : null
-          )
-          setTripPrice({
-            transaction,
-            discount: isRecord(details) ? details.discounts : undefined,
-            tier: isRecord(details) ? details.grossTiers : undefined,
-            miscs: isRecord(details) ? details.miscs : undefined,
-          })
+          setTripPrice(buildTripPriceFromDetails(details))
           if (Array.isArray(details.rooms)) {
             setBookingRooms(details.rooms as BookingRoom[])
           }
-          if (isRecord(details.tranx) && typeof details.tranx.expectedCancelTime === 'string') {
-            setExpectedCancelTime(details.tranx.expectedCancelTime)
+          if (isRecord(details.tranx)) {
+            if (typeof details.tranx.expectedCancelTime === 'string') {
+              setExpectedCancelTime(details.tranx.expectedCancelTime)
+            }
+            if (typeof details.tranx.status === 'string' && details.tranx.status.toLowerCase() === 'voided') {
+              await clearSavedBookingState()
+              window.location.href = getTourRedirectUrl(tourData, tourId)
+              return
+            }
           }
           setAppliedDiscounts(extractDiscountCodes(details))
         }
@@ -1256,6 +1753,18 @@ export default function BookingPage() {
       setIsRefreshingBooking(false)
     }
   }
+
+  useEffect(() => {
+    if (!bookingId || bookingRefreshInitialized.current) {
+      return
+    }
+    if (tripPrice && bookingRooms && bookingDetailData && typeof bookingDetailData.ref === 'string') {
+      bookingRefreshInitialized.current = true
+      return
+    }
+    bookingRefreshInitialized.current = true
+    refreshBookingDetails(bookingId)
+  }, [bookingId, bookingDetailData, bookingRooms, tripPrice])
 
   const handleApplyDiscount = async () => {
     if (!bookingId) {
@@ -1344,32 +1853,42 @@ export default function BookingPage() {
   }
 
   const handleCancelBooking = async () => {
-    if (!bookingId) {
-      return
-    }
     setIsSubmitting(true)
+    const redirectUrl = getTourRedirectUrl(tourData, tourId)
     try {
-      await fetch('/api/booking/cancel', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ id: bookingId }),
-      })
+      if (bookingId) {
+        await fetch('/api/booking/cancel', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ id: bookingId }),
+        })
+      }
+    } catch (error) {
+      console.error('Booking cancel error:', error)
+    } finally {
       setBookingId(null)
       setBookingRooms(null)
       setTripPrice(null)
       setExpectedCancelTime(null)
+      setBookingDetailData(null)
       setPaymentInfo(null)
       setAppliedDiscounts([])
-      setDiscountMessage('Booking cancelled.')
-      setCurrentStep(1)
-    } catch (error) {
-      console.error('Booking cancel error:', error)
-      setDiscountMessage('Failed to cancel booking.')
-    } finally {
+      await clearSavedBookingState()
+      clearBookingUrlParams(encodedTourParam, tourIdParam)
+      setShowCancelConfirm(false)
+      window.location.href = redirectUrl
       setIsSubmitting(false)
     }
+  }
+
+  const openCancelConfirm = () => {
+    setShowCancelConfirm(true)
+  }
+
+  const closeCancelConfirm = () => {
+    setShowCancelConfirm(false)
   }
 
   const handleLookupBooking = async () => {
@@ -1390,7 +1909,7 @@ export default function BookingPage() {
       const nextId = isRecord(json) ? Number(json.data) : NaN
       if (Number.isFinite(nextId)) {
         setBookingId(nextId)
-        await refreshBookingDetails()
+        await refreshBookingDetails(nextId)
         setPaymentMessage(`Booking ID ${nextId} loaded.`)
       } else {
         setPaymentMessage('No booking found for this transaction.')
@@ -1424,8 +1943,20 @@ export default function BookingPage() {
   }, [totalTravellers, dialCodes])
 
   useEffect(() => {
+    setTravellers((prev) =>
+      prev.map((traveller) => (traveller.sameAsPrimary ? applyPrimaryToTraveller(traveller) : traveller))
+    )
+  }, [primaryContact])
+
+  useEffect(() => {
     if (!tourId) {
       return
+    }
+    if (isRecord(tourData) && isRecord(tourData.data)) {
+      const savedId = typeof tourData.data.id === 'number' ? tourData.data.id : Number(tourData.data.id)
+      if (savedId === tourId) {
+        return
+      }
     }
     let isActive = true
 
@@ -1454,7 +1985,14 @@ export default function BookingPage() {
     return () => {
       isActive = false
     }
-  }, [tourId])
+  }, [tourId, tourData])
+
+  useEffect(() => {
+    if (!formError || !formErrorRef.current) {
+      return
+    }
+    formErrorRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [formError])
 
   useEffect(() => {
     let isActive = true
@@ -1530,9 +2068,17 @@ export default function BookingPage() {
     if (!resolvedTourCodeId) {
       return
     }
+    const skipTourInfo = isRecord(tourInfoData) && isRecord(tourInfoData.data)
+    const skipRoomConfigs = roomConfigs.length > 0
+    if (skipTourInfo && skipRoomConfigs) {
+      return
+    }
     let isActive = true
 
     const fetchTourInfo = async () => {
+      if (skipTourInfo) {
+        return
+      }
       try {
         if (isActive) {
           setTourInfoError(false)
@@ -1553,6 +2099,9 @@ export default function BookingPage() {
     }
 
     const fetchRoomConfigs = async () => {
+      if (skipRoomConfigs) {
+        return
+      }
       try {
         if (isActive) {
           setRoomConfigError(false)
@@ -1582,7 +2131,7 @@ export default function BookingPage() {
     return () => {
       isActive = false
     }
-  }, [resolvedTourCodeId])
+  }, [resolvedTourCodeId, tourInfoData, roomConfigs])
 
   useEffect(() => {
     if (!roomConfigs.length || roomsInitialized.current) {
@@ -1601,6 +2150,16 @@ export default function BookingPage() {
     }
     roomsInitialized.current = true
   }, [roomConfigs])
+
+  useEffect(() => {
+    if (!roomConfigs.length || !rooms.length || selectedRoomConfigs.length) {
+      return
+    }
+    const payloadResult = buildRoomsPayload(rooms, roomConfigs)
+    if (!payloadResult.error) {
+      setSelectedRoomConfigs(payloadResult.configs)
+    }
+  }, [roomConfigs, rooms, selectedRoomConfigs.length])
 
   useEffect(() => {
     if (pricingInitialized.current) {
@@ -1719,6 +2278,30 @@ export default function BookingPage() {
     })
   }
 
+  const applyPrimaryToTraveller = (traveller: TravellerInfo) => ({
+    ...traveller,
+    title: primaryContact.title,
+    firstName: primaryContact.firstName,
+    lastName: primaryContact.lastName,
+    email: primaryContact.email,
+    dialCode: primaryContact.countryCode,
+    phone: primaryContact.phone,
+  })
+
+  const toggleSameAsPrimary = (index: number, nextValue: boolean) => {
+    setTravellers((prev) =>
+      prev.map((traveller, tIndex) => {
+        if (tIndex !== index) {
+          return traveller
+        }
+        if (!nextValue) {
+          return { ...traveller, sameAsPrimary: false }
+        }
+        return { ...applyPrimaryToTraveller(traveller), sameAsPrimary: true }
+      })
+    )
+  }
+
   const renderFieldError = (message?: string) => (message ? <span className="field-error">{message}</span> : null)
 
   const validateStep = () => {
@@ -1733,7 +2316,6 @@ export default function BookingPage() {
     }
     if (currentStep === 2) {
       const primaryFields: Array<{ key: keyof ContactInfo; label: string; value: string }> = [
-        { key: 'title', label: 'Title', value: primaryContact.title },
         { key: 'firstName', label: 'First Name', value: primaryContact.firstName },
         { key: 'lastName', label: 'Last Name', value: primaryContact.lastName },
         { key: 'email', label: 'Email', value: primaryContact.email },
@@ -1760,6 +2342,7 @@ export default function BookingPage() {
       const returnDate = departureEndDate ?? departureStartDate
       const nextTravellerErrors = travellers.map(() => ({} as Partial<Record<keyof TravellerInfo, string>>))
       let firstError = ''
+      let firstErrorFieldId = ''
 
       for (let index = 0; index < travellers.length; index += 1) {
         const traveller = travellers[index]
@@ -1770,19 +2353,19 @@ export default function BookingPage() {
           nextTravellerErrors[index][field] = message
           if (!firstError) {
             firstError = `Traveller ${index + 1} (${label}): ${message}`
+            if (field === 'nationality') {
+              firstErrorFieldId = `traveller-${index}-nationality`
+            }
           }
         }
 
-        if (!traveller.title) {
-          addTravellerError('title', 'Title is required.')
-        }
         if (!traveller.firstName) {
           addTravellerError('firstName', 'First name is required.')
         }
         if (!traveller.lastName) {
           addTravellerError('lastName', 'Last name is required.')
         }
-        if (!traveller.nationality) {
+        if (!traveller.nationality || !traveller.nationality.trim()) {
           addTravellerError('nationality', 'Nationality is required.')
         }
         if (!traveller.passport) {
@@ -1802,6 +2385,14 @@ export default function BookingPage() {
       setTravellerErrors(nextTravellerErrors)
       if (firstError) {
         setFormError(firstError)
+        if (firstErrorFieldId) {
+          setTimeout(() => {
+            const target = document.getElementById(firstErrorFieldId)
+            if (target) {
+              target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }
+          }, 0)
+        }
         return false
       }
     }
@@ -1810,6 +2401,10 @@ export default function BookingPage() {
 
   const handleNextStep = async () => {
     if (!validateStep()) {
+      return
+    }
+    if (currentStep === 4 && !paymentTermsAccepted) {
+      setFormError('Please accept the terms and conditions before continuing.')
       return
     }
 
@@ -1922,6 +2517,7 @@ export default function BookingPage() {
           }),
         })
         await parseJsonResponse(updateRes)
+        await refreshBookingDetails(bookingId)
         setCurrentStep(3)
         window.scrollTo(0, 0)
         return
@@ -1949,6 +2545,7 @@ export default function BookingPage() {
             setPaymentMessage(`Booking reference: ${submitJson.data.ref}`)
           }
         }
+        await refreshBookingDetails(bookingId)
         setCurrentStep(4)
         window.scrollTo(0, 0)
         return
@@ -2040,7 +2637,7 @@ export default function BookingPage() {
               <div className="row g-4">
                 <div className="col-lg-8">
                   <div className="booking-card">
-                    {formError ? <div className="booking-alert">{formError}</div> : null}
+                    {formError ? <div ref={formErrorRef} className="booking-alert">{formError}</div> : null}
 
                     {currentStep === 1 && (
                       <div className="booking-step-content">
@@ -2164,20 +2761,19 @@ export default function BookingPage() {
                         <h3>Primary Contact</h3>
                         <div className="row g-4">
                           <div className="col-md-4">
-                            <div className={`form-clt${primaryContactErrors.title ? ' is-error' : ''}`}>
-                              <span>Title <span className="required">*</span></span>
+                            <div className="form-clt">
+                              <span>Title</span>
                               <select
+                                data-react-select="true"
                                 value={primaryContact.title}
                                 onChange={(event) => updatePrimaryContact('title', event.target.value)}
                               >
-                                <option value="">Select</option>
                                 {titleOptions.map((option) => (
                                   <option key={`primary-title-${option}`} value={option}>
                                     {option}
                                   </option>
                                 ))}
                               </select>
-                              {renderFieldError(primaryContactErrors.title)}
                             </div>
                           </div>
                           <div className="col-md-4">
@@ -2220,6 +2816,7 @@ export default function BookingPage() {
                             <div className={`form-clt${primaryContactErrors.countryCode ? ' is-error' : ''}`}>
                               <span>Country Code <span className="required">*</span></span>
                               <select
+                                data-react-select="true"
                                 value={primaryContact.countryCode}
                                 onChange={(event) => updatePrimaryContact('countryCode', event.target.value)}
                               >
@@ -2280,23 +2877,31 @@ export default function BookingPage() {
                                 <div className="booking-traveller-header">
                                   <h4>Traveller {index + 1}</h4>
                                   <span className="booking-traveller-type">{getTravellerTypeLabel(travellerTypes[index] ?? 'ADT')}</span>
+                                  <label className="booking-traveller-sync">
+                                    <input
+                                      type="checkbox"
+                                      checked={Boolean(traveller.sameAsPrimary)}
+                                      onChange={(event) => toggleSameAsPrimary(index, event.target.checked)}
+                                    />
+                                    Same as Primary Contact
+                                  </label>
                                 </div>
                                 <div className="row g-4">
                                   <div className="col-md-3">
-                                    <div className={`form-clt${travellerError.title ? ' is-error' : ''}`}>
-                                      <span>Title <span className="required">*</span></span>
+                                    <div className="form-clt">
+                                      <span>Title</span>
                                       <select
+                                        data-react-select="true"
                                         value={traveller.title}
                                         onChange={(event) => updateTraveller(index, 'title', event.target.value)}
+                                        disabled={traveller.sameAsPrimary}
                                       >
-                                        <option value="">Select</option>
                                         {titleOptions.map((option) => (
                                           <option key={`traveller-title-${index}-${option}`} value={option}>
                                             {option}
                                           </option>
                                         ))}
                                       </select>
-                                      {renderFieldError(travellerError.title)}
                                     </div>
                                   </div>
                                   <div className="col-md-4">
@@ -2307,6 +2912,7 @@ export default function BookingPage() {
                                         value={traveller.firstName}
                                         onChange={(event) => updateTraveller(index, 'firstName', event.target.value)}
                                         placeholder="First name"
+                                        disabled={traveller.sameAsPrimary}
                                       />
                                       {renderFieldError(travellerError.firstName)}
                                     </div>
@@ -2319,6 +2925,7 @@ export default function BookingPage() {
                                         value={traveller.lastName}
                                         onChange={(event) => updateTraveller(index, 'lastName', event.target.value)}
                                         placeholder="Last name"
+                                        disabled={traveller.sameAsPrimary}
                                       />
                                       {renderFieldError(travellerError.lastName)}
                                     </div>
@@ -2331,6 +2938,7 @@ export default function BookingPage() {
                                         value={traveller.email}
                                         onChange={(event) => updateTraveller(index, 'email', event.target.value)}
                                         placeholder="Email address"
+                                        disabled={traveller.sameAsPrimary}
                                       />
                                     </div>
                                   </div>
@@ -2338,8 +2946,10 @@ export default function BookingPage() {
                                     <div className="form-clt">
                                       <span>Dial Code</span>
                                       <select
+                                        data-react-select="true"
                                         value={traveller.dialCode}
                                         onChange={(event) => updateTraveller(index, 'dialCode', event.target.value)}
+                                        disabled={traveller.sameAsPrimary}
                                       >
                                         <option value="">Select</option>
                                         {dialCodes.map((code, optionIndex) => (
@@ -2361,6 +2971,7 @@ export default function BookingPage() {
                                         value={traveller.phone}
                                         onChange={(event) => updateTraveller(index, 'phone', event.target.value)}
                                         placeholder="Phone number"
+                                        disabled={traveller.sameAsPrimary}
                                       />
                                     </div>
                                   </div>
@@ -2379,6 +2990,8 @@ export default function BookingPage() {
                                     <div className={`form-clt${travellerError.nationality ? ' is-error' : ''}`}>
                                       <span>Nationality <span className="required">*</span></span>
                                       <select
+                                        id={`traveller-${index}-nationality`}
+                                        data-react-select="true"
                                         value={traveller.nationality}
                                         onChange={(event) => updateTraveller(index, 'nationality', event.target.value)}
                                       >
@@ -2436,142 +3049,459 @@ export default function BookingPage() {
                         <h3>Review Your Booking</h3>
                         <div className="booking-review-block">
                           <h4>Primary Contact</h4>
-                          <p>
-                            {primaryContact.firstName} {primaryContact.lastName}
-                          </p>
-                          <p>{primaryContact.email}</p>
-                          <p>
-                            {primaryContact.countryCode} {primaryContact.phone}
-                          </p>
-                        </div>
-                        <div className="booking-review-block">
-                          <h4>Travellers</h4>
-                          <ul>
-                            {travellers.map((traveller, index) => (
-                              <li key={`review-${index}`}>
-                                {traveller.firstName || traveller.lastName ? `${traveller.firstName} ${traveller.lastName}` : `Traveller ${index + 1}`}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                        <div className="booking-review-block">
-                          <h4>Rooms</h4>
-                          <ul>
-                            {rooms.map((room, index) => (
-                              <li key={`review-room-${index}`}>
-                                Room {index + 1}: {room.adults} Adult(s), {room.childWithBed} Child (W/Bed), {room.childWithoutBed} Child (WO/Bed), {room.infants} Infant(s)
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                        <div className="booking-review-block booking-discount">
-                          <h4>Promo Code</h4>
-                          <div className="booking-discount-form">
-                            <input
-                              type="text"
-                              value={discountCode}
-                              onChange={(event) => setDiscountCode(event.target.value)}
-                              placeholder="Enter promo code"
-                            />
-                            <button type="button" className="theme-btn outline" onClick={handleApplyDiscount} disabled={isApplyingDiscount}>
-                              {isApplyingDiscount ? 'Applying...' : 'Apply'}
-                            </button>
+                          <div className="booking-review-grid">
+                            {renderReviewRow(
+                              'Name',
+                              formatPersonName(
+                                reviewDetails?.purchaser && typeof reviewDetails.purchaser.title === 'string'
+                                  ? reviewDetails.purchaser.title
+                                  : primaryContact.title,
+                                reviewDetails?.purchaser && typeof reviewDetails.purchaser.firstName === 'string'
+                                  ? reviewDetails.purchaser.firstName
+                                  : primaryContact.firstName,
+                                reviewDetails?.purchaser && typeof reviewDetails.purchaser.lastName === 'string'
+                                  ? reviewDetails.purchaser.lastName
+                                  : primaryContact.lastName
+                              )
+                            )}
+                            {renderReviewRow(
+                              'Email',
+                              reviewDetails?.purchaser && typeof reviewDetails.purchaser.email === 'string'
+                                ? reviewDetails.purchaser.email
+                                : primaryContact.email
+                            )}
+                            {renderReviewRow(
+                              'Contact Number',
+                              reviewDetails?.purchaser && typeof reviewDetails.purchaser.mobile === 'string'
+                                ? reviewDetails.purchaser.mobile
+                                : `${primaryContact.countryCode}${primaryContact.phone}`.trim()
+                            )}
+                            {renderReviewRow(
+                              'Address',
+                              reviewDetails?.purchaser
+                                ? `${typeof reviewDetails.purchaser.address === 'string' ? reviewDetails.purchaser.address : ''} ${typeof reviewDetails.purchaser.postCode === 'string' ? reviewDetails.purchaser.postCode : ''}`.trim()
+                                : `${primaryContact.address} ${primaryContact.postCode}`.trim()
+                            )}
                           </div>
-                          {discountMessage ? <div className="booking-discount-message">{discountMessage}</div> : null}
-                          {appliedDiscounts.length ? (
-                            <div className="booking-discount-list">
-                              {appliedDiscounts.map((code) => (
-                                <button
-                                  key={`discount-${code}`}
-                                  type="button"
-                                  className="booking-discount-chip"
-                                  onClick={() => handleRemoveDiscount(code)}
-                                >
-                                  {code} <span>&times;</span>
-                                </button>
+                        </div>
+
+                        {reviewHasPaxs ? (
+                          <div className="booking-review-block">
+                            {reviewDetails.rooms.map((room, roomIndex) => {
+                              const roomRecord = isRecord(room) ? room : null
+                              const roomSequence = roomRecord && typeof roomRecord.sequence === 'number' ? roomRecord.sequence : roomIndex + 1
+                              const paxs = roomRecord && Array.isArray(roomRecord.paxs) ? roomRecord.paxs : []
+                              return (
+                                <div key={`review-room-${roomSequence}`} className="booking-review-room">
+                                  <h4>Room {roomSequence}</h4>
+                                  <div className="booking-review-travellers">
+                                    {paxs.map((pax, paxIndex) => {
+                                      const paxRecord = isRecord(pax) ? pax : null
+                                      const paxType = paxRecord && typeof paxRecord.type === 'string' ? paxRecord.type : 'ADT'
+                                      const paxName = paxRecord
+                                        ? formatPersonName(
+                                          typeof paxRecord.title === 'string' ? paxRecord.title : '',
+                                          typeof paxRecord.firstName === 'string' ? paxRecord.firstName : '',
+                                          typeof paxRecord.lastName === 'string' ? paxRecord.lastName : ''
+                                        )
+                                        : ''
+                                      return (
+                                        <div key={`review-room-${roomSequence}-pax-${paxIndex}`} className="booking-review-card">
+                                          <h5>
+                                            Traveller {paxIndex + 1} ({getTravellerTypeLabel(paxType)})
+                                          </h5>
+                                          <div className="booking-review-grid">
+                                            {renderReviewRow('Name', paxName)}
+                                            {renderReviewRow('Email', paxRecord && typeof paxRecord.email === 'string' ? paxRecord.email : '')}
+                                            {renderReviewRow('Contact Number', paxRecord && typeof paxRecord.mobile === 'string' ? paxRecord.mobile : '')}
+                                            {renderReviewRow('Date of Birth', paxRecord && typeof paxRecord.birthday === 'string' ? formatDate(paxRecord.birthday) : '')}
+                                            {renderReviewRow('Nationality', paxRecord && typeof paxRecord.nationality === 'string' ? paxRecord.nationality : '')}
+                                            {renderReviewRow('Passport', paxRecord && typeof paxRecord.passport === 'string' ? paxRecord.passport : '')}
+                                            {renderReviewRow(
+                                              'Passport Expiry',
+                                              paxRecord && typeof paxRecord.expiryDate === 'string' ? formatDate(paxRecord.expiryDate) : ''
+                                            )}
+                                          </div>
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        ) : (
+                          <div className="booking-review-block">
+                            <h4>Travellers</h4>
+                            {bookingId && !reviewDetails ? (
+                              <p className="text">Booking details are loading. If this persists, use Refresh Booking Details on the payment step.</p>
+                            ) : null}
+                            <div className="booking-review-travellers">
+                              {travellers.map((traveller, index) => (
+                                <div key={`review-traveller-${index}`} className="booking-review-card">
+                                  <h5>
+                                    Traveller {index + 1} ({getTravellerTypeLabel(travellerTypes[index] ?? 'ADT')})
+                                  </h5>
+                                  <div className="booking-review-grid">
+                                    {renderReviewRow('Name', formatPersonName(traveller.title, traveller.firstName, traveller.lastName))}
+                                    {renderReviewRow('Email', traveller.email)}
+                                    {renderReviewRow('Contact Number', `${traveller.dialCode}${traveller.phone}`.trim())}
+                                    {renderReviewRow('Date of Birth', traveller.dob ? formatDate(traveller.dob) : '')}
+                                    {renderReviewRow('Nationality', traveller.nationality)}
+                                    {renderReviewRow('Passport', traveller.passport)}
+                                    {renderReviewRow('Passport Expiry', traveller.passportExpiry ? formatDate(traveller.passportExpiry) : '')}
+                                  </div>
+                                </div>
                               ))}
                             </div>
-                          ) : null}
+                          </div>
+                        )}
+
+                        {showDiscountForm ? (
+                          <div className="booking-review-block booking-discount">
+                            <h4>Promo Code</h4>
+                            <div className="booking-discount-form">
+                              <input
+                                type="text"
+                                value={discountCode}
+                                onChange={(event) => setDiscountCode(event.target.value)}
+                                placeholder="Enter promo code"
+                              />
+                              <button type="button" className="theme-btn outline" onClick={handleApplyDiscount} disabled={isApplyingDiscount}>
+                                {isApplyingDiscount ? 'Applying...' : 'Apply'}
+                              </button>
+                            </div>
+                            {discountMessage ? <div className="booking-discount-message">{discountMessage}</div> : null}
+                            {appliedDiscounts.length ? (
+                              <div className="booking-discount-list">
+                                {appliedDiscounts.map((code) => (
+                                  <button
+                                    key={`discount-${code}`}
+                                    type="button"
+                                    className="booking-discount-chip"
+                                    onClick={() => handleRemoveDiscount(code)}
+                                  >
+                                    {code} <span>&times;</span>
+                                  </button>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
+                        <div className="booking-review-notice">
+                          <h4>Important Notice</h4>
+                          <p className="text">
+                            Please review all details carefully before proceeding to payment. Any changes after payment may incur additional charges.
+                          </p>
                         </div>
                       </div>
                     )}
 
                     {currentStep === 4 && (
-                      <div className="booking-step-content">
+                      <div className="booking-step-content booking-payment">
                         <h3>Payment</h3>
-                        <p className="text">Payment gateway is connected via API. This UI is a placeholder for the final gateway form.</p>
-                        <div className="booking-payment-method">
-                          <label className="booking-radio">
-                            <input
-                              type="radio"
-                              name="payment-method"
-                              checked={priceType === 'full'}
-                              onChange={() => setPriceType('full')}
-                            />
-                            Full Tour Payment
-                          </label>
-                          <label className="booking-radio">
-                            <input
-                              type="radio"
-                              name="payment-method"
-                              checked={priceType === 'land'}
-                              onChange={() => setPriceType('land')}
-                            />
-                            Land Tour Payment
-                          </label>
+                        {bookingDetailData && isRecord(bookingDetailData) && typeof bookingDetailData.ref === 'string' ? (
+                          <div className="booking-payment-ref">
+                            Booking Ref: <strong>{bookingDetailData.ref}</strong>
+                          </div>
+                        ) : bookingRef ? (
+                          <div className="booking-payment-ref">
+                            Booking Ref: <strong>{bookingRef}</strong>
+                          </div>
+                        ) : null}
+
+                        <div className="booking-payment-summary">
+                          <div className="booking-payment-tour">
+                            {tourSummary.cover ? <img src={tourSummary.cover} alt={tourSummary.title} /> : null}
+                            <div>
+                              <p className="booking-payment-duration">{tourSummary.duration || '-'}</p>
+                              <h4>{tourSummary.title || 'Tour details'}</h4>
+                              {tripCode ? <p className="booking-payment-code">{tripCode}</p> : null}
+                            </div>
+                          </div>
+                          <div className="booking-payment-departure">
+                            <div className="booking-payment-departure-grid">
+                              <div>
+                                <span>Departure Date</span>
+                                <p>{formatDate(selectedDeparture?.flightStartDate || selectedDeparture?.startDate || '') || 'To be confirmed'}</p>
+                              </div>
+                              <div className="booking-payment-plane">
+                                <i className="fa-solid fa-plane"></i>
+                              </div>
+                              <div>
+                                <span>Return Date</span>
+                                <p>{formatDate(selectedDeparture?.flightEndDate || selectedDeparture?.endDate || '') || 'To be confirmed'}</p>
+                              </div>
+                            </div>
+                          </div>
+                          {flightRows.length ? (
+                            <div className="booking-payment-flights">
+                              <div className="booking-payment-title">Flight Details</div>
+                              <div className="booking-summary-flights">
+                                <div className="flight-row flight-head">
+                                  <span>Date</span>
+                                  <span>Sector</span>
+                                  <span>Flight</span>
+                                  <span>ETD</span>
+                                  <span>ETA</span>
+                                </div>
+                                {flightRows.map((flight, index) => (
+                                  <div key={`payment-flight-${index}`} className="flight-row">
+                                    <span>{formatDate(flight.departureDate || '')}</span>
+                                    <span>{flight.sector || '-'}</span>
+                                    <span>{flight.flightNo || '-'}</span>
+                                    <span>{flight.etd || '-'}</span>
+                                    <span>
+                                      {flight.eta || '-'}
+                                      {typeof flight.zone === 'number' && flight.zone !== 0 ? (
+                                        <span className="flight-zone">{flight.zone > 0 ? `+${flight.zone}` : flight.zone}</span>
+                                      ) : null}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ) : null}
                         </div>
-                        <div className="row g-4 booking-form">
-                          <div className="col-md-6">
-                            <div className="form-clt">
-                              <span>Card Holder</span>
-                              <input type="text" placeholder="Name on card" />
-                            </div>
-                          </div>
-                          <div className="col-md-6">
-                            <div className="form-clt">
-                              <span>Card Number</span>
-                              <input type="text" placeholder="0000 0000 0000 0000" />
-                            </div>
-                          </div>
-                          <div className="col-md-4">
-                            <div className="form-clt">
-                              <span>Expiry</span>
-                              <input type="text" placeholder="MM/YY" />
-                            </div>
-                          </div>
-                          <div className="col-md-4">
-                            <div className="form-clt">
-                              <span>CVV</span>
-                              <input type="text" placeholder="***" />
-                            </div>
-                          </div>
-                          <div className="col-md-4">
-                            <div className="form-clt">
-                              <span>Billing Zip</span>
-                              <input type="text" placeholder="Postal code" />
-                            </div>
-                          </div>
-                        </div>
-                        <div className="booking-payment-actions">
-                          <button type="button" className="theme-btn outline" onClick={refreshBookingDetails} disabled={isRefreshingBooking}>
-                            {isRefreshingBooking ? 'Refreshing...' : 'Refresh Booking Details'}
+
+                        <div className="booking-payment-section">
+                          <button
+                            type="button"
+                            className="booking-payment-toggle"
+                            onClick={() => setIsPaymentContactOpen((prev) => !prev)}
+                          >
+                            <span>Primary Contact</span>
+                            <span className="booking-toggle-icon">{isPaymentContactOpen ? '-' : '+'}</span>
                           </button>
+                          {isPaymentContactOpen ? (
+                            <div className="booking-payment-panel">
+                              {renderReviewRow(
+                                'Name',
+                                formatPersonName(
+                                  reviewDetails?.purchaser && typeof reviewDetails.purchaser.title === 'string'
+                                    ? reviewDetails.purchaser.title
+                                    : primaryContact.title,
+                                  reviewDetails?.purchaser && typeof reviewDetails.purchaser.firstName === 'string'
+                                    ? reviewDetails.purchaser.firstName
+                                    : primaryContact.firstName,
+                                  reviewDetails?.purchaser && typeof reviewDetails.purchaser.lastName === 'string'
+                                    ? reviewDetails.purchaser.lastName
+                                    : primaryContact.lastName
+                                )
+                              )}
+                              {renderReviewRow(
+                                'Email',
+                                reviewDetails?.purchaser && typeof reviewDetails.purchaser.email === 'string'
+                                  ? reviewDetails.purchaser.email
+                                  : primaryContact.email
+                              )}
+                              {renderReviewRow(
+                                'Contact Number',
+                                reviewDetails?.purchaser && typeof reviewDetails.purchaser.mobile === 'string'
+                                  ? reviewDetails.purchaser.mobile
+                                  : `${primaryContact.countryCode}${primaryContact.phone}`.trim()
+                              )}
+                              {renderReviewRow(
+                                'Address',
+                                reviewDetails?.purchaser
+                                  ? `${typeof reviewDetails.purchaser.address === 'string' ? reviewDetails.purchaser.address : ''} ${typeof reviewDetails.purchaser.postCode === 'string' ? reviewDetails.purchaser.postCode : ''}`.trim()
+                                  : `${primaryContact.address} ${primaryContact.postCode}`.trim()
+                              )}
+                            </div>
+                          ) : null}
                         </div>
-                        <div className="booking-payment-lookup">
-                          <div className="form-clt">
-                            <span>Transaction ID</span>
-                            <input
-                              type="text"
-                              value={paymentLookupId}
-                              onChange={(event) => setPaymentLookupId(event.target.value)}
-                              placeholder="Enter payment transaction id"
-                            />
-                          </div>
-                          <button type="button" className="theme-btn outline" onClick={handleLookupBooking}>
-                            Lookup Booking
+
+                        <div className="booking-payment-section">
+                          <button
+                            type="button"
+                            className="booking-payment-toggle"
+                            onClick={() => setIsPaymentTravellerOpen((prev) => !prev)}
+                          >
+                            <span>Travellers</span>
+                            <span className="booking-toggle-icon">{isPaymentTravellerOpen ? '-' : '+'}</span>
                           </button>
+                          {isPaymentTravellerOpen ? (
+                            <div className="booking-payment-panel">
+                              {reviewHasPaxs ? (
+                                reviewDetails?.rooms.map((room, roomIndex) => {
+                                  const roomRecord = isRecord(room) ? room : null
+                                  const roomSequence = roomRecord && typeof roomRecord.sequence === 'number' ? roomRecord.sequence : roomIndex + 1
+                                  const paxs = roomRecord && Array.isArray(roomRecord.paxs) ? roomRecord.paxs : []
+                                  return (
+                                    <div key={`payment-room-${roomSequence}`} className="booking-payment-room">
+                                      <h5>Room {roomSequence}</h5>
+                                      <div className="booking-review-travellers">
+                                        {paxs.map((pax, paxIndex) => {
+                                          const paxRecord = isRecord(pax) ? pax : null
+                                          const paxType = paxRecord && typeof paxRecord.type === 'string' ? paxRecord.type : 'ADT'
+                                          const paxName = paxRecord
+                                            ? formatPersonName(
+                                              typeof paxRecord.title === 'string' ? paxRecord.title : '',
+                                              typeof paxRecord.firstName === 'string' ? paxRecord.firstName : '',
+                                              typeof paxRecord.lastName === 'string' ? paxRecord.lastName : ''
+                                            )
+                                            : ''
+                                          return (
+                                            <div key={`payment-room-${roomSequence}-pax-${paxIndex}`} className="booking-review-card">
+                                              <h5>
+                                                Traveller {paxIndex + 1} ({getTravellerTypeLabel(paxType)})
+                                              </h5>
+                                              <div className="booking-review-grid">
+                                                {renderReviewRow('Name', paxName)}
+                                                {renderReviewRow('Email', paxRecord && typeof paxRecord.email === 'string' ? paxRecord.email : '')}
+                                                {renderReviewRow('Contact Number', paxRecord && typeof paxRecord.mobile === 'string' ? paxRecord.mobile : '')}
+                                                {renderReviewRow('Date of Birth', paxRecord && typeof paxRecord.birthday === 'string' ? formatDate(paxRecord.birthday) : '')}
+                                                {renderReviewRow('Nationality', paxRecord && typeof paxRecord.nationality === 'string' ? paxRecord.nationality : '')}
+                                                {renderReviewRow('Passport', paxRecord && typeof paxRecord.passport === 'string' ? paxRecord.passport : '')}
+                                                {renderReviewRow(
+                                                  'Passport Expiry',
+                                                  paxRecord && typeof paxRecord.expiryDate === 'string' ? formatDate(paxRecord.expiryDate) : ''
+                                                )}
+                                              </div>
+                                            </div>
+                                          )
+                                        })}
+                                      </div>
+                                    </div>
+                                  )
+                                })
+                              ) : (
+                                <div className="booking-review-travellers">
+                                  {travellers.map((traveller, index) => (
+                                    <div key={`payment-traveller-${index}`} className="booking-review-card">
+                                      <h5>
+                                        Traveller {index + 1} ({getTravellerTypeLabel(travellerTypes[index] ?? 'ADT')})
+                                      </h5>
+                                      <div className="booking-review-grid">
+                                        {renderReviewRow('Name', formatPersonName(traveller.title, traveller.firstName, traveller.lastName))}
+                                        {renderReviewRow('Email', traveller.email)}
+                                        {renderReviewRow('Contact Number', `${traveller.dialCode}${traveller.phone}`.trim())}
+                                        {renderReviewRow('Date of Birth', traveller.dob ? formatDate(traveller.dob) : '')}
+                                        {renderReviewRow('Nationality', traveller.nationality)}
+                                        {renderReviewRow('Passport', traveller.passport)}
+                                        {renderReviewRow('Passport Expiry', traveller.passportExpiry ? formatDate(traveller.passportExpiry) : '')}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ) : null}
                         </div>
-                        {paymentMessage ? <div className="booking-alert booking-alert-success">{paymentMessage}</div> : null}
+
+                        <div className="booking-payment-section">
+                          <button
+                            type="button"
+                            className="booking-payment-toggle"
+                            onClick={() => setIsPaymentPriceOpen((prev) => !prev)}
+                          >
+                            <span>Price Summary</span>
+                            <span className="booking-toggle-icon">{isPaymentPriceOpen ? '-' : '+'}</span>
+                          </button>
+                          {isPaymentPriceOpen ? (
+                            <div className="booking-payment-panel">
+                              {priceRows.length ? (
+                                <div className="booking-payment-price-block">
+                                  <div className="booking-summary-title">Tour Fare</div>
+                                  <div className="booking-summary-table">
+                                    <div className="booking-summary-price-row booking-summary-head">
+                                      <span>Type</span>
+                                      <span>Unit</span>
+                                      <span>Qty</span>
+                                      <span>Amount</span>
+                                    </div>
+                                    {priceRows.map((row) => (
+                                      <div key={`payment-fare-${row.label}`} className="booking-summary-price-row">
+                                        <span>{row.label}</span>
+                                        <span>{formatPrice(row.unitPrice)}</span>
+                                        <span>{row.qty}</span>
+                                        <span>{formatPrice(row.amount)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              ) : null}
+
+                              {taxRows.length ? (
+                                <div className="booking-payment-price-block">
+                                  <div className="booking-summary-title">Taxes</div>
+                                  <div className="booking-summary-table">
+                                    <div className="booking-summary-price-row booking-summary-head">
+                                      <span>Type</span>
+                                      <span>Unit</span>
+                                      <span>Qty</span>
+                                      <span>Amount</span>
+                                    </div>
+                                    {taxRows.map((row) => (
+                                      <div key={`payment-tax-${row.label}`} className="booking-summary-price-row">
+                                        <span>{row.label}</span>
+                                        <span>{formatPrice(row.unitPrice)}</span>
+                                        <span>{row.qty}</span>
+                                        <span>{formatPrice(row.amount)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              ) : null}
+
+                              {discountRows.length ? (
+                                <div className="booking-payment-price-block">
+                                  <div className="booking-summary-title">Discount</div>
+                                  <div className="booking-summary-table">
+                                    {discountRows.map((row, index) => (
+                                      <div key={`payment-discount-${index}`} className="booking-summary-price-row">
+                                        <span>{row.label}</span>
+                                        <span></span>
+                                        <span></span>
+                                        <span>{formatSignedPrice(row.amount)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              ) : null}
+
+                              <div className="booking-payment-total">
+                                <div className="booking-summary-total-row">
+                                  <span>Total Amount</span>
+                                  <span>{formatPrice(paymentSummary.totalAmountValue || totalAmount || 0)}</span>
+                                </div>
+                                {paymentSummary.depositValue > 0 ? (
+                                  <div className="booking-summary-total-row">
+                                    <span>Deposit</span>
+                                    <span>{formatPrice(paymentSummary.depositValue)}</span>
+                                  </div>
+                                ) : null}
+                                {paymentSummary.totalPaidValue > 0 ? (
+                                  <div className="booking-summary-total-row">
+                                    <span>Total Paid</span>
+                                    <span>{formatPrice(paymentSummary.totalPaidValue)}</span>
+                                  </div>
+                                ) : null}
+                                {paymentSummary.balanceValue > 0 ? (
+                                  <div className="booking-summary-total-row">
+                                    <span>Balance</span>
+                                    <span>{formatPrice(paymentSummary.balanceValue)}</span>
+                                  </div>
+                                ) : null}
+                              </div>
+                            </div>
+                          ) : null}
+                        </div>
+                        <div className="booking-payment-secure">
+                          <h4>Secure Payment</h4>
+                          <p className="text">
+                            Your payment information is encrypted and securely processed. We do not store complete card details on our servers.
+                          </p>
+                        </div>
+
+                        <label className="booking-payment-check">
+                          <input
+                            type="checkbox"
+                            checked={paymentTermsAccepted}
+                            onChange={(event) => setPaymentTermsAccepted(event.target.checked)}
+                          />
+                          By proceeding with the payment, you agree to ASA Holidays&apos; <a href="/terms" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a> and <a href="/privacy" target="_blank" rel="noopener noreferrer">Data Protection Policy</a>.
+                        </label>
                       </div>
                     )}
 
@@ -2605,7 +3535,7 @@ export default function BookingPage() {
                         </button>
                       ) : null}
                       {bookingId && currentStep < 5 ? (
-                        <button type="button" className="theme-btn outline" onClick={handleCancelBooking}>
+                        <button type="button" className="theme-btn outline" onClick={openCancelConfirm}>
                           Cancel Booking
                         </button>
                       ) : null}
@@ -2625,9 +3555,14 @@ export default function BookingPage() {
 
                 <div className="col-lg-4">
                   <div className="booking-summary">
-                    {expectedCancelTime ? (
-                      <div className="booking-summary-timer">
-                        <p className="text">Seats are held until {expectedCancelTime}.</p>
+                    {expectedCancelTime && currentStep < 5 ? (
+                      <div className="booking-summary-countdown">
+                        <p className="booking-summary-countdown-text">
+                          We&apos;ve reserved this seats for you. Please complete checkout in:
+                        </p>
+                        <p className="booking-summary-countdown-time">
+                          <CountdownTimer targetDate={expectedCancelTime} onExpire={handleCountdownExpire} />
+                        </p>
                       </div>
                     ) : null}
                     <div className="booking-summary-header">
@@ -2748,6 +3683,38 @@ export default function BookingPage() {
                       </div>
                     ) : null}
 
+                    {showDiscountForm ? (
+                      <div className="booking-summary-section booking-discount-summary">
+                        <div className="booking-summary-title">Discount Code</div>
+                        <div className="booking-discount-form">
+                          <input
+                            type="text"
+                            value={discountCode}
+                            onChange={(event) => setDiscountCode(event.target.value)}
+                            placeholder="Enter promo code"
+                          />
+                          <button type="button" className="theme-btn outline" onClick={handleApplyDiscount} disabled={isApplyingDiscount}>
+                            {isApplyingDiscount ? 'Applying...' : 'Apply'}
+                          </button>
+                        </div>
+                        {discountMessage ? <div className="booking-discount-message">{discountMessage}</div> : null}
+                        {appliedDiscounts.length ? (
+                          <div className="booking-discount-list">
+                            {appliedDiscounts.map((code) => (
+                              <button
+                                key={`discount-summary-${code}`}
+                                type="button"
+                                className="booking-discount-chip"
+                                onClick={() => handleRemoveDiscount(code)}
+                              >
+                                {code} <span>&times;</span>
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+
                     {totalAmount ? (
                       <div className="booking-summary-section booking-summary-total">
                         <div className="booking-summary-total-row">
@@ -2773,29 +3740,42 @@ export default function BookingPage() {
             </div>
           </section>
 
+          {currentStep < 4 ? (
+            <div className="booking-mobile-bar">
+              <div>
+                <span className="booking-mobile-label">Total</span>
+                <span className="booking-mobile-value">
+                  {totalAmount ? formatPrice(totalAmount) : fromPrice || '-'}
+                </span>
+              </div>
+              <button type="button" className="theme-btn" onClick={handleNextStep} disabled={isSubmitting}>
+                {isSubmitting ? 'Processing...' : 'Continue'}
+              </button>
+            </div>
+          ) : null}
+
+          {showCancelConfirm ? (
+            <div className="booking-modal-backdrop" onClick={closeCancelConfirm}>
+              <div className="booking-modal" onClick={(event) => event.stopPropagation()}>
+                <h3>Cancel Booking Process?</h3>
+                <p className="text">
+                  Are you sure you want to cancel your booking process? All your current selections and information will be lost.
+                </p>
+                <div className="booking-modal-actions">
+                  <button type="button" className="theme-btn outline" onClick={closeCancelConfirm}>
+                    Keep Booking
+                  </button>
+                  <button type="button" className="theme-btn" onClick={handleCancelBooking} disabled={isSubmitting}>
+                    {isSubmitting ? 'Cancelling...' : 'Cancel Booking'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           <Footer />
         </div>
       </div>
     </>
   )
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
