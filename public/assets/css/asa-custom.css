@@ -238,6 +238,11 @@
   background: rgba(0, 0, 0, 0.16);
 }
 
+.ui-datepicker-calendar {
+  background: #f7f9fc;
+}
+
+
 .range-filter {
   display: grid;
   gap: 12px;

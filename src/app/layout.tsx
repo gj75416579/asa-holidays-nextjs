@@ -21,6 +21,7 @@ export default function RootLayout({
         <link rel="stylesheet" href="/assets/css/meanmenu.css" />
         <link rel="stylesheet" href="/assets/css/swiper-bundle.min.css" />
         <link rel="stylesheet" href="/assets/css/nice-select.css" />
+        <link rel="stylesheet" href="/assets/css/jquery-ui.min.css" />
         <link rel="stylesheet" href="/assets/css/flacticon.css" />
         <link rel="stylesheet" href="/assets/css/main.css" />
         <link rel="stylesheet" href="/assets/css/asa-custom.css" />

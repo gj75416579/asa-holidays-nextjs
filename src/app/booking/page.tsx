@@ -225,6 +225,30 @@ const formatDate = (value: string) => {
   })
 }
 
+const formatDateInputValue = (value: string) => {
+  if (!value) {
+    return ''
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split('-')
+    return `${day}/${month}/${year}`
+  }
+  return value
+}
+
+const normalizeDateInputValue = (value: string) => {
+  if (!value) {
+    return ''
+  }
+  const match = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  if (match) {
+    const day = match[1].padStart(2, '0')
+    const month = match[2].padStart(2, '0')
+    return `${match[3]}-${month}-${day}`
+  }
+  return value
+}
+
 const formatPersonName = (title: string, firstName: string, lastName: string) => {
   const prefix = title ? `${title}. ` : ''
   const full = `${firstName ?? ''} ${lastName ?? ''}`.trim()
@@ -839,6 +863,15 @@ const parseDateOnly = (value: string) => {
     const year = Number(parts[0])
     const month = Number(parts[1])
     const day = Number(parts[2])
+    if (Number.isFinite(year) && Number.isFinite(month) && Number.isFinite(day)) {
+      return new Date(year, month - 1, day)
+    }
+  }
+  const slashParts = value.split('/')
+  if (slashParts.length === 3) {
+    const day = Number(slashParts[0])
+    const month = Number(slashParts[1])
+    const year = Number(slashParts[2])
     if (Number.isFinite(year) && Number.isFinite(month) && Number.isFinite(day)) {
       return new Date(year, month - 1, day)
     }
@@ -1822,10 +1855,10 @@ function BookingPageContent() {
           mobile: phone ? `${dialCode}${phone}` : '',
           nationality: nationality.name,
           nationalityShort: nationality.code,
-          birthday: traveler.dob,
+          birthday: normalizeDateInputValue(traveler.dob),
           gender,
           passport: traveler.passport,
-          expiryDate: traveler.passportExpiry,
+          expiryDate: normalizeDateInputValue(traveler.passportExpiry),
           tranxRoomId: roomId,
           sequence,
           type,
@@ -2089,6 +2122,50 @@ function BookingPageContent() {
       prev.map((traveller) => (traveller.sameAsPrimary ? applyPrimaryToTraveller(traveller) : traveller))
     )
   }, [primaryContact])
+
+  useEffect(() => {
+    if (currentStep !== 2) {
+      return
+    }
+    let timer: number | null = null
+
+    const initDatePickers = () => {
+      const $ = (window as any).jQuery
+      if (!$ || typeof $.fn?.datepicker !== 'function') {
+        timer = window.setTimeout(initDatePickers, 200)
+        return
+      }
+      $('.js-date-picker').each((_: number, element: HTMLElement) => {
+        const $element = $(element)
+        if ($element.hasClass('hasDatepicker')) {
+          return
+        }
+        const yearRange = element.getAttribute('data-year-range') || 'c-10:c+10'
+        $element.datepicker({
+          dateFormat: 'dd/mm/yy',
+          changeMonth: true,
+          changeYear: true,
+          yearRange,
+          onSelect: (dateText: string) => {
+            const field = element.getAttribute('data-field') as keyof TravellerInfo | null
+            const index = Number(element.getAttribute('data-index'))
+            if (!field || !Number.isFinite(index)) {
+              return
+            }
+            updateTraveller(index, field, dateText)
+          },
+        })
+      })
+    }
+
+    initDatePickers()
+
+    return () => {
+      if (timer) {
+        window.clearTimeout(timer)
+      }
+    }
+  }, [currentStep, travellers.length])
 
   useEffect(() => {
     if (!tourId) {
@@ -3179,8 +3256,15 @@ function BookingPageContent() {
                                     <div className={`form-clt${travellerError.dob ? ' is-error' : ''}`}>
                                       <span>Date of Birth <span className="required">*</span></span>
                                       <input
-                                        type="date"
-                                        value={traveller.dob}
+                                        type="text"
+                                        className="js-date-picker"
+                                        inputMode="numeric"
+                                        autoComplete="off"
+                                        placeholder="DD/MM/YYYY"
+                                        data-year-range="c-120:c"
+                                        data-field="dob"
+                                        data-index={index}
+                                        value={formatDateInputValue(traveller.dob)}
                                         onChange={(event) => updateTraveller(index, 'dob', event.target.value)}
                                       />
                                       {renderFieldError(travellerError.dob)}
@@ -3229,8 +3313,15 @@ function BookingPageContent() {
                                     <div className={`form-clt${travellerError.passportExpiry ? ' is-error' : ''}`}>
                                       <span>Passport Expiry</span>
                                       <input
-                                        type="date"
-                                        value={traveller.passportExpiry}
+                                        type="text"
+                                        className="js-date-picker"
+                                        inputMode="numeric"
+                                        autoComplete="off"
+                                        placeholder="DD/MM/YYYY"
+                                        data-year-range="c:c+20"
+                                        data-field="passportExpiry"
+                                        data-index={index}
+                                        value={formatDateInputValue(traveller.passportExpiry)}
                                         onChange={(event) => updateTraveller(index, 'passportExpiry', event.target.value)}
                                       />
                                       {renderFieldError(travellerError.passportExpiry)}

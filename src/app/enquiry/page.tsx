@@ -87,9 +87,11 @@ const normalizeDate = (value: string): string => {
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     return value
   }
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
-    const [day, month, year] = value.split('/')
-    return `${year}-${month}-${day}`
+  const match = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  if (match) {
+    const day = match[1].padStart(2, '0')
+    const month = match[2].padStart(2, '0')
+    return `${match[3]}-${month}-${day}`
   }
   return ''
 }
@@ -151,6 +153,46 @@ export default function EnquiryPage() {
     }
   }, [recaptchaEnabled])
 
+  useEffect(() => {
+    let timer: number | null = null
+
+    const initDatePickers = () => {
+      const $ = (window as any).jQuery
+      if (!$ || typeof $.fn?.datepicker !== 'function') {
+        timer = window.setTimeout(initDatePickers, 200)
+        return
+      }
+
+      $('.js-date-picker').each((_: number, element: HTMLElement) => {
+        const $element = $(element)
+        if ($element.hasClass('hasDatepicker')) {
+          return
+        }
+        const yearRange = element.getAttribute('data-year-range') || 'c-10:c+10'
+        $element.datepicker({
+          dateFormat: 'dd/mm/yy',
+          changeMonth: true,
+          changeYear: true,
+          yearRange,
+          onSelect: (dateText: string) => {
+            const field = element.getAttribute('data-field') as keyof EnquiryFormState | null
+            if (field) {
+              handleInputChange(field, dateText)
+            }
+          },
+        })
+      })
+    }
+
+    initDatePickers()
+
+    return () => {
+      if (timer) {
+        window.clearTimeout(timer)
+      }
+    }
+  }, [])
+
   const renderRecaptcha = () => {
     if (!recaptchaEnabled || !recaptchaRef.current || !window.grecaptcha) {
       return
@@ -184,10 +226,16 @@ export default function EnquiryPage() {
         window.scrollTo({ top: 0, behavior: 'smooth' })
         return
       }
+      const payload = {
+        ...formData,
+        departureDate1: normalizeDate(formData.departureDate1),
+        departureDate2: normalizeDate(formData.departureDate2),
+      }
+
       const response = await fetch('/api/enquiry', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       })
 
       const data = await response.json().catch(() => null)
@@ -354,8 +402,14 @@ export default function EnquiryPage() {
                             <div className="form-clt">
                               <span>Departure Date (Option 1)</span>
                               <input
-                                type="date"
-                                value={formData.departureDate1}
+                                type="text"
+                                className="js-date-picker"
+                                inputMode="numeric"
+                                autoComplete="off"
+                                placeholder="DD/MM/YYYY"
+                                data-year-range="c:c+5"
+                                data-field="departureDate1"
+                                value={formatDateLabel(formData.departureDate1)}
                                 onChange={(event) => handleInputChange('departureDate1', event.target.value)}
                               />
                             </div>
@@ -364,8 +418,14 @@ export default function EnquiryPage() {
                             <div className="form-clt">
                               <span>Departure Date (Option 2)</span>
                               <input
-                                type="date"
-                                value={formData.departureDate2}
+                                type="text"
+                                className="js-date-picker"
+                                inputMode="numeric"
+                                autoComplete="off"
+                                placeholder="DD/MM/YYYY"
+                                data-year-range="c:c+5"
+                                data-field="departureDate2"
+                                value={formatDateLabel(formData.departureDate2)}
                                 onChange={(event) => handleInputChange('departureDate2', event.target.value)}
                               />
                             </div>
