@@ -237,7 +237,7 @@ function TourListContent() {
       startPrice: filters.priceMin,
       endPrice: filters.priceMax,
       date: '',
-      type: productType,
+      productType: productType,
       sort: 2,
       sortType: 1,
       currentPage,

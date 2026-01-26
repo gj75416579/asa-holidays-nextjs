@@ -496,7 +496,34 @@ function TourDetailsContent() {
   const hasMapLocation = Boolean(mapLocation)
   const hasMapImage = Boolean(resolvedDetail.mapImage)
   const callPhone = '63035303'
-
+  const primaryDeparture = departures[0] ?? null
+  const enquiryParams = new URLSearchParams()
+  if (resolvedDetail.title) {
+    enquiryParams.set('tourName', resolvedDetail.title)
+  }
+  const primaryTourCode = primaryDeparture?.tourCode || primaryDeparture?.code || ''
+  if (primaryTourCode) {
+    enquiryParams.set('tourCode', primaryTourCode)
+  }
+  if (primaryDeparture?.priceCode) {
+    enquiryParams.set('productCode', primaryDeparture.priceCode)
+  }
+  const primaryDepartureDate = primaryDeparture?.flightStartDate || primaryDeparture?.startDate || ''
+  if (primaryDepartureDate) {
+    enquiryParams.set('departureDate', primaryDepartureDate)
+  }
+  if (resolvedDetail.id) {
+    enquiryParams.set('tourId', String(resolvedDetail.id))
+  }
+  if (primaryDeparture?.id) {
+    enquiryParams.set('departureId', String(primaryDeparture.id))
+  }
+  if (primaryDeparture?.priceCodeId) {
+    enquiryParams.set('tourCodeId', String(primaryDeparture.priceCodeId))
+  }
+  enquiryParams.set('type', String(isGroupTour ? 1 : 2))
+  const enquiryQuery = enquiryParams.toString()
+  const enquiryUrl = enquiryQuery ? `/enquiry?${enquiryQuery}` : '/enquiry'
   const DepartureCard = ({ departure }: { departure: DepartureItem }) => {
     const [isOpen, setIsOpen] = useState(false)
     const [priceType, setPriceType] = useState<'full' | 'land'>('full')
@@ -512,36 +539,13 @@ function TourDetailsContent() {
       tourId: bookingTourId ?? undefined,
       tourCodeId: departure.id ?? departure.priceCodeId ?? undefined,
       departureId: departure.id ?? undefined,
-      type: priceType === 'full' ? 1 : 2,
+      type: 1,
     }
     const bookingUrl = `/booking?tour=${encodeTourParam(bookingPayload)}`
-    const enquiryParams = new URLSearchParams()
-    if (resolvedDetail.title) {
-      enquiryParams.set('tourName', resolvedDetail.title)
-    }
-    if (tourCode) {
-      enquiryParams.set('tourCode', tourCode)
-    }
-    if (departure.priceCode) {
-      enquiryParams.set('productCode', departure.priceCode)
-    }
-    if (dateStart) {
-      enquiryParams.set('departureDate', dateStart)
-    }
-    if (bookingTourId) {
-      enquiryParams.set('tourId', String(bookingTourId))
-    }
-    if (departure.id) {
-      enquiryParams.set('departureId', String(departure.id))
-    }
-    if (departure.priceCodeId) {
-      enquiryParams.set('tourCodeId', String(departure.priceCodeId))
-    }
-    enquiryParams.set('type', '2')
-    const enquiryQuery = enquiryParams.toString()
-    const enquiryUrl = enquiryQuery ? `/enquiry?${enquiryQuery}` : '/enquiry'
-    const actionUrl = priceType === 'land' ? enquiryUrl : bookingUrl
-    const actionLabel = priceType === 'land' ? 'Enquiry Now' : 'Book Now'
+
+
+    const actionUrl = bookingUrl
+    const actionLabel = 'Book Now'
 
     return (
       <div className={`departure-card ${isOpen ? 'is-open' : ''}`}>
@@ -762,19 +766,19 @@ function TourDetailsContent() {
                   <h1 className="wow fadeInUp" data-wow-delay=".3s">{resolvedDetail.title}</h1>
                 </div>
                 <ul className="list">
-  {resolvedDetail.location ? (
-    <li>
-      <i className="fa-regular fa-location-dot"></i>
-      {resolvedDetail.location}
-    </li>
-  ) : null}
-  {resolvedDetail.duration ? (
-    <li>
-      <i className="fa-regular fa-clock"></i>
-      {resolvedDetail.duration}
-    </li>
-  ) : null}
-</ul>
+                  {resolvedDetail.location ? (
+                    <li>
+                      <i className="fa-regular fa-location-dot"></i>
+                      {resolvedDetail.location}
+                    </li>
+                  ) : null}
+                  {resolvedDetail.duration ? (
+                    <li>
+                      <i className="fa-regular fa-clock"></i>
+                      {resolvedDetail.duration}
+                    </li>
+                  ) : null}
+                </ul>
               </div>
             </div>
           </div>
@@ -1042,6 +1046,11 @@ function TourDetailsContent() {
                       <div className="tour-details-side">
                         <div className="tour-details-sidebar sticky-style">
                           <div className="tour-sidebar-items">
+                            {isGroupTour ? (
+                              <a href={enquiryUrl} className="theme-btn">
+                                Enquiry Now
+                              </a>
+                            ) : null}
                             <h3>{isGroupTour ? 'Price & Departure' : 'Tour Enquiry'}</h3>
                             {isGroupTour ? (
                               departures.length ? (
@@ -1056,13 +1065,13 @@ function TourDetailsContent() {
                             ) : (
                               <>
                                 <p className="text">This tour is for enquiry only. Please contact us for availability.</p>
-                                <a href="/contact" className="theme-btn">
+                                <a href={enquiryUrl} className="theme-btn">
                                   Enquiry Now
                                 </a>
                               </>
                             )}
                           </div>
-<div className="widget-contact">
+                          <div className="widget-contact">
                             <h3>Need Help?</h3>
                             <ul className="list-style-one">
                               <li><i className="far fa-envelope"></i> <a href="mailto:helpxample@gmail.com">helpxample@gmail.com</a></li>
@@ -1184,6 +1193,10 @@ function TourDetailsContent() {
     </>
   );
 }
+
+
+
+
 
 
 

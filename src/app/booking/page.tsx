@@ -2110,7 +2110,45 @@ function BookingPageContent() {
         console.log('[booking][tourDetail] request:', { tourId })
         const detailRes = await fetch(`/api/tour/detail?id=${tourId}`)
         const detailJson = await parseJsonResponse(detailRes)
-        console.log('[booking][tourDetail] response:', detailJson)
+        const detailRecord = isRecord(detailJson) && isRecord(detailJson.data) ? detailJson.data : null
+        const productType = detailRecord && typeof detailRecord.productType === 'number' ? detailRecord.productType : null
+        if (productType === 2) {
+          const params = new URLSearchParams()
+          const tourName = detailRecord ? getLocalizedText(detailRecord.name) : ''
+          if (tourName) {
+            params.set('tourName', tourName)
+          }
+          const tourCode = detailRecord && typeof detailRecord.tourCode === 'string'
+            ? detailRecord.tourCode.trim()
+            : detailRecord && typeof detailRecord.code === 'string'
+              ? detailRecord.code.trim()
+              : ''
+          if (tourCode) {
+            params.set('tourCode', tourCode)
+          }
+          const productCode = detailRecord && typeof detailRecord.productCode === 'string'
+            ? detailRecord.productCode.trim()
+            : ''
+          if (productCode) {
+            params.set('productCode', productCode)
+          }
+          if (tourId) {
+            params.set('tourId', String(tourId))
+          }
+          if (departureIdParam) {
+            params.set('departureId', departureIdParam)
+          }
+          if (tourCodeIdParam) {
+            params.set('tourCodeId', tourCodeIdParam)
+          }
+          params.set('type', '2')
+          const enquiryQuery = params.toString()
+          const enquiryUrl = enquiryQuery ? `/enquiry?${enquiryQuery}` : '/enquiry'
+          if (typeof window !== 'undefined') {
+            window.location.href = enquiryUrl
+          }
+          return
+        }        console.log('[booking][tourDetail] response:', detailJson)
         if (isActive) {
           setTourData(detailJson)
         }
@@ -3671,7 +3709,7 @@ function BookingPageContent() {
                             checked={paymentTermsAccepted}
                             onChange={(event) => setPaymentTermsAccepted(event.target.checked)}
                           />
-                          By proceeding with the payment, you agree to ASA Holidays&apos; <a href="/terms" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a> and <a href="/privacy" target="_blank" rel="noopener noreferrer">Data Protection Policy</a>.
+                          I have read and understood the booking&apos; <a href="/tour-terms" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a>.
                         </label>
 
                         {(!paymentStatus || paymentStatus === 'failed' || paymentStatus === 'error') ? (
@@ -3960,6 +3998,7 @@ function BookingPageContent() {
     </>
   )
 }
+
 
 
 

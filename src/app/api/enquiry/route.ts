@@ -9,12 +9,13 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
     const recaptcha = body.recaptcha
+    const shouldVerifyRecaptcha = process.env.NEXT_PUBLIC_API_MODE === 'prod' && Boolean(process.env.RECAPTCHA_SECRET_KEY)
 
-    if (process.env.RECAPTCHA_SECRET_KEY && !recaptcha) {
+    if (shouldVerifyRecaptcha && !recaptcha) {
       return NextResponse.json({ error: 'reCAPTCHA verification required' }, { status: 400 })
     }
 
-    if (recaptcha && process.env.RECAPTCHA_SECRET_KEY) {
+    if (recaptcha && shouldVerifyRecaptcha) {
       const params = new URLSearchParams()
       params.set('secret', process.env.RECAPTCHA_SECRET_KEY)
       params.set('response', recaptcha)
@@ -36,3 +37,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to send enquiry' }, { status: 500 })
   }
 }
+
+
+
+
