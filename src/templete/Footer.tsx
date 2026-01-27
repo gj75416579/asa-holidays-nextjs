@@ -58,7 +58,7 @@ export default function Footer() {
                     </a>
                   </li>
                   <li>
-                    <a href="/contact">
+                    <a href="/contact-us">
                       <i className="fa-solid fa-chevron-right"></i>
                       Careers
                     </a>
@@ -116,8 +116,8 @@ export default function Footer() {
                   </div>
                   <div className="content">
                     <h6>
-                      101 Upper Cross Street #05-36 <br />
-                      People&apos;s Park Centre, Singapore 058357
+                      1 Park Road #03-57 <br />
+                      People&apos;s Park Complex, Singapore 059108
                     </h6>
                   </div>
                 </div>
@@ -137,7 +137,7 @@ export default function Footer() {
                   </div>
                   <div className="content">
                     <h6>
-                      <a href="tel:+6565343722">+65 6534 3722</a>
+                      <a href="tel:+6563035303">+65 6303 5303</a>
                     </h6>
                   </div>
                 </div>
@@ -174,7 +174,7 @@ export default function Footer() {
           <div className="footer-wrapper">
             <h2 className="wow fadeInUp" data-wow-delay=".3s">ASA Holidays</h2>
             <div className="text-item wow fadeInUp" data-wow-delay=".5s">
-              <p>&copy; 2025 <span>ASA Holidays,</span> All rights reserved</p>
+              <p>&copy; 2025 <span>Air Sino-Euro Associates Travel Pte. Ltd.</span> All rights reserved</p>
               <a href="#" className="icon"><i className="fa-solid fa-chevron-up"></i></a>
             </div>
           </div>

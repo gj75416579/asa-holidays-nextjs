@@ -14,7 +14,7 @@ export default function Header() {
     (isTourList && productTypeParam !== '2')
   const isFreeEasy = isTourList && productTypeParam === '2'
   const isCruises = pathname.startsWith('/destination')
-  const isAbout = pathname === '/about' || pathname.startsWith('/team') || pathname.startsWith('/gallery') || pathname.startsWith('/faq')
+  const isAbout = pathname === '/about' || pathname.startsWith('/faq')
   const isContact = pathname.startsWith('/contact')
 
   return (
@@ -59,7 +59,7 @@ export default function Header() {
               <div className="offcanvas__top mb-5 d-flex justify-content-between align-items-center">
                 <div className="offcanvas__logo">
                   <a href="/">
-                    <img src="/assets/img/logo/black-logo.svg" alt="logo-img" />
+                    <img src="/assets/img/logo/asa-logo.png" alt="ASA Holidays logo" />
                   </a>
                 </div>
                 <div className="offcanvas__close">
@@ -94,10 +94,10 @@ export default function Header() {
                   </div>
                 </form>
                 <div className="social-icon d-flex align-items-center">
-                  <a href="#"><i className="fab fa-facebook-f"></i></a>
-                  <a href="#"><i className="fab fa-twitter"></i></a>
-                  <a href="#"><i className="fab fa-youtube"></i></a>
-                  <a href="#"><i className="fab fa-linkedin-in"></i></a>
+                  <a href="https://www.facebook.com/ASAHolidays"><i className="fab fa-facebook-f"></i></a>
+                  <a href="http://www.weibo.com/AsaHoliday"><i className="fab fa-weibo"></i></a>
+                  <a href="https://www.instagram.com/asa.holidays/"><i className="fab fa-instagram"></i></a>
+                  <a href="https://www.youtube.com/user/asaholidayvideo"><i className="fab fa-youtube"></i></a>
                 </div>
               </div>
             </div>
@@ -128,7 +128,7 @@ export default function Header() {
                 </li>
                 <li>
                   <i className="fa-solid fa-phone-flip"></i>
-                  <a href="tel:+65-6534-3722">Call : +65 6534 3722</a>
+                  <a href="tel:+6563035303">Call : +65 6303 5303</a>
                 </li>
               </ul>
             </div>
@@ -143,7 +143,7 @@ export default function Header() {
               <div className="header-left">
                 <div className="logo">
                   <a href="/" className="header-logo">
-                    <img src="/assets/img/logo/black-logo.svg" alt="logo-img" />
+                    <img src="/assets/img/logo/asa-logo.png" alt="ASA Holidays logo" />
                   </a>
                 </div>
                 <div className="mean__menu-wrapper">
@@ -163,7 +163,10 @@ export default function Header() {
                           <a href="/destination">Cruises</a>
                         </li>
                         <li>
-                          <a href="/about">MICE</a>
+                          <a href="/">Vouchers</a>
+                        </li>
+                        <li>
+                          <a href="/">MICE</a>
                         </li>
                         <li className={isAbout ? 'active' : ''}>
                           <a href="/about">
@@ -172,13 +175,11 @@ export default function Header() {
                           </a>
                           <ul className="submenu">
                             <li><a href="/about">About Us</a></li>
-                            <li><a href="/team">Our Team</a></li>
-                            <li><a href="/gallery">Gallery</a></li>
                             <li><a href="/faq">FAQ</a></li>
                           </ul>
                         </li>
                         <li className={isContact ? 'active' : ''}>
-                          <a href="/contact">Contact Us</a>
+                          <a href="/contact-us">Contact Us</a>
                         </li>
                       </ul>
                     </nav>
@@ -193,7 +194,7 @@ export default function Header() {
                   </form>
                 </div>
                 <div className="header-button">
-                  <a href="/contact" className="theme-btn">Book Now</a>
+                  <a href="/contact-us" className="theme-btn">Book Now</a>
                 </div>
                 <div className="header__hamburger d-xl-none my-auto">
                   <div className="sidebar__toggle">
