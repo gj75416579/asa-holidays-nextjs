@@ -13,7 +13,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="shortcut icon" href="/assets/img/favicon.svg" />
+        <link rel="shortcut icon" href="/assets/img/favicon.ico" />
         <link rel="stylesheet" href="/assets/css/bootstrap.min.css" />
         <link rel="stylesheet" href="/assets/css/all.min.css" />
         <link rel="stylesheet" href="/assets/css/animate.css" />

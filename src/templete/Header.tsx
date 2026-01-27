@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 
 export default function Header() {
@@ -16,6 +17,21 @@ export default function Header() {
   const isCruises = pathname.startsWith('/destination')
   const isAbout = pathname === '/about' || pathname.startsWith('/faq')
   const isContact = pathname.startsWith('/contact')
+
+  useEffect(() => {
+    const preloader = document.querySelector('.preloader') as HTMLElement | null
+    if (!preloader) {
+      return
+    }
+    preloader.classList.add('loaded')
+    preloader.style.opacity = '0'
+    preloader.style.visibility = 'hidden'
+    preloader.style.pointerEvents = 'none'
+    const timeout = setTimeout(() => {
+      preloader.style.display = 'none'
+    }, 800)
+    return () => clearTimeout(timeout)
+  }, [pathname, searchParams])
 
   return (
     <>
@@ -73,7 +89,7 @@ export default function Header() {
               </p>
               <div className="mobile-menu fix mb-3"></div>
               <div className="offcanvas__contact">
-                <h3>Enquire Now</h3>
+                {/* <h3>Enquire Now</h3>
                 <form action="#" id="contact-form" method="POST" className="contact-form-items">
                   <div className="row g-4">
                     <div className="col-lg-12">
@@ -92,7 +108,7 @@ export default function Header() {
                       </div>
                     </div>
                   </div>
-                </form>
+                </form> */}
                 <div className="social-icon d-flex align-items-center">
                   <a href="https://www.facebook.com/ASAHolidays"><i className="fab fa-facebook-f"></i></a>
                   <a href="http://www.weibo.com/AsaHoliday"><i className="fab fa-weibo"></i></a>
@@ -111,7 +127,7 @@ export default function Header() {
           <div className="header-top-wrapper">
             <p>Welcome to <span>ASA Holidays</span> - Singapore&apos;s Premier Travel Agency <b>Let&apos;s Talk</b></p>
             <div className="header-right">
-              <div className="flag-wrap">
+              {/* <div className="flag-wrap">
                 <i className="fa-solid fa-globe"></i>
                 <div className="nice-select" tabIndex={0}>
                   <span className="current">English</span>
@@ -120,7 +136,7 @@ export default function Header() {
                     <li data-value="2" className="option">中文</li>
                   </ul>
                 </div>
-              </div>
+              </div> */}
               <ul className="header-list">
                 <li>
                   <i className="fa-solid fa-envelope"></i>
@@ -187,7 +203,7 @@ export default function Header() {
                 </div>
               </div>
               <div className="header-right d-flex justify-content-end align-items-center">
-                <div className="search-widget">
+                {/* <div className="search-widget">
                   <form action="#">
                     <button type="submit"><i className="fa-solid fa-magnifying-glass"></i></button>
                     <input type="text" placeholder="Search" />
@@ -195,7 +211,7 @@ export default function Header() {
                 </div>
                 <div className="header-button">
                   <a href="/contact-us" className="theme-btn">Book Now</a>
-                </div>
+                </div> */}
                 <div className="header__hamburger d-xl-none my-auto">
                   <div className="sidebar__toggle">
                     <i className="fas fa-bars"></i>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Script from 'next/script'
 
@@ -107,7 +107,7 @@ const formatDateLabel = (value: string): string => {
   return value
 }
 
-export default function EnquiryPage() {
+function EnquiryContent() {
   const searchParams = useSearchParams()
   const [formData, setFormData] = useState<EnquiryFormState>(defaultFormState)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -502,6 +502,14 @@ export default function EnquiryPage() {
         </div>
       </div>
     </>
+  )
+}
+
+export default function EnquiryPage() {
+  return (
+    <Suspense fallback={null}>
+      <EnquiryContent />
+    </Suspense>
   )
 }
 

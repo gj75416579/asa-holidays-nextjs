@@ -639,7 +639,7 @@
         };
 
         window.initNiceSelectSearch = initNiceSelectSearch;
-        $('select').niceSelect();
+        $('select:not([data-no-nice-select="true"])').niceSelect();
         initNiceSelectSearch();
         $(document).off('click.reactSelectSync').on('click.reactSelectSync', '.nice-select .option:not(.disabled)', function () {
             var select = $(this).closest('.nice-select').prev('select')[0];

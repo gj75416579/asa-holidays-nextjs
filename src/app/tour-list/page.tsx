@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import Header from '@/templete/HeaderWithSuspense'
 import Footer from '@/templete/Footer'
 import ApiMaintenanceNotice from '@/templete/ApiMaintenanceNotice'
+import { footerContactSection } from '@/lib/footer-contact'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,7 +36,110 @@ type SectorOption = {
   name: string
 }
 
+type TravelDateOption = {
+  label: string
+  value: string
+}
+
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null
+
+const MONTH_LABELS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+const MONTH_LOOKUP: Record<string, number> = {
+  jan: 0,
+  january: 0,
+  feb: 1,
+  february: 1,
+  mar: 2,
+  march: 2,
+  apr: 3,
+  april: 3,
+  may: 4,
+  jun: 5,
+  june: 5,
+  jul: 6,
+  july: 6,
+  aug: 7,
+  august: 7,
+  sep: 8,
+  sept: 8,
+  september: 8,
+  oct: 9,
+  october: 9,
+  nov: 10,
+  november: 10,
+  dec: 11,
+  december: 11,
+}
+
+const getNext12Months = (): TravelDateOption[] => {
+  const months: TravelDateOption[] = []
+  const today = new Date()
+  const currentMonth = today.getMonth()
+  const currentYear = today.getFullYear()
+
+  for (let i = 0; i < 12; i += 1) {
+    const monthIndex = (currentMonth + i) % 12
+    const yearOffset = Math.floor((currentMonth + i) / 12)
+    const year = currentYear + yearOffset
+    const value = `${year}-${String(monthIndex + 1).padStart(2, '0')}`
+    months.push({
+      label: `${MONTH_LABELS[monthIndex]} ${year}`,
+      value,
+    })
+  }
+
+  return months
+}
+
+const resolveTravelDateValue = (param: string | null, options: TravelDateOption[]) => {
+  if (!param) {
+    return ''
+  }
+  const normalized = param.trim().toLowerCase()
+  if (!normalized) {
+    return ''
+  }
+  if (normalized === 'n/a' || normalized === 'na') {
+    return ''
+  }
+  if (/^\d{4}-\d{2}$/.test(normalized)) {
+    return options.find((option) => option.value === normalized)?.value ?? ''
+  }
+
+  const yearMatch = normalized.match(/\b(\d{4})\b/)
+  const year = yearMatch ? Number(yearMatch[1]) : null
+  const monthKey = Object.keys(MONTH_LOOKUP).find((key) => normalized.includes(key))
+  if (!monthKey) {
+    return ''
+  }
+  const monthIndex = MONTH_LOOKUP[monthKey]
+  const match = options.find((option) => {
+    const [optionYear, optionMonth] = option.value.split('-').map(Number)
+    if (year && optionYear !== year) {
+      return false
+    }
+    return optionMonth - 1 === monthIndex
+  })
+  return match?.value ?? ''
+}
+
+const formatTravelDateLabel = (value: string, options: TravelDateOption[]) => {
+  if (!value) {
+    return ''
+  }
+  const matched = options.find((option) => option.value === value)
+  if (matched) {
+    return matched.label
+  }
+  if (/^\d{4}-\d{2}$/.test(value)) {
+    const [year, month] = value.split('-')
+    const monthIndex = Number(month) - 1
+    if (monthIndex >= 0 && monthIndex < MONTH_LABELS.length) {
+      return `${MONTH_LABELS[monthIndex]} ${year}`
+    }
+  }
+  return value
+}
 
 const extractPageData = (data: unknown): unknown[] => {
   if (!isRecord(data)) {
@@ -202,6 +306,9 @@ function TourListContent() {
   const searchParams = useSearchParams()
   const productTypeParam = searchParams.get('productType')
   const productType = productTypeParam === '2' ? 2 : 1
+  const sectorIdParam = searchParams.get('sectorId')
+  const sectorNameParam = searchParams.get('sectorName')
+  const travelDateParam = searchParams.get('travelDate') ?? searchParams.get('month')
 
   const DEFAULT_PRICE_MIN = 1
   const DEFAULT_PRICE_MAX = 20000
@@ -209,13 +316,17 @@ function TourListContent() {
   const DEFAULT_DURATION_MAX = 30
   const PAGE_SIZE = 10
 
+  const travelDateOptions = useMemo(() => getNext12Months(), [])
   const [filters, setFilters] = useState({
-    sectorIds: [] as string[],
+    sectorIds: sectorIdParam ? [sectorIdParam] : [],
+    travelDate: resolveTravelDateValue(travelDateParam, travelDateOptions),
     priceMin: DEFAULT_PRICE_MIN,
     priceMax: DEFAULT_PRICE_MAX,
     durationMin: DEFAULT_DURATION_MIN,
     durationMax: DEFAULT_DURATION_MAX,
   })
+  const [sectorTouched, setSectorTouched] = useState(false)
+  const [travelDateTouched, setTravelDateTouched] = useState(false)
   const [currentPage, setCurrentPage] = useState(0)
   const [sectorsData, setSectorsData] = useState<unknown | null>(null)
   const [listError, setListError] = useState(false)
@@ -227,6 +338,69 @@ function TourListContent() {
     [filters.sectorIds, sectorOptions]
   )
 
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+    const $ = (window as any).jQuery
+    if (!$ || !$.fn || !$.fn.niceSelect) {
+      return
+    }
+    const $select = $('.tour-list-wrapper .tour-date-select')
+    if (!$select.length) {
+      return
+    }
+    if ($select.next('.nice-select').length) {
+      $select.niceSelect('update')
+    } else {
+      $select.niceSelect()
+    }
+    const initNiceSelectSearch = (window as any).initNiceSelectSearch
+    if (typeof initNiceSelectSearch === 'function') {
+      initNiceSelectSearch()
+    }
+  }, [filters.travelDate, travelDateOptions])
+
+  useEffect(() => {
+    setSectorTouched(false)
+  }, [sectorIdParam, sectorNameParam])
+
+  useEffect(() => {
+    if (sectorTouched) {
+      return
+    }
+    if (sectorIdParam) {
+      setFilters((prev) => {
+        if (prev.sectorIds.length === 1 && prev.sectorIds[0] === sectorIdParam) {
+          return prev
+        }
+        return { ...prev, sectorIds: [sectorIdParam] }
+      })
+      return
+    }
+    if (!sectorNameParam || filters.sectorIds.length) {
+      return
+    }
+    const normalized = sectorNameParam.trim().toLowerCase()
+    if (!normalized) {
+      return
+    }
+    const match = sectorOptions.find((sector) => sector.name.toLowerCase() === normalized)
+    if (match) {
+      setFilters((prev) => ({ ...prev, sectorIds: [String(match.id)] }))
+    }
+  }, [sectorIdParam, sectorNameParam, sectorOptions, filters.sectorIds, sectorTouched])
+
+  useEffect(() => {
+    if (travelDateTouched) {
+      return
+    }
+    const resolved = resolveTravelDateValue(travelDateParam, travelDateOptions)
+    if (resolved && resolved !== filters.travelDate) {
+      setFilters((prev) => ({ ...prev, travelDate: resolved }))
+    }
+  }, [travelDateParam, travelDateOptions, filters.travelDate, travelDateTouched])
+
   const listPayload = useMemo(
     () => ({
       search: '',
@@ -236,7 +410,7 @@ function TourListContent() {
       endDuration: filters.durationMax,
       startPrice: filters.priceMin,
       endPrice: filters.priceMax,
-      date: '',
+      date: filters.travelDate,
       productType: productType,
       sort: 2,
       sortType: 1,
@@ -262,6 +436,7 @@ function TourListContent() {
   }, [
     productType,
     filters.sectorIds.join(','),
+    filters.travelDate,
     filters.priceMin,
     filters.priceMax,
     filters.durationMin,
@@ -357,6 +532,7 @@ function TourListContent() {
   const totalRows = extractTotalRows(tourListData)
   const displayTotalRows = totalRows ?? resolvedTourListItems.length
   const showApiNotice = listError || sectorsError
+  const travelDateLabel = formatTravelDateLabel(filters.travelDate, travelDateOptions)
 
   return (
     <>
@@ -408,6 +584,7 @@ function TourListContent() {
                                   className={`destination-pill${filters.sectorIds.includes(String(sector.id)) ? ' is-active' : ''}`}
                                   onClick={() => {
                                     const idValue = String(sector.id)
+                                    setSectorTouched(true)
                                     setFilters((prev) => {
                                       if (prev.sectorIds.includes(idValue)) {
                                         return { ...prev, sectorIds: prev.sectorIds.filter((id) => id !== idValue) }
@@ -420,6 +597,30 @@ function TourListContent() {
                                 </button>
                               ))}
                             </div>
+                          </div>
+                        </div>
+                        <div className="tour-sidebar-items travel-date-item">
+                          <div className="widget-title">
+                            <h4>Travel Date</h4>
+                          </div>
+                          <div className="form-clt">
+                            <select
+                              className="tour-date-select"
+                              data-react-select="true"
+                              value={filters.travelDate}
+                              onChange={(event) => {
+                                const nextValue = event.target.value
+                                setTravelDateTouched(true)
+                                setFilters((prev) => ({ ...prev, travelDate: nextValue }))
+                              }}
+                            >
+                              <option value="">N/A</option>
+                              {travelDateOptions.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
                           </div>
                         </div>
                         <div className="tour-sidebar-items">
@@ -533,17 +734,34 @@ function TourListContent() {
                             key={`selected-${sector.id}`}
                             type="button"
                             className="destination-pill filter-chip"
-                            onClick={() =>
+                            onClick={() => {
+                              setSectorTouched(true)
                               setFilters((prev) => ({
                                 ...prev,
                                 sectorIds: prev.sectorIds.filter((id) => id !== String(sector.id)),
                               }))
-                            }
+                            }}
                           >
                             {sector.name}
                             <span className="filter-chip-remove">x</span>
                           </button>
                         ))}
+                        {filters.travelDate ? (
+                          <>
+                            <span className="filter-label">Travel Date:</span>
+                            <button
+                              type="button"
+                              className="destination-pill filter-chip"
+                              onClick={() => {
+                                setTravelDateTouched(true)
+                                setFilters((prev) => ({ ...prev, travelDate: '' }))
+                              }}
+                            >
+                              {travelDateLabel}
+                              <span className="filter-chip-remove">x</span>
+                            </button>
+                          </>
+                        ) : null}
                       </div>
                     </div>
                     <div className="tour-list-wrap">
@@ -708,45 +926,14 @@ function TourListContent() {
               </div>
             </div>
           </section>
-
-          {/* Contact Section Start */}
-          <section className="contact-section section-padding pb-0">
-            <div className="container">
-              <div className="contact-wrapper">
-                <div className="row g-4 align-items-end">
-                  <div className="col-lg-6">
-                    <div className="contact-image">
-                      <img data-speed=".8" src="/assets/img/home-1/Image.jpg" alt="img" />
-                    </div>
-                  </div>
-                  <div className="col-lg-6">
-                    <div className="contact-content">
-                      <div className="logo-image">
-                        <a href="/"><img src="/assets/img/logo/white-logo.svg" alt="img" /></a>
-                      </div>
-                      <div className="section-title mb-0">
-                        <h2 className="sec-title text-white text-anim">
-                          Adventure Is Calling é??Are You Ready?
-                        </h2>
-                      </div>
-                      <p className="text wow fadeInUp" data-wow-delay=".3s">
-                        Get ready to embark on unforgettable journeys with us. whether you&apos;re seeking thrilling adventures, relaxing escapes
-                      </p>
-                      <a href="/tour-details" className="theme-btn">Explore Our Tours</a>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Footer Section Start */}
-          <Footer />
+{/* Footer Section Start */}
+          <Footer contactSection={footerContactSection} />
         </div>
       </div>
     </>
   )
 }
+
 
 
 

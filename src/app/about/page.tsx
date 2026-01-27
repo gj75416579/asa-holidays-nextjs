@@ -470,18 +470,18 @@ export default function About() {
 
                 {activeTab === 'company' && (
                   <div className="tab-pane fade show active" role="tabpanel">
-                    <div className="text-center mb-4">
+                    {/* <div className="text-center mb-4">
                       <img src={aboutImageSrc} alt="ASA Holidays" className="img-fluid" />
-                    </div>
+                    </div> */}
                     <div className="about-tab-body" dangerouslySetInnerHTML={{ __html: companyHtml }} />
                   </div>
                 )}
 
                 {activeTab === 'milestones' && (
                   <div className="tab-pane fade show active" role="tabpanel">
-                    <div className="text-center mb-4">
+                    {/* <div className="text-center mb-4">
                       <img src={milestoneImageSrc} alt="ASA Holidays 100" className="img-fluid" />
-                    </div>
+                    </div> */}
                     <div className="accordion" id="asaMilestonesAccordion">
                       {milestones.map((milestone, index) => (
                         <div key={milestone.id} className="accordion-item">
