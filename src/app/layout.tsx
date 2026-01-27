@@ -13,7 +13,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="shortcut icon" href="/assets/img/favicon.svg" />
+        <link rel="shortcut icon" href="/assets/img/favicon.ico" />
         <link rel="stylesheet" href="/assets/css/bootstrap.min.css" />
         <link rel="stylesheet" href="/assets/css/all.min.css" />
         <link rel="stylesheet" href="/assets/css/animate.css" />
@@ -21,6 +21,7 @@ export default function RootLayout({
         <link rel="stylesheet" href="/assets/css/meanmenu.css" />
         <link rel="stylesheet" href="/assets/css/swiper-bundle.min.css" />
         <link rel="stylesheet" href="/assets/css/nice-select.css" />
+        <link rel="stylesheet" href="/assets/css/jquery-ui.min.css" />
         <link rel="stylesheet" href="/assets/css/flacticon.css" />
         <link rel="stylesheet" href="/assets/css/main.css" />
         <link rel="stylesheet" href="/assets/css/asa-custom.css" />

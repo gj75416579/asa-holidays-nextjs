@@ -8,15 +8,19 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json()
-    const recaptcha = body.recaptcha
+    const recaptcha = typeof body?.recaptcha === 'string' ? body.recaptcha : ''
+    const shouldVerifyRecaptcha = process.env.NEXT_PUBLIC_API_MODE === 'prod'
+    const recaptchaSecret = process.env.RECAPTCHA_SECRET_KEY
 
-    if (process.env.RECAPTCHA_SECRET_KEY && !recaptcha) {
-      return NextResponse.json({ error: 'reCAPTCHA verification required' }, { status: 400 })
-    }
-
-    if (recaptcha && process.env.RECAPTCHA_SECRET_KEY) {
+    if (shouldVerifyRecaptcha) {
+      if (!recaptchaSecret) {
+        return NextResponse.json({ error: 'reCAPTCHA secret not configured' }, { status: 500 })
+      }
+      if (!recaptcha) {
+        return NextResponse.json({ error: 'reCAPTCHA verification required' }, { status: 400 })
+      }
       const params = new URLSearchParams()
-      params.set('secret', process.env.RECAPTCHA_SECRET_KEY)
+      params.set('secret', recaptchaSecret)
       params.set('response', recaptcha)
       const verification = await fetch('https://www.google.com/recaptcha/api/siteverify', {
         method: 'POST',
@@ -36,3 +40,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to send enquiry' }, { status: 500 })
   }
 }
+
+
+
+

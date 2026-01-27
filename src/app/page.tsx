@@ -1,10 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 import Header from '@/templete/HeaderWithSuspense'
 import Footer from '@/templete/Footer'
 import ApiMaintenanceNotice from '@/templete/ApiMaintenanceNotice'
+import { footerContactSection } from '@/lib/footer-contact'
 
 type HomeApiData = {
   hotTours: unknown | null
@@ -804,18 +806,6 @@ const brandSection = {
   ],
 }
 
-const contactSection = {
-  image: '/assets/img/home-1/Image.jpg',
-  logo: '/assets/img/logo/white-logo.svg',
-  title: 'Ready for Your Next Adventure?',
-  description:
-    'Let ASA Holidays take you on a journey of a lifetime. From Europe to Asia, we have the perfect tour package waiting for you.',
-  cta: {
-    href: '/tour-grid',
-    label: 'Browse All Tours',
-  },
-}
-
 type ApiRecord = Record<string, unknown>
 
 const isRecord = (value: unknown): value is ApiRecord => !!value && typeof value === 'object'
@@ -975,6 +965,52 @@ const resolveContactForm = (
   }
 }
 
+const normalizeText = (value: string) => value.trim().toLowerCase()
+
+const resolveSectorId = (data: unknown, name: string) => {
+  const normalized = normalizeText(name)
+  if (!normalized) {
+    return ''
+  }
+  const list = extractList(data)
+  for (const item of list) {
+    if (!isRecord(item)) {
+      continue
+    }
+    const nameValue =
+      typeof item.name === 'string'
+        ? item.name.trim()
+        : isRecord(item.name) && typeof item.name.EN === 'string'
+          ? item.name.EN.trim()
+          : ''
+    if (!nameValue) {
+      continue
+    }
+    if (normalizeText(nameValue) !== normalized) {
+      continue
+    }
+    const idValue = pickString(item, ['id', 'sectorId'])
+    if (idValue) {
+      return idValue
+    }
+  }
+  return ''
+}
+
+const resolveProductTypeParam = (value: string) => {
+  const normalized = normalizeText(value)
+  if (!normalized) {
+    return ''
+  }
+  if (normalized.includes('free')) {
+    return '2'
+  }
+  if (normalized.includes('group')) {
+    return '1'
+  }
+  return ''
+}
+
 const resolveTourSection = (
   data: unknown,
   fallback: typeof tourSection,
@@ -1100,6 +1136,7 @@ const resolveTourPlaceSection = (
   }
 }
 export default function Home() {
+  const router = useRouter()
   const [homeApiData, setHomeApiData] = useState(homeApiInitialData)
   const [apiError, setApiError] = useState(false)
 
@@ -1181,6 +1218,35 @@ export default function Home() {
       $select.niceSelect()
     }
   }, [selectOptionsKey])
+
+  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const formData = new FormData(event.currentTarget)
+    const destination = String(formData.get('destination') ?? '').trim()
+    const month = String(formData.get('month') ?? '').trim()
+    const tourType = String(formData.get('tourType') ?? '').trim()
+    const params = new URLSearchParams()
+    if (destination) {
+      const sectorId = resolveSectorId(homeApiData.sectors, destination)
+      if (sectorId) {
+        params.set('sectorId', sectorId)
+      } else {
+        params.set('sectorName', destination)
+      }
+    }
+
+    const productType = resolveProductTypeParam(tourType)
+    if (productType) {
+      params.set('productType', productType)
+    }
+
+    if (month) {
+      params.set('month', month)
+    }
+
+    const query = params.toString()
+    router.push(query ? `/tour-list?${query}` : '/tour-list')
+  }
 
   return (
     <>
@@ -1266,25 +1332,34 @@ export default function Home() {
                     {resolvedContactForm.subtext.pre} <span className="count">{resolvedContactForm.subtext.count}</span>
                     <b>{resolvedContactForm.subtext.suffix}</b> {resolvedContactForm.subtext.post}
                   </p>
-                  <div className="box-item">
-                    {resolvedContactForm.selects.map((select) => (
-                      <div key={select.placeholder} className="form-clt">
-                        <div className="form">
-                          <select className="single-select w-100">
-                            <option>{select.placeholder}</option>
-                            {select.options.map((option) => (
-                              <option key={option}>{option}</option>
-                            ))}
-                          </select>
+                  <form className="box-item" onSubmit={handleSearchSubmit}>
+                    {resolvedContactForm.selects.map((select, index) => {
+                      const name = index === 0 ? 'destination' : index === 1 ? 'month' : 'tourType'
+                      return (
+                        <div key={select.placeholder} className="form-clt">
+                          <div className="form">
+                            <select
+                              className="single-select w-100"
+                              name={name}
+                              defaultValue=""
+                            >
+                              <option value="">{select.placeholder}</option>
+                              {select.options.map((option) => (
+                                <option key={option} value={option}>
+                                  {option}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                     <div className="form-clt">
-                      <button className="theme-btn" type="submit">
+                      <button className="theme-btn home-search-btn" type="submit">
                         {resolvedContactForm.buttonText}
                       </button>
                     </div>
-                  </div>
+                  </form>
                 </div>
               </div>
             </div>
@@ -1847,7 +1922,7 @@ export default function Home() {
           {/* Brand Section Start */}
           <section className="brand-section section-padding fix">
             <div className="container custom-container-2">
-              <div className="brand-wrapper">
+              <div className="brand-wrapper is-hidden">
                 <h6>{brandSection.title}</h6>
                 <div className="swiper brand-slider">
                   <div className="swiper-wrapper">
@@ -1861,44 +1936,14 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-            </div>
-          </section>
-
-          {/* Contact Section Start */}
-          <section className="contact-section section-padding pb-0">
-            <div className="container">
-              <div className="contact-wrapper">
-                <div className="row g-4 align-items-end">
-                  <div className="col-lg-6">
-                    <div className="contact-image">
-                      <img data-speed=".8" src={contactSection.image} alt="img" />
-                    </div>
-                  </div>
-                  <div className="col-lg-6">
-                    <div className="contact-content">
-                      <div className="logo-image">
-                        <a href="/">
-                          <img src={contactSection.logo} alt="img" />
-                        </a>
-                      </div>
-                      <div className="section-title mb-0">
-                        <h2 className="sec-title text-white text-anim">{contactSection.title}</h2>
-                      </div>
-                      <p className="text wow fadeInUp" data-wow-delay=".3s">
-                        {contactSection.description}
-                      </p>
-                      <a href={contactSection.cta.href} className="theme-btn">
-                        {contactSection.cta.label}
-                      </a>
-                    </div>
-                  </div>
-                </div>
+              <div className="brand-replacement">
+                <img src="/assets/img/WEBSITE-FOOTER-UPDATE.webp" alt="ASA Holidays footer update" />
               </div>
             </div>
           </section>
 
           {/* Footer Section Start */}
-          <Footer />
+          <Footer contactSection={footerContactSection} />
         </div>
       </div>
     </>

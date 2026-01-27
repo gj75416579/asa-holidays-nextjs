@@ -43,6 +43,7 @@ export default function ScriptLoader() {
 
         // Load scripts sequentially in the correct order
         // Core libraries first
+        await loadScript('/assets/js/jquery-ui.min.js')
         await loadScript('/assets/js/bootstrap.bundle.min.js')
         await loadScript('/assets/js/gsap.min.js')
 

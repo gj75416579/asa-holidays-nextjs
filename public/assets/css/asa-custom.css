@@ -111,6 +111,22 @@
   background-color: var(--theme);
 }
 
+.contact-from-section .home-search-btn {
+  background-color: #fff;
+  color: var(--theme);
+  border: 2px solid #fff;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12);
+}
+
+.contact-from-section .home-search-btn:hover {
+  color: #fff;
+  border-color: var(--theme-2);
+}
+
+.contact-from-section .home-search-btn::after {
+  background-color: var(--theme-2);
+}
+
 /* Testimonial Section Dots */
 .swiper-pagination-bullet-active {
   background-color: var(--theme) !important;
@@ -171,6 +187,62 @@
   max-height: 240px;
   overflow-y: auto;
   padding-right: 4px;
+}
+
+.tour-list-wrapper .tour-main-sideber .tour-date-select {
+  width: 100%;
+  height: 50px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  padding: 0 32px;
+  font-size: 15px;
+  color: var(--text);
+  text-align: center;
+  text-align-last: center;
+  -moz-text-align-last: center;
+}
+
+.tour-list-wrapper .tour-main-sideber .tour-date-select option {
+  text-align: center;
+  font-size: 15px;
+}
+
+.tour-list-wrapper .tour-main-sideber .tour-date-select + .nice-select {
+  width: 100%;
+  float: none;
+  height: 50px;
+  line-height: 50px;
+  border-radius: 6px;
+  padding: 0 32px;
+  text-align: center !important;
+}
+
+.tour-list-wrapper .tour-main-sideber .tour-date-select + .nice-select .current {
+  display: block;
+  text-align: center;
+}
+
+.tour-list-wrapper .tour-main-sideber .tour-date-select + .nice-select .list .option {
+  text-align: center;
+}
+
+.tour-list-wrapper .tour-main-sideber .tour-date-select + .nice-select .list {
+  left: 0;
+  right: 0;
+  width: 100%;
+}
+
+.tour-list-wrapper .tour-main-sideber .tour-date-select:focus {
+  outline: none;
+  border-color: var(--theme);
+  box-shadow: 0 0 0 2px rgba(0, 102, 179, 0.12);
+}
+
+.tour-list-wrapper .tour-main-sideber .tour-sidebar-items.travel-date-item {
+  border-bottom: 1px solid rgba(21, 21, 21, 0.1);
+  padding-bottom: 30px;
+  margin-bottom: 30px;
 }
 
 .destination-pill {
@@ -237,6 +309,11 @@
 .filter-chip:hover .filter-chip-remove {
   background: rgba(0, 0, 0, 0.16);
 }
+
+.ui-datepicker-calendar {
+  background: #f7f9fc;
+}
+
 
 .range-filter {
   display: grid;
@@ -611,6 +688,26 @@
   text-align: center;
 }
 
+@media (max-width: 575px) {
+  .departure-header {
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 10px;
+  }
+
+  .departure-meta {
+    text-align: left;
+  }
+
+  .departure-toggle {
+    justify-self: end;
+  }
+
+  .departure-flight-item {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 /* Check List Icon */
 .list-item .list li i {
   color: var(--theme);
@@ -714,6 +811,242 @@
   vertical-align: top;
 }
 
+.tour-terms-wrapper {
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.tour-terms-intro {
+  margin: 12px 0 24px;
+  color: var(--text);
+}
+
+.terms-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 12px 0 16px;
+}
+
+.terms-table {
+  min-width: 520px;
+}
+
+.faq-questions {
+  margin: 0;
+  padding-left: 22px;
+  color: var(--text);
+}
+
+.faq-questions li {
+  margin-bottom: 16px;
+}
+
+.faq-questions li strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--header);
+}
+
+.faq-questions a {
+  color: var(--theme);
+  text-decoration: underline;
+}
+
+.privacy-wrapper {
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.privacy-intro {
+  margin: 12px 0 24px;
+  color: var(--text);
+}
+
+.privacy-updated {
+  margin-top: 24px;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.web-terms-wrapper {
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.enquiry-wrapper .contact-box {
+  margin-left: 0;
+}
+
+.enquiry-box .form-clt select {
+  width: 100%;
+  height: 52px;
+  border: 1px solid rgba(21, 21, 21, 0.1);
+  border-radius: 10px;
+  background: var(--white);
+  color: var(--text);
+  padding: 0 42px 0 20px;
+  font-size: 14px;
+  line-height: 1.2;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text) 50%),
+    linear-gradient(135deg, var(--text) 50%, transparent 50%);
+  background-position: calc(100% - 24px) 50%, calc(100% - 18px) 50%;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+}
+
+.enquiry-tour-summary {
+  margin-top: 18px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+}
+
+.enquiry-tour-summary h5 {
+  margin-bottom: 10px;
+  color: var(--header);
+}
+
+.enquiry-tour-summary ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.enquiry-tour-summary li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.enquiry-tour-summary li strong {
+  color: var(--header);
+  text-align: right;
+}
+
+.enquiry-recaptcha {
+  margin-top: 8px;
+}
+
+@media (max-width: 767px) {
+  .enquiry-box .form-clt select {
+    height: 48px;
+    padding: 0 38px 0 18px;
+  }
+}
+
+@media (max-width: 575px) {
+  .enquiry-box .form-clt select {
+    height: 46px;
+    padding: 0 34px 0 16px;
+  }
+
+  .enquiry-tour-summary li {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.contact-us-wrapper {
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.contact-us-wrapper h2 {
+  margin-bottom: 20px;
+  color: var(--header);
+}
+
+.contact-map {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 24px;
+  background: #fff;
+}
+
+.contact-map iframe {
+  display: block;
+  width: 100%;
+  height: 390px;
+  border: 0;
+}
+
+.contact-info-grid {
+  margin-top: 10px;
+}
+
+.contact-info-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  background: #fff;
+  height: 100%;
+}
+
+.contact-info-card h4 {
+  margin-bottom: 12px;
+  color: var(--header);
+}
+
+.contact-info-list {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text);
+}
+
+.contact-info-list li {
+  margin-bottom: 6px;
+}
+
+.contact-hours {
+  display: grid;
+  gap: 16px;
+}
+
+.contact-hours-title {
+  font-weight: 600;
+  color: var(--header);
+  margin-bottom: 6px;
+}
+
+.contact-hours-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--text);
+}
+
+@media (max-width: 575px) {
+  .tour-terms-section .section-title,
+  .privacy-section .section-title,
+  .web-terms-section .section-title,
+  .faq-section .section-title {
+    margin-bottom: 16px;
+  }
+
+  .contact-us-wrapper h2 {
+    margin-bottom: 18px;
+  }
+
+  .contact-map iframe {
+    height: 300px;
+  }
+
+  .contact-hours-row {
+    flex-direction: column;
+    gap: 4px;
+  }
+}
+
 .tour-place-section .tour-place-item .tour-place-content h3,
 .tour-list-section .tour-place-item .tour-place-content h3,
 .related-tours-section .tour-place-item .tour-place-content h3 {
@@ -749,6 +1082,22 @@
   margin: 0;
   color: var(--header);
   font-weight: 500;
+}
+
+.brand-wrapper.is-hidden {
+  display: none;
+}
+
+.brand-replacement {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.brand-replacement img {
+  max-width: 100%;
+  height: auto;
+  display: block;
 }
 
 /* Booking Flow */
@@ -1741,11 +2090,172 @@ pre code {
 }
 
 @media (max-width: 575px) {
+  .booking-summary-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .booking-summary-header img {
+    width: 100%;
+    max-width: 220px;
+    height: auto;
+  }
+
+  .booking-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .booking-summary-plane {
+    display: none;
+  }
+
+  .booking-summary-right {
+    text-align: left;
+  }
+
+  .flight-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .booking-summary-price-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .booking-summary-table {
+    border: none;
+    background: transparent;
+    display: grid;
+    gap: 10px;
+  }
+
+  .booking-summary-price-row.booking-summary-head {
+    display: none;
+  }
+
+  .booking-summary-price-row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "type amount"
+      "unit qty";
+    row-gap: 4px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  .booking-summary-price-row span {
+    white-space: normal;
+    text-overflow: initial;
+  }
+
+  .booking-summary-price-row span:nth-child(1) {
+    grid-area: type;
+    text-align: left;
+    font-weight: 600;
+  }
+
+  .booking-summary-price-row span:nth-child(2) {
+    grid-area: unit;
+    text-align: left;
+  }
+
+  .booking-summary-price-row span:nth-child(2)::before {
+    content: "Unit ";
+    font-size: 11px;
+    color: var(--text);
+    opacity: 0.7;
+    margin-right: 4px;
+  }
+
+  .booking-summary-price-row span:nth-child(3) {
+    grid-area: qty;
+    text-align: right;
+  }
+
+  .booking-summary-price-row span:nth-child(3)::before {
+    content: "Qty ";
+    font-size: 11px;
+    color: var(--text);
+    opacity: 0.7;
+    margin-right: 4px;
+  }
+
+  .booking-summary-price-row span:nth-child(4) {
+    grid-area: amount;
+    text-align: right;
+    font-weight: 600;
+  }
+
+  .booking-summary-price-row span:empty {
+    display: none;
+  }
+
+  .booking-navigation {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .booking-navigation .theme-btn {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .booking-payment-tour {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .booking-payment-tour img {
+    width: 100%;
+    max-width: 240px;
+    height: auto;
+  }
+
   .booking-payment-departure-grid {
     grid-template-columns: 1fr;
   }
 
   .booking-payment-plane {
     display: none;
+  }
+}
+
+
+.enquiry-box .nice-select {
+  width: 100%;
+  height: 52px;
+  border: 1px solid rgba(21, 21, 21, 0.1);
+  border-radius: 10px;
+  background: var(--white);
+  color: var(--text);
+  padding: 0 42px 0 20px;
+  font-size: 14px;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  float: none;
+}
+
+.enquiry-box .nice-select:after {
+  right: 18px;
+}
+
+.enquiry-box .nice-select .list {
+  width: 100%;
+}
+
+@media (max-width: 767px) {
+  .enquiry-box .nice-select {
+    height: 48px;
+    padding: 0 38px 0 18px;
+  }
+}
+
+@media (max-width: 575px) {
+  .enquiry-box .nice-select {
+    height: 46px;
+    padding: 0 34px 0 16px;
   }
 }
