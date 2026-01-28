@@ -1136,8 +1136,8 @@ function TourDetailsContent() {
                           <div className="widget-contact">
                             <h3>Need Help?</h3>
                             <ul className="list-style-one">
-                              <li><i className="far fa-envelope"></i> <a href="mailto:helpxample@gmail.com">helpxample@gmail.com</a></li>
-                              <li><i className="far fa-phone-volume"></i> <a href="tel:+000(123)45688">+000 (123) 456 88</a></li>
+                              <li><i className="far fa-envelope"></i> <a href="mailto:enquiry@asaholiday.com">enquiry@asaholiday.com</a></li>
+                              <li><i className="far fa-phone-volume"></i> <a href="tel:+6563035303">+65 6303 5303</a></li>
                             </ul>
                           </div>
                           <div className="tour-sidebar-bg-image-items">

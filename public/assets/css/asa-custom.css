@@ -15,7 +15,7 @@
 }
 /* Theme Button Override */
 .theme-btn {
-  background-color: var(--theme);
+  background-color: var(--theme-2);
 }
 
 .theme-btn.color {
@@ -23,7 +23,7 @@
 }
 
 .theme-btn:hover::after {
-  background-color: #B93D58;
+  background-color: #277780;
 }
 
 /* Link Button Hover */
@@ -58,13 +58,38 @@
 
 /* Footer Background */
 .footer-section.header-bg {
-  background-color: #1a2a3a;
+  background-color: #1C1917;
 }
 
 .footer-bottom.style-1 {
-  background-color: #0f1a24;
+  background-color: #1C1917;
 }
 
+.footer-bottom {
+  border-top: 1px solid #292524;
+  border-bottom: 1px solid #292524;
+}
+
+.footer-widget-wrapper .single-footer-widget .list-area li a,
+.footer-widget-wrapper .single-footer-widget .list-area li a i,
+.footer-widget-wrapper .single-footer-widget .contact-item .icon,
+.footer-widget-wrapper .single-footer-widget .contact-item .content h6,
+.footer-widget-wrapper .single-footer-widget .contact-item .content h6 a,
+.footer-widget-wrapper .single-footer-widget .footer-content p {
+  color: #78716C;
+}
+
+.footer-widget-wrapper .single-footer-widget .footer-content .social-icon a {
+  background: #292524;
+  border-color: #292524;
+  color: #A8A29E;
+}
+
+.footer-widget-wrapper .single-footer-widget .footer-content .social-icon a:hover {
+  background-color: #D4536E;
+  border-color: #D4536E;
+  color: #ffffff;
+}
 /* About Box Icon */
 .about-box .icon i {
   color: var(--theme);
@@ -2313,4 +2338,39 @@ pre code {
 }
 
 
+
+
+
+
+.footer-bottom .footer-wrapper h2 {
+  font-size: clamp(32px, 8vw, 120px);
+  white-space: nowrap;
+}
+
+
+.footer-bottom {
+  margin-bottom: 0;
+  padding-bottom: 24px;
+}
+
+.footer-bottom .footer-wrapper {
+  column-gap: 24px;
+  row-gap: 16px;
+}
+
+.footer-bottom .footer-wrapper h2 {
+  margin-right: 16px;
+  margin-top: 8px;
+}
+
+@media (max-width: 767px) {
+  .footer-bottom .footer-wrapper {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .footer-bottom .footer-wrapper h2 {
+    margin-right: 0;
+  }
+}
 
