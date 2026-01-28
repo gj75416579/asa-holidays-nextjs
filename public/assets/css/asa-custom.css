@@ -4,16 +4,15 @@
  */
 
 :root {
-  /* ASA Brand Colors - Blue/Teal Theme */
-  --theme: #0066B3;        /* ASA Primary Blue */
-  --theme-2: #00A3E0;      /* ASA Secondary Blue */
-  --header: #1a1a1a;       /* Dark text */
-  --text: #555555;         /* Body text */
-  --border: #e0e0e0;
-  --bg: #f8f9fa;
-  --bg-2: #e8f4fc;
+  /* ASA Brand Colors - Muted Rose Theme */
+  --theme: #D4536E;        /* Primary - Muted Rose */
+  --theme-2: #2E939A;      /* Secondary - Muted Teal */
+  --header: #1C1917;       /* Neutral 900 */
+  --text: #57534E;         /* Neutral 600 */
+  --border: #E7E5E4;       /* Neutral 200 */
+  --bg: #FAFAF9;           /* Neutral 50 */
+  --bg-2: #FDF2F4;         /* Primary 50 */
 }
-
 /* Theme Button Override */
 .theme-btn {
   background-color: var(--theme);
@@ -24,7 +23,7 @@
 }
 
 .theme-btn:hover::after {
-  background-color: #004d86;
+  background-color: #B93D58;
 }
 
 /* Link Button Hover */
@@ -724,7 +723,7 @@
 }
 
 #back-top:hover {
-  background-color: #004d86;
+  background-color: #B93D58;
 }
 
 /* Custom Cursor */
@@ -2312,4 +2311,6 @@ pre code {
     padding: 0 34px 0 16px;
   }
 }
+
+
 
