@@ -2374,3 +2374,266 @@ pre code {
   }
 }
 
+
+.mice-hero {
+  padding: 40px 0 20px;
+}
+
+.mice-hero-image {
+  width: 100%;
+  border-radius: 12px;
+  display: block;
+}
+
+.mice-services-title {
+  text-align: center;
+  padding: 18px 16px;
+  margin-top: 18px;
+  border-radius: 10px;
+}
+
+.mice-services-title h2 {
+  margin: 0;
+  color: var(--header);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.mice-gallery {
+  margin-top: 24px;
+}
+
+.mice-gallery-item {
+  border-radius: 12px;
+  overflow: hidden;
+  height: 360px;
+}
+
+@media (max-width: 991px) {
+  .mice-gallery-item {
+    height: 280px;
+  }
+}
+
+@media (max-width: 575px) {
+  .mice-gallery-item {
+    height: 220px;
+  }
+}
+
+.mice-gallery-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.mice-contact-section {
+  background-color: #D4536E;
+  padding: 60px 0;
+  color: #ffffff;
+}
+
+.mice-contact-intro {
+  text-align: center;
+  max-width: 760px;
+  margin: 0 auto 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.mice-contact-intro h2 {
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.mice-contact-intro p {
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 16px;
+}
+
+.mice-contact-email {
+  color: #ffffff;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.mice-contact-form .form-clt input,
+.mice-contact-form .form-clt textarea {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  color: #ffffff;
+}
+
+.mice-contact-form .form-clt input::placeholder,
+.mice-contact-form .form-clt textarea::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.mice-contact-form .theme-btn {
+  background-color: #2E939A;
+}
+
+.mice-contact-form .theme-btn::after {
+  background-color: #277780;
+}
+
+@media (max-width: 991px) {
+  .mice-gallery {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 575px) {
+  .mice-contact-section {
+    padding: 40px 0;
+  }
+}
+
+
+.mice-contact-form .row {
+  justify-content: center;
+}
+
+.mice-contact-form .form-clt {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.mice-contact-form .form-clt span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 0;
+  color: #ffffff;
+}
+
+.mice-contact-form .form-clt .required {
+  color: #fff;
+}
+
+.mice-contact-form .form-clt input,
+.mice-contact-form .form-clt textarea {
+  width: 100%;
+}
+
+.mice-contact-form {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+
+
+.itinerary-list {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-left: 36px;
+}
+
+.itinerary-day {
+  position: relative;
+  padding: 14px 0 18px;
+  background: #ffffff;
+}
+
+.itinerary-list::before {
+  content: '';
+  position: absolute;
+  left: 11px;
+  top: 18px;
+  bottom: 18px;
+  width: 2px;
+  background: #dbe3ea;
+}
+
+.itinerary-day + .itinerary-day {
+  border-top: 1px solid #e5e7eb;
+}
+
+.itinerary-marker {
+  position: absolute;
+  left: -36px;
+  top: 18px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--primary);
+  display: grid;
+  place-items: center;
+}
+
+.itinerary-marker::after {
+  content: '';
+  width: 6px;
+  height: 10px;
+  border-right: 2px solid #ffffff;
+  border-bottom: 2px solid #ffffff;
+  transform: rotate(45deg);
+}
+
+.itinerary-toggle {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0 8px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--header);
+  font-size: 16px;
+}
+
+.itinerary-title {
+  flex: 1;
+}
+
+.itinerary-chevron {
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid #7b8794;
+  border-bottom: 2px solid #7b8794;
+  transform: rotate(45deg);
+  transition: transform 0.2s ease;
+}
+
+.itinerary-day.is-open .itinerary-chevron {
+  transform: rotate(-135deg);
+}
+
+.itinerary-body {
+  padding: 2px 0 0;
+  color: #5f6b7a;
+}
+
+.itinerary-body .tour-richtext {
+  margin-top: 6px;
+}
+
+@media (max-width: 575px) {
+  .itinerary-list {
+    padding-left: 28px;
+  }
+
+  .itinerary-marker {
+    left: -28px;
+    width: 20px;
+    height: 20px;
+  }
+
+  .itinerary-list::before {
+    left: 8px;
+  }
+
+  .itinerary-toggle {
+    font-size: 15px;
+  }
+}

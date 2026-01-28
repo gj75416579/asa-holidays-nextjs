@@ -2,6 +2,7 @@
 import { postDataJson } from '@/lib/api/server'
 
 const ASA_ENQUIRY_EMAIL = 'enquiry@asaholiday.com'
+const ASA_MICE_EMAIL = 'mice@asaholiday.com'
 
 const formatValue = (value: unknown, fallback = 'N/A') => {
   if (typeof value === 'string' && value.trim()) {
@@ -52,7 +53,12 @@ export async function POST(request: Request) {
       }
     }
 
-    const emailContent = `
+    const formType = typeof body?.formType === 'string' ? body.formType : ''
+    const submittedAt = new Date().toLocaleString('en-SG', { timeZone: 'Asia/Singapore' })
+
+    let subject = 'Enquiry'
+    let recipients = [ASA_ENQUIRY_EMAIL]
+    let emailContent = `
       <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
       "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
       <html xmlns="http://www.w3.org/1999/xhtml">
@@ -72,16 +78,36 @@ export async function POST(request: Request) {
         <tr><td>Departure Prefer 1:</td><td>${formatValue(body?.departureDate1, 'Not specified')}</td></tr>
         <tr><td>Departure Prefer 2:</td><td>${formatValue(body?.departureDate2, 'Not specified')}</td></tr>
         <tr><td>Message:</td><td>${formatMessage(body?.message)}</td></tr>
-        <tr><td>Submitted At:</td><td>${new Date().toLocaleString('en-SG', { timeZone: 'Asia/Singapore' })}</td></tr>
+        <tr><td>Submitted At:</td><td>${submittedAt}</td></tr>
       </table>
       </body>
       </html>
     `
 
+    if (formType === 'mice') {
+      subject = 'MICE Inquiry'
+      recipients = [ASA_MICE_EMAIL]
+      emailContent = `
+        <html>
+        <head></head>
+        <body>
+        <table>
+          <tr><td>Name:</td><td>${formatValue(body?.name)}</td></tr>
+          <tr><td>Email:</td><td>${formatValue(body?.email)}</td></tr>
+          <tr><td>Contact No.:</td><td>${formatValue(body?.contactNo)}</td></tr>
+          <tr><td>Subject:</td><td>${formatValue(body?.subject)}</td></tr>
+          <tr><td>Message:</td><td>${formatMessage(body?.message)}</td></tr>
+          <tr><td>Submitted At:</td><td>${submittedAt}</td></tr>
+        </table>
+        </body>
+        </html>
+      `
+    }
+
     const emailData = {
-      subject: 'Enquiry',
+      subject,
       message: emailContent,
-      to: [ASA_ENQUIRY_EMAIL]
+      to: recipients
     }
 
     const data = await postDataJson('system/email', emailData)
