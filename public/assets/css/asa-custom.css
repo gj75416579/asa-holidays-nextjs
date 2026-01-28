@@ -1,22 +1,21 @@
-/*
+﻿/*
  * ASA Holidays Custom Styles
  * Override default Roavio theme colors with ASA branding
  */
 
 :root {
-  /* ASA Brand Colors - Blue/Teal Theme */
-  --theme: #0066B3;        /* ASA Primary Blue */
-  --theme-2: #00A3E0;      /* ASA Secondary Blue */
-  --header: #1a1a1a;       /* Dark text */
-  --text: #555555;         /* Body text */
-  --border: #e0e0e0;
-  --bg: #f8f9fa;
-  --bg-2: #e8f4fc;
+  /* ASA Brand Colors - Muted Rose Theme */
+  --theme: #D4536E;        /* Primary - Muted Rose */
+  --theme-2: #2E939A;      /* Secondary - Muted Teal */
+  --header: #1C1917;       /* Neutral 900 */
+  --text: #57534E;         /* Neutral 600 */
+  --border: #E7E5E4;       /* Neutral 200 */
+  --bg: #FAFAF9;           /* Neutral 50 */
+  --bg-2: #FDF2F4;         /* Primary 50 */
 }
-
 /* Theme Button Override */
 .theme-btn {
-  background-color: var(--theme);
+  background-color: var(--theme-2);
 }
 
 .theme-btn.color {
@@ -24,7 +23,7 @@
 }
 
 .theme-btn:hover::after {
-  background-color: #004d86;
+  background-color: #277780;
 }
 
 /* Link Button Hover */
@@ -59,13 +58,38 @@
 
 /* Footer Background */
 .footer-section.header-bg {
-  background-color: #1a2a3a;
+  background-color: #1C1917;
 }
 
 .footer-bottom.style-1 {
-  background-color: #0f1a24;
+  background-color: #1C1917;
 }
 
+.footer-bottom {
+  border-top: 1px solid #292524;
+  border-bottom: 1px solid #292524;
+}
+
+.footer-widget-wrapper .single-footer-widget .list-area li a,
+.footer-widget-wrapper .single-footer-widget .list-area li a i,
+.footer-widget-wrapper .single-footer-widget .contact-item .icon,
+.footer-widget-wrapper .single-footer-widget .contact-item .content h6,
+.footer-widget-wrapper .single-footer-widget .contact-item .content h6 a,
+.footer-widget-wrapper .single-footer-widget .footer-content p {
+  color: #78716C;
+}
+
+.footer-widget-wrapper .single-footer-widget .footer-content .social-icon a {
+  background: #292524;
+  border-color: #292524;
+  color: #A8A29E;
+}
+
+.footer-widget-wrapper .single-footer-widget .footer-content .social-icon a:hover {
+  background-color: #D4536E;
+  border-color: #D4536E;
+  color: #ffffff;
+}
 /* About Box Icon */
 .about-box .icon i {
   color: var(--theme);
@@ -724,7 +748,7 @@
 }
 
 #back-top:hover {
-  background-color: #004d86;
+  background-color: #B93D58;
 }
 
 /* Custom Cursor */
@@ -784,6 +808,37 @@
 .tour-richtext a {
   color: var(--theme);
   text-decoration: underline;
+}
+
+.tour-detail-banner {
+  position: relative;
+  border-radius: 10px;
+  margin-bottom: 24px;
+  background-color: #f7f9fc;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  min-height: 430px;
+}
+
+.tour-detail-banner::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(21, 21, 21, 0) 29.25%, rgba(21, 21, 21, 0.45) 100%);
+}
+
+@media (max-width: 991px) {
+  .tour-detail-banner {
+    min-height: 320px;
+  }
+}
+
+@media (max-width: 575px) {
+  .tour-detail-banner {
+    min-height: 240px;
+  }
 }
 
 .tour-richtext strong {
@@ -933,6 +988,28 @@
 
 .enquiry-recaptcha {
   margin-top: 8px;
+}
+
+.contact-us-wrapper-3 .contact-box.enquiry-box .form-clt {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.contact-us-wrapper-3 .contact-box.enquiry-box .form-clt span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  line-height: 1.2;
+  margin-bottom: 0;
+}
+
+.contact-us-wrapper-3 .contact-box.enquiry-box .form-clt span .required {
+  color: #dc2626;
+  line-height: 1;
+  display: inline-block;
+  font-weight: 600;
 }
 
 @media (max-width: 767px) {
@@ -2257,5 +2334,306 @@ pre code {
   .enquiry-box .nice-select {
     height: 46px;
     padding: 0 34px 0 16px;
+  }
+}
+
+
+
+
+
+
+.footer-bottom .footer-wrapper h2 {
+  font-size: clamp(32px, 8vw, 120px);
+  white-space: nowrap;
+}
+
+
+.footer-bottom {
+  margin-bottom: 0;
+  padding-bottom: 24px;
+}
+
+.footer-bottom .footer-wrapper {
+  column-gap: 24px;
+  row-gap: 16px;
+}
+
+.footer-bottom .footer-wrapper h2 {
+  margin-right: 16px;
+  margin-top: 8px;
+}
+
+@media (max-width: 767px) {
+  .footer-bottom .footer-wrapper {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .footer-bottom .footer-wrapper h2 {
+    margin-right: 0;
+  }
+}
+
+
+.mice-hero {
+  padding: 40px 0 20px;
+}
+
+.mice-hero-image {
+  width: 100%;
+  border-radius: 12px;
+  display: block;
+}
+
+.mice-services-title {
+  text-align: center;
+  padding: 18px 16px;
+  margin-top: 18px;
+  border-radius: 10px;
+}
+
+.mice-services-title h2 {
+  margin: 0;
+  color: var(--header);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.mice-gallery {
+  margin-top: 24px;
+}
+
+.mice-gallery-item {
+  border-radius: 12px;
+  overflow: hidden;
+  height: 360px;
+}
+
+@media (max-width: 991px) {
+  .mice-gallery-item {
+    height: 280px;
+  }
+}
+
+@media (max-width: 575px) {
+  .mice-gallery-item {
+    height: 220px;
+  }
+}
+
+.mice-gallery-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.mice-contact-section {
+  background-color: #D4536E;
+  padding: 60px 0;
+  color: #ffffff;
+}
+
+.mice-contact-intro {
+  text-align: center;
+  max-width: 760px;
+  margin: 0 auto 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.mice-contact-intro h2 {
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.mice-contact-intro p {
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 16px;
+}
+
+.mice-contact-email {
+  color: #ffffff;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.mice-contact-form .form-clt input,
+.mice-contact-form .form-clt textarea {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  color: #ffffff;
+}
+
+.mice-contact-form .form-clt input::placeholder,
+.mice-contact-form .form-clt textarea::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.mice-contact-form .theme-btn {
+  background-color: #2E939A;
+}
+
+.mice-contact-form .theme-btn::after {
+  background-color: #277780;
+}
+
+@media (max-width: 991px) {
+  .mice-gallery {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 575px) {
+  .mice-contact-section {
+    padding: 40px 0;
+  }
+}
+
+
+.mice-contact-form .row {
+  justify-content: center;
+}
+
+.mice-contact-form .form-clt {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.mice-contact-form .form-clt span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 0;
+  color: #ffffff;
+}
+
+.mice-contact-form .form-clt .required {
+  color: #fff;
+}
+
+.mice-contact-form .form-clt input,
+.mice-contact-form .form-clt textarea {
+  width: 100%;
+}
+
+.mice-contact-form {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+
+
+.itinerary-list {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-left: 36px;
+}
+
+.itinerary-day {
+  position: relative;
+  padding: 14px 0 18px;
+  background: #ffffff;
+}
+
+.itinerary-list::before {
+  content: '';
+  position: absolute;
+  left: 11px;
+  top: 18px;
+  bottom: 18px;
+  width: 2px;
+  background: #dbe3ea;
+}
+
+.itinerary-day + .itinerary-day {
+  border-top: 1px solid #e5e7eb;
+}
+
+.itinerary-marker {
+  position: absolute;
+  left: -36px;
+  top: 18px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--primary);
+  display: grid;
+  place-items: center;
+}
+
+.itinerary-marker::after {
+  content: '';
+  width: 6px;
+  height: 10px;
+  border-right: 2px solid #ffffff;
+  border-bottom: 2px solid #ffffff;
+  transform: rotate(45deg);
+}
+
+.itinerary-toggle {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0 8px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--header);
+  font-size: 16px;
+}
+
+.itinerary-title {
+  flex: 1;
+}
+
+.itinerary-chevron {
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid #7b8794;
+  border-bottom: 2px solid #7b8794;
+  transform: rotate(45deg);
+  transition: transform 0.2s ease;
+}
+
+.itinerary-day.is-open .itinerary-chevron {
+  transform: rotate(-135deg);
+}
+
+.itinerary-body {
+  padding: 2px 0 0;
+  color: #5f6b7a;
+}
+
+.itinerary-body .tour-richtext {
+  margin-top: 6px;
+}
+
+@media (max-width: 575px) {
+  .itinerary-list {
+    padding-left: 28px;
+  }
+
+  .itinerary-marker {
+    left: -28px;
+    width: 20px;
+    height: 20px;
+  }
+
+  .itinerary-list::before {
+    left: 8px;
+  }
+
+  .itinerary-toggle {
+    font-size: 15px;
   }
 }

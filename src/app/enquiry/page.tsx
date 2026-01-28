@@ -1,6 +1,6 @@
-'use client'
+﻿'use client'
 
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Script from 'next/script'
 
@@ -40,6 +40,7 @@ declare global {
           'error-callback'?: () => void
         }
       ) => number
+      getResponse: () => string
       reset: (widgetId?: number) => void
     }
   }
@@ -113,12 +114,9 @@ function EnquiryContent() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
   const [isSuccess, setIsSuccess] = useState(false)
-  const recaptchaRef = useRef<HTMLDivElement | null>(null)
-  const recaptchaWidgetId = useRef<number | null>(null)
   const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY ?? ''
   const recaptchaMode = process.env.NEXT_PUBLIC_API_MODE ?? 'dev'
   const recaptchaEnabled = recaptchaMode === 'prod' && Boolean(recaptchaSiteKey)
-
   const queryKey = useMemo(() => searchParams.toString(), [searchParams])
 
   useEffect(() => {
@@ -143,15 +141,6 @@ function EnquiryContent() {
       departureDate1: departureDate || prev.departureDate1,
     }))
   }, [queryKey, searchParams])
-
-  useEffect(() => {
-    if (!recaptchaEnabled) {
-      return
-    }
-    if (window.grecaptcha) {
-      renderRecaptcha()
-    }
-  }, [recaptchaEnabled])
 
   useEffect(() => {
     let timer: number | null = null
@@ -193,23 +182,15 @@ function EnquiryContent() {
     }
   }, [])
 
-  const renderRecaptcha = () => {
-    if (!recaptchaEnabled || !recaptchaRef.current || !window.grecaptcha) {
-      return
-    }
-    if (recaptchaWidgetId.current !== null) {
-      return
-    }
-    recaptchaWidgetId.current = window.grecaptcha.render(recaptchaRef.current, {
-      sitekey: recaptchaSiteKey,
-      callback: (token: string) => handleInputChange('recaptcha', token),
-      'expired-callback': () => handleInputChange('recaptcha', ''),
-      'error-callback': () => handleInputChange('recaptcha', ''),
-    })
-  }
-
   const handleInputChange = (field: keyof EnquiryFormState, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const getRecaptchaResponse = () => {
+    if (!recaptchaEnabled || !window.grecaptcha || typeof window.grecaptcha.getResponse !== 'function') {
+      return ''
+    }
+    return window.grecaptcha.getResponse()
   }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -219,7 +200,8 @@ function EnquiryContent() {
     setIsSuccess(false)
 
     try {
-      if (recaptchaEnabled && !formData.recaptcha) {
+      const recaptchaToken = getRecaptchaResponse()
+      if (recaptchaEnabled && !recaptchaToken) {
         setStatusMessage('Please complete the reCAPTCHA verification.')
         setIsSuccess(false)
         setIsSubmitting(false)
@@ -228,6 +210,7 @@ function EnquiryContent() {
       }
       const payload = {
         ...formData,
+        recaptcha: recaptchaToken,
         departureDate1: normalizeDate(formData.departureDate1),
         departureDate2: normalizeDate(formData.departureDate2),
       }
@@ -251,19 +234,10 @@ function EnquiryContent() {
       setStatusMessage('We have received your enquiry. Our tour specialist will contact you shortly.')
       setIsSuccess(true)
 
-      setFormData((prev) => ({
-        ...defaultFormState,
-        tourName: prev.tourName,
-        tourCode: prev.tourCode,
-        productCode: prev.productCode,
-        tourId: prev.tourId,
-        departureId: prev.departureId,
-        tourCodeId: prev.tourCodeId,
-        type: prev.type,
-        departureDate1: prev.departureDate1,
-      }))
-      if (recaptchaWidgetId.current !== null && window.grecaptcha?.reset) {
-        window.grecaptcha.reset(recaptchaWidgetId.current)
+      setFormData(defaultFormState)
+
+      if (recaptchaEnabled && window.grecaptcha?.reset) {
+        window.grecaptcha.reset()
       }
 
       window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -289,9 +263,8 @@ function EnquiryContent() {
       <Header />
       {recaptchaEnabled ? (
         <Script
-          src="https://www.google.com/recaptcha/api.js?render=explicit"
+          src="https://www.google.com/recaptcha/api.js"
           strategy="afterInteractive"
-          onLoad={renderRecaptcha}
         />
       ) : null}
 
@@ -433,7 +406,7 @@ function EnquiryContent() {
                           <div className="col-lg-4">
                             <div className="form-clt">
                               <span>Adults</span>
-                              <select value={formData.adults} onChange={(event) => handleInputChange('adults', event.target.value)}>
+                              <select data-no-nice-select="true" value={formData.adults} onChange={(event) => handleInputChange('adults', event.target.value)}>
                                 {adultOptions.map((value) => (
                                   <option key={`adult-${value}`} value={value}>
                                     {value}
@@ -445,7 +418,7 @@ function EnquiryContent() {
                           <div className="col-lg-4">
                             <div className="form-clt">
                               <span>Children</span>
-                              <select value={formData.children} onChange={(event) => handleInputChange('children', event.target.value)}>
+                              <select data-no-nice-select="true" value={formData.children} onChange={(event) => handleInputChange('children', event.target.value)}>
                                 {numberOptions.map((value) => (
                                   <option key={`child-${value}`} value={value}>
                                     {value}
@@ -457,7 +430,7 @@ function EnquiryContent() {
                           <div className="col-lg-4">
                             <div className="form-clt">
                               <span>Infants</span>
-                              <select value={formData.infants} onChange={(event) => handleInputChange('infants', event.target.value)}>
+                              <select data-no-nice-select="true" value={formData.infants} onChange={(event) => handleInputChange('infants', event.target.value)}>
                                 {numberOptions.map((value) => (
                                   <option key={`infant-${value}`} value={value}>
                                     {value}
@@ -481,7 +454,9 @@ function EnquiryContent() {
                           </div>
                           {recaptchaEnabled ? (
                             <div className="col-lg-12">
-                              <div className="enquiry-recaptcha" ref={recaptchaRef}></div>
+                              <div className="enquiry-recaptcha">
+                                <div className="g-recaptcha" data-sitekey={recaptchaSiteKey}></div>
+                              </div>
                             </div>
                           ) : null}
                           <div className="col-lg-12">
@@ -512,6 +487,8 @@ export default function EnquiryPage() {
     </Suspense>
   )
 }
+
+
 
 
 

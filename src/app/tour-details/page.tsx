@@ -1,11 +1,10 @@
-'use client'
+﻿'use client'
 
 import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 import Header from '@/templete/HeaderWithSuspense'
 import Footer from '@/templete/Footer'
-import { footerContactSection } from '@/lib/footer-contact'
 import ApiMaintenanceNotice from '@/templete/ApiMaintenanceNotice'
 
 export const dynamic = 'force-dynamic'
@@ -24,6 +23,7 @@ type TourDetail = {
   location: string
   sector: string
   duration: string
+  bannerImage: string
   overviewHtml: string
   highlightsHtml: string
   itineraryHtml: string
@@ -69,6 +69,20 @@ type DepartureItem = {
   flights?: Record<string, unknown>[]
 }
 
+type ItineraryDay = {
+  id: number | string
+  title: string
+  descriptionHtml: string
+}
+
+type ItineraryGroup = {
+  id: number
+  name?: string
+  travelStartDate?: string
+  travelEndDate?: string
+  itineraryDiffDescInternal?: string
+}
+
 type RelatedTourItem = {
   id: number | string
   image: string
@@ -102,6 +116,30 @@ const getLocalizedText = (value: unknown) => {
     return value.EN.trim()
   }
   return ''
+}
+
+const pickStringValue = (...values: unknown[]) => {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim()
+    }
+  }
+  return ''
+}
+
+const resolveBannerImage = (record: Record<string, unknown>) => {
+  const images = isRecord(record.images) ? record.images : null
+  return pickStringValue(
+    record.banner,
+    record.bannerImage,
+    record.bannerImg,
+    record.bannerUrl,
+    record.cover,
+    record.image,
+    record.thumbnail,
+    images?.banner,
+    images?.desktop
+  )
 }
 
 const formatDuration = (value: unknown) => {
@@ -210,6 +248,7 @@ const resolveTourDetail = (data: unknown, fallback: typeof tourDetailFallback, f
     location: fallbackEnabled ? fallback.location : '',
     sector: fallbackEnabled ? fallback.location : '',
     duration: fallbackEnabled ? fallback.duration : '',
+    bannerImage: '',
     overviewHtml: '',
     highlightsHtml: '',
     itineraryHtml: '',
@@ -234,6 +273,7 @@ const resolveTourDetail = (data: unknown, fallback: typeof tourDetailFallback, f
     location: locationValue || (fallbackEnabled ? fallback.location : ''),
     sector: locationValue || (fallbackEnabled ? fallback.location : ''),
     duration: durationValue || (fallbackEnabled ? fallback.duration : ''),
+    bannerImage: resolveBannerImage(record),
     overviewHtml: getLocalizedText(record.shortDescription),
     highlightsHtml: getLocalizedText(record.highlights),
     itineraryHtml: getLocalizedText(record.writeUps),
@@ -378,6 +418,34 @@ const getAvailability = (departure: DepartureItem) => {
   return { label: 'Available', status: 'available', available }
 }
 
+const resolveItineraryGroupId = (data: unknown): number | null => {
+  if (!isRecord(data) || !Array.isArray(data.data)) {
+    return null
+  }
+  const first = data.data[0] as Record<string, unknown> | undefined
+  if (!first || typeof first.id !== 'number') {
+    return null
+  }
+  return first.id
+}
+
+const resolveItineraryItems = (data: unknown): ItineraryDay[] => {
+  if (!isRecord(data) || !isRecord(data.data) || !Array.isArray(data.data.itineraries)) {
+    return []
+  }
+
+  return data.data.itineraries.map((item, index) => {
+    const record = isRecord(item) ? item : {}
+    const title = getLocalizedText(record.name)
+    const descriptionHtml = getLocalizedText(record.description)
+
+    return {
+      id: typeof record.id === 'number' ? record.id : `itinerary-${index + 1}`,
+      title: title || `Day ${index + 1}`,
+      descriptionHtml,
+    }
+  })
+}
 const resolveRelatedTours = (data: unknown): RelatedTourItem[] => {
   const list = extractList(data)
   if (!list.length) {
@@ -440,6 +508,8 @@ function TourDetailsContent() {
   const [detailError, setDetailError] = useState(false)
   const [departuresError, setDeparturesError] = useState(false)
   const [relatedError, setRelatedError] = useState(false)
+  const [itineraryItems, setItineraryItems] = useState<ItineraryDay[]>([])
+  const [itineraryError, setItineraryError] = useState(false)
 
   useEffect(() => {
     let isActive = true
@@ -491,7 +561,87 @@ function TourDetailsContent() {
   const departures = resolveDepartures(departuresData)
   const relatedTours = resolveRelatedTours(relatedData)
   const isGroupTour = resolvedDetail.productType === 1
-  const showApiNotice = detailError || departuresError || relatedError
+
+  useEffect(() => {
+    let isActive = true
+
+    if (!resolvedDetail.id || !isGroupTour) {
+      setDeparturesData(null)
+      return () => {
+        isActive = false
+      }
+    }
+
+    const fetchDepartures = async () => {
+      try {
+        if (isActive) {
+          setDeparturesError(false)
+        }
+        const requestPayload = {
+          id: resolvedDetail.id,
+          pageSize: 0,
+          currentPage: 0,
+        }
+        const res = await fetch('/api/tour/departures', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestPayload),
+        })
+        const json = await parseJsonResponse(res)
+        if (isActive) {
+          setDeparturesData(json)
+        }
+      } catch (error) {
+        console.error('Tour departures fetch error:', error)
+        if (isActive) {
+          setDeparturesError(true)
+        }
+      }
+    }
+
+    fetchDepartures()
+
+    return () => {
+      isActive = false
+    }
+  }, [resolvedDetail.id, isGroupTour])
+
+  useEffect(() => {
+    let isActive = true
+
+    if (!resolvedDetail.id) {
+      setRelatedData(null)
+      return () => {
+        isActive = false
+      }
+    }
+
+    const fetchRelated = async () => {
+      try {
+        if (isActive) {
+          setRelatedError(false)
+        }
+        const relatedRes = await fetch(`/api/tour/link/${resolvedDetail.id}`)
+        const relatedJson = await parseJsonResponse(relatedRes)
+        if (isActive) {
+          setRelatedData(relatedJson)
+        }
+      } catch (error) {
+        console.error('Related tours fetch error:', error)
+        if (isActive) {
+          setRelatedError(true)
+        }
+      }
+    }
+
+    fetchRelated()
+
+    return () => {
+      isActive = false
+    }
+  }, [resolvedDetail.id])
   const emptyNotice = <div className="tour-empty-notice">No information available for this tour.</div>
   const mapLocation = resolvedDetail.sector.trim()
   const hasMapLocation = Boolean(mapLocation)
@@ -540,13 +690,36 @@ function TourDetailsContent() {
       tourId: bookingTourId ?? undefined,
       tourCodeId: departure.id ?? departure.priceCodeId ?? undefined,
       departureId: departure.id ?? undefined,
-      type: 1,
+      type: priceType === 'full' ? 1 : 2,
     }
     const bookingUrl = `/booking?tour=${encodeTourParam(bookingPayload)}`
-
-
-    const actionUrl = bookingUrl
-    const actionLabel = 'Book Now'
+    const enquiryParams = new URLSearchParams()
+    if (resolvedDetail.title) {
+      enquiryParams.set('tourName', resolvedDetail.title)
+    }
+    if (tourCode) {
+      enquiryParams.set('tourCode', tourCode)
+    }
+    if (departure.priceCode) {
+      enquiryParams.set('productCode', departure.priceCode)
+    }
+    if (dateStart) {
+      enquiryParams.set('departureDate', dateStart)
+    }
+    if (bookingTourId) {
+      enquiryParams.set('tourId', String(bookingTourId))
+    }
+    if (departure.id) {
+      enquiryParams.set('departureId', String(departure.id))
+    }
+    if (departure.priceCodeId) {
+      enquiryParams.set('tourCodeId', String(departure.priceCodeId))
+    }
+    enquiryParams.set('type', '2')
+    const enquiryQuery = enquiryParams.toString()
+    const enquiryUrl = enquiryQuery ? `/enquiry?${enquiryQuery}` : '/enquiry'
+    const actionUrl = priceType === 'land' ? enquiryUrl : bookingUrl
+    const actionLabel = priceType === 'land' ? 'Enquiry Now' : 'Book Now'
 
     return (
       <div className={`departure-card ${isOpen ? 'is-open' : ''}`}>
@@ -646,7 +819,11 @@ function TourDetailsContent() {
               </div>
             ) : null}
             <div className="departure-actions">
-              {availability.status === 'sold-out' ? (
+              {priceType === 'land' ? (
+                <a href={actionUrl} className="theme-btn">
+                  {actionLabel}
+                </a>
+              ) : availability.status === 'sold-out' ? (
                 <button type="button" className="theme-btn is-disabled" disabled>
                   Sold Out
                 </button>
@@ -672,77 +849,52 @@ function TourDetailsContent() {
   useEffect(() => {
     let isActive = true
 
-    if (!resolvedDetail.id || !isGroupTour) {
-      setDeparturesData(null)
-      return
-    }
-
-    const fetchDepartures = async () => {
-      try {
-        if (isActive) {
-          setDeparturesError(false)
-        }
-        const res = await fetch('/api/tour/departures', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id: resolvedDetail.id,
-            pageSize: 0,
-            currentPage: 0,
-          }),
-        })
-        const data = await parseJsonResponse(res)
-        if (isActive) {
-          setDeparturesData(data)
-        }
-      } catch (error) {
-        console.error('Tour departures fetch error:', error)
-        if (isActive) {
-          setDeparturesError(true)
-        }
-      }
-    }
-
-    fetchDepartures()
-
-    return () => {
-      isActive = false
-    }
-  }, [resolvedDetail.id, isGroupTour])
-
-  useEffect(() => {
-    let isActive = true
-
     if (!resolvedDetail.id) {
-      setRelatedData(null)
+      setItineraryItems([])
       return
     }
 
-    const fetchRelated = async () => {
+    const fetchItinerary = async () => {
       try {
         if (isActive) {
-          setRelatedError(false)
+          setItineraryError(false)
         }
-        const res = await fetch(`/api/tour/link/${resolvedDetail.id}`)
-        const data = await parseJsonResponse(res)
+        console.log('[itinerary-groups] request:', { tourId: resolvedDetail.id })
+        const groupRes = await fetch(`/api/tour/itinerary-groups/${resolvedDetail.id}`)
+        const groupData = await parseJsonResponse(groupRes)
+        console.log('[itinerary-groups] response:', groupData)
+        const groupId = resolveItineraryGroupId(groupData)
+        if (!groupId) {
+          if (isActive) {
+            setItineraryItems([])
+          }
+          return
+        }
+
+        console.log('[itineraries] request:', { groupId })
+        const itineraryRes = await fetch(`/api/tour/itineraries/${groupId}`)
+        const itineraryData = await parseJsonResponse(itineraryRes)
+        console.log('[itineraries] response:', itineraryData)
+        const items = resolveItineraryItems(itineraryData)
         if (isActive) {
-          setRelatedData(data)
+          setItineraryItems(items)
         }
       } catch (error) {
-        console.error('Related tours fetch error:', error)
+        console.error('Itinerary fetch error:', error)
         if (isActive) {
-          setRelatedError(true)
+          setItineraryError(true)
         }
       }
     }
 
-    fetchRelated()
+    fetchItinerary()
 
     return () => {
       isActive = false
     }
   }, [resolvedDetail.id])
 
+  const showApiNotice = detailError || departuresError || relatedError || itineraryError
   return (
     <>
       <Header />
@@ -790,7 +942,7 @@ function TourDetailsContent() {
           <section className="tour-details-section section-padding pt-0 fix">
             <div className="container">
               <div className="tour-details-wrappers">
-                <div className="row g-2">
+                {/* <div className="row g-2">
                   <div className="col-xl-3 col-lg-4 col-md-6">
                     <div className="details-image">
                       <img src="/assets/img/inner-page/tour-details/details-1.jpg" alt="img" />
@@ -821,8 +973,16 @@ function TourDetailsContent() {
                       <img src="/assets/img/inner-page/tour-details/details-6.jpg" alt="img" />
                     </div>
                   </div>
-                </div>
+                </div> */}
                 <div className="tour-details-content">
+                  {resolvedDetail.bannerImage ? (
+                    <div
+                      className="tour-detail-banner"
+                      role="img"
+                      aria-label={resolvedDetail.title || 'Tour banner'}
+                      style={{ backgroundImage: `url(${resolvedDetail.bannerImage})` }}
+                    ></div>
+                  ) : null}
                   <div className="row g-4">
                     <div className="col-lg-8 col-12">
                       <div className="tour-left-content">
@@ -860,7 +1020,46 @@ function TourDetailsContent() {
                         ) : (
                           <div className="mt-3">{emptyNotice}</div>
                         )}
-                        {/* Itinerary hidden for now */}
+                        <h3>Itinerary</h3>
+                        {itineraryItems.length ? (
+                          <div className="accordion-two mt-3 mb-5" id="itinerary-accordion">
+                            {itineraryItems.map((item, index) => {
+                              const collapseId = `itinerary-collapse-${item.id}`
+                              const isFirst = index === 0
+                              return (
+                                <div key={item.id} className="accordion-item">
+                                  <h5 className="accordion-header">
+                                    <button
+                                      className={`accordion-button${isFirst ? '' : ' collapsed'}`}
+                                      type="button"
+                                      data-bs-toggle="collapse"
+                                      data-bs-target={`#${collapseId}`}
+                                      aria-expanded={isFirst}
+                                      aria-controls={collapseId}
+                                    >
+                                      {item.title}
+                                    </button>
+                                  </h5>
+                                  <div
+                                    id={collapseId}
+                                    className={`accordion-collapse collapse${isFirst ? ' show' : ''}`}
+                                    data-bs-parent="#itinerary-accordion"
+                                  >
+                                    <div className="accordion-body">
+                                      {item.descriptionHtml ? (
+                                        <div className="tour-richtext" dangerouslySetInnerHTML={{ __html: item.descriptionHtml }} />
+                                      ) : (
+                                        <div className="tour-richtext">{emptyNotice}</div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        ) : (
+                          <div className="mt-3 mb-5">{emptyNotice}</div>
+                        )}
                         {/* Frequently Asked Questions hidden for now */}
                         {/*
                         <h3>Frequently Asked Questions</h3>
@@ -1075,8 +1274,8 @@ function TourDetailsContent() {
                           <div className="widget-contact">
                             <h3>Need Help?</h3>
                             <ul className="list-style-one">
-                              <li><i className="far fa-envelope"></i> <a href="mailto:helpxample@gmail.com">helpxample@gmail.com</a></li>
-                              <li><i className="far fa-phone-volume"></i> <a href="tel:+000(123)45688">+000 (123) 456 88</a></li>
+                              <li><i className="far fa-envelope"></i> <a href="mailto:enquiry@asaholiday.com">enquiry@asaholiday.com</a></li>
+                              <li><i className="far fa-phone-volume"></i> <a href="tel:+6563035303">+65 6303 5303</a></li>
                             </ul>
                           </div>
                           <div className="tour-sidebar-bg-image-items">
@@ -1155,13 +1354,55 @@ function TourDetailsContent() {
               </div>
             </div>
           </section>
-{/* Footer Section Start */}
-          <Footer contactSection={footerContactSection} />
+
+          {/* Contact Section Start */}
+          <section className="contact-section section-padding pb-0">
+            <div className="container">
+              <div className="contact-wrapper">
+                <div className="row g-4 align-items-end">
+                  <div className="col-lg-6">
+                    <div className="contact-image">
+                      <img data-speed=".8" src="/assets/img/home-1/Image.jpg" alt="img" />
+                    </div>
+                  </div>
+                  <div className="col-lg-6">
+                    <div className="contact-content">
+                      <div className="logo-image">
+                        <a href="/"><img src="/assets/img/logo/white-logo.svg" alt="img" /></a>
+                      </div>
+                      <div className="section-title mb-0">
+                        <h2 className="sec-title text-white text-anim">
+                          Adventure Is Calling 茅藛?Are You Ready?
+                        </h2>
+                      </div>
+                      <p className="text wow fadeInUp" data-wow-delay=".3s">
+                        Get ready to embark on unforgettable journeys with us. whether you&apos;re seeking thrilling adventures, relaxing escapes
+                      </p>
+                      <a href="/tour-details" className="theme-btn">Explore Our Tours</a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Footer Section Start */}
+          <Footer />
         </div>
       </div>
     </>
   );
 }
+
+
+
+
+
+
+
+
+
+
 
 
 

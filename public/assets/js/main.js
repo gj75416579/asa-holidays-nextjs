@@ -1,4 +1,4 @@
-(function($) {
+﻿(function($) {
     "use strict";
   
     const $documentOn = $(document);
@@ -364,7 +364,20 @@
         });
     }
 
-     //>> gallery Slider2 Start <<//
+     //>> MICE Slider Start <<//
+        if ($('.mice-gallery-slider').length > 0) {
+         const miceSlider = new Swiper(".mice-gallery-slider", {
+            slidesPerView: 1,
+            spaceBetween: 0,
+            speed: 1000,
+            loop: true,
+            autoplay: {
+                delay: 3000,
+                disableOnInteraction: false,
+            },
+         });
+    }
+//>> gallery Slider2 Start <<//
         if ($('.gallery-slider-2').length > 0) {
          const gallerySlider2 = new Swiper(".gallery-slider-2", {
             spaceBetween: 10,
@@ -821,5 +834,14 @@
    
   
   })(jQuery); // End jQuery
+
+
+
+
+
+
+
+
+
 
 
