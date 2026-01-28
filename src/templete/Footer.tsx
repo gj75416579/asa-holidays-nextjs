@@ -131,27 +131,27 @@ export default function Footer({ contactSection }: FooterProps) {
                   </div>
                   <ul className="list-area">
                     <li>
-                      <a href="/tour-grid">
+                      <a href="/tour-list/?sectorId=1">
                         <i className="fa-solid fa-chevron-right"></i>
                         Europe
                       </a>
                     </li>
                     <li>
-                      <a href="/tour-grid">
+                      <a href="/tour-list/?sectorId=5">
                         <i className="fa-solid fa-chevron-right"></i>
                         Japan
                       </a>
                     </li>
                     <li>
-                      <a href="/tour-grid">
+                      <a href="/tour-list/?sectorId=2">
                         <i className="fa-solid fa-chevron-right"></i>
                         China
                       </a>
                     </li>
                     <li>
-                      <a href="/tour-grid">
+                      <a href="/tour-list/?sectorId=6">
                         <i className="fa-solid fa-chevron-right"></i>
-                        Korea &amp; Australia
+                        Korea
                       </a>
                     </li>
                   </ul>

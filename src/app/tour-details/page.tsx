@@ -5,7 +5,6 @@ import { useSearchParams } from 'next/navigation'
 
 import Header from '@/templete/HeaderWithSuspense'
 import Footer from '@/templete/Footer'
-import { footerContactSection } from '@/lib/footer-contact'
 import ApiMaintenanceNotice from '@/templete/ApiMaintenanceNotice'
 
 export const dynamic = 'force-dynamic'
@@ -24,6 +23,7 @@ type TourDetail = {
   location: string
   sector: string
   duration: string
+  bannerImage: string
   overviewHtml: string
   highlightsHtml: string
   itineraryHtml: string
@@ -102,6 +102,30 @@ const getLocalizedText = (value: unknown) => {
     return value.EN.trim()
   }
   return ''
+}
+
+const pickStringValue = (...values: unknown[]) => {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim()
+    }
+  }
+  return ''
+}
+
+const resolveBannerImage = (record: Record<string, unknown>) => {
+  const images = isRecord(record.images) ? record.images : null
+  return pickStringValue(
+    record.banner,
+    record.bannerImage,
+    record.bannerImg,
+    record.bannerUrl,
+    record.cover,
+    record.image,
+    record.thumbnail,
+    images?.banner,
+    images?.desktop
+  )
 }
 
 const formatDuration = (value: unknown) => {
@@ -210,6 +234,7 @@ const resolveTourDetail = (data: unknown, fallback: typeof tourDetailFallback, f
     location: fallbackEnabled ? fallback.location : '',
     sector: fallbackEnabled ? fallback.location : '',
     duration: fallbackEnabled ? fallback.duration : '',
+    bannerImage: '',
     overviewHtml: '',
     highlightsHtml: '',
     itineraryHtml: '',
@@ -234,6 +259,7 @@ const resolveTourDetail = (data: unknown, fallback: typeof tourDetailFallback, f
     location: locationValue || (fallbackEnabled ? fallback.location : ''),
     sector: locationValue || (fallbackEnabled ? fallback.location : ''),
     duration: durationValue || (fallbackEnabled ? fallback.duration : ''),
+    bannerImage: resolveBannerImage(record),
     overviewHtml: getLocalizedText(record.shortDescription),
     highlightsHtml: getLocalizedText(record.highlights),
     itineraryHtml: getLocalizedText(record.writeUps),
@@ -540,13 +566,36 @@ function TourDetailsContent() {
       tourId: bookingTourId ?? undefined,
       tourCodeId: departure.id ?? departure.priceCodeId ?? undefined,
       departureId: departure.id ?? undefined,
-      type: 1,
+      type: priceType === 'full' ? 1 : 2,
     }
     const bookingUrl = `/booking?tour=${encodeTourParam(bookingPayload)}`
-
-
-    const actionUrl = bookingUrl
-    const actionLabel = 'Book Now'
+    const enquiryParams = new URLSearchParams()
+    if (resolvedDetail.title) {
+      enquiryParams.set('tourName', resolvedDetail.title)
+    }
+    if (tourCode) {
+      enquiryParams.set('tourCode', tourCode)
+    }
+    if (departure.priceCode) {
+      enquiryParams.set('productCode', departure.priceCode)
+    }
+    if (dateStart) {
+      enquiryParams.set('departureDate', dateStart)
+    }
+    if (bookingTourId) {
+      enquiryParams.set('tourId', String(bookingTourId))
+    }
+    if (departure.id) {
+      enquiryParams.set('departureId', String(departure.id))
+    }
+    if (departure.priceCodeId) {
+      enquiryParams.set('tourCodeId', String(departure.priceCodeId))
+    }
+    enquiryParams.set('type', '2')
+    const enquiryQuery = enquiryParams.toString()
+    const enquiryUrl = enquiryQuery ? `/enquiry?${enquiryQuery}` : '/enquiry'
+    const actionUrl = priceType === 'land' ? enquiryUrl : bookingUrl
+    const actionLabel = priceType === 'land' ? 'Enquiry Now' : 'Book Now'
 
     return (
       <div className={`departure-card ${isOpen ? 'is-open' : ''}`}>
@@ -646,7 +695,11 @@ function TourDetailsContent() {
               </div>
             ) : null}
             <div className="departure-actions">
-              {availability.status === 'sold-out' ? (
+              {priceType === 'land' ? (
+                <a href={actionUrl} className="theme-btn">
+                  {actionLabel}
+                </a>
+              ) : availability.status === 'sold-out' ? (
                 <button type="button" className="theme-btn is-disabled" disabled>
                   Sold Out
                 </button>
@@ -790,7 +843,7 @@ function TourDetailsContent() {
           <section className="tour-details-section section-padding pt-0 fix">
             <div className="container">
               <div className="tour-details-wrappers">
-                <div className="row g-2">
+                {/* <div className="row g-2">
                   <div className="col-xl-3 col-lg-4 col-md-6">
                     <div className="details-image">
                       <img src="/assets/img/inner-page/tour-details/details-1.jpg" alt="img" />
@@ -821,8 +874,16 @@ function TourDetailsContent() {
                       <img src="/assets/img/inner-page/tour-details/details-6.jpg" alt="img" />
                     </div>
                   </div>
-                </div>
+                </div> */}
                 <div className="tour-details-content">
+                  {resolvedDetail.bannerImage ? (
+                    <div
+                      className="tour-detail-banner"
+                      role="img"
+                      aria-label={resolvedDetail.title || 'Tour banner'}
+                      style={{ backgroundImage: `url(${resolvedDetail.bannerImage})` }}
+                    ></div>
+                  ) : null}
                   <div className="row g-4">
                     <div className="col-lg-8 col-12">
                       <div className="tour-left-content">
@@ -1155,16 +1216,45 @@ function TourDetailsContent() {
               </div>
             </div>
           </section>
-{/* Footer Section Start */}
-          <Footer contactSection={footerContactSection} />
+
+          {/* Contact Section Start */}
+          <section className="contact-section section-padding pb-0">
+            <div className="container">
+              <div className="contact-wrapper">
+                <div className="row g-4 align-items-end">
+                  <div className="col-lg-6">
+                    <div className="contact-image">
+                      <img data-speed=".8" src="/assets/img/home-1/Image.jpg" alt="img" />
+                    </div>
+                  </div>
+                  <div className="col-lg-6">
+                    <div className="contact-content">
+                      <div className="logo-image">
+                        <a href="/"><img src="/assets/img/logo/white-logo.svg" alt="img" /></a>
+                      </div>
+                      <div className="section-title mb-0">
+                        <h2 className="sec-title text-white text-anim">
+                          Adventure Is Calling éˆ?Are You Ready?
+                        </h2>
+                      </div>
+                      <p className="text wow fadeInUp" data-wow-delay=".3s">
+                        Get ready to embark on unforgettable journeys with us. whether you&apos;re seeking thrilling adventures, relaxing escapes
+                      </p>
+                      <a href="/tour-details" className="theme-btn">Explore Our Tours</a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Footer Section Start */}
+          <Footer />
         </div>
       </div>
     </>
   );
 }
-
-
-
 
 
 

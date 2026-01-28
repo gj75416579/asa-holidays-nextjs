@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
@@ -234,17 +234,8 @@ function EnquiryContent() {
       setStatusMessage('We have received your enquiry. Our tour specialist will contact you shortly.')
       setIsSuccess(true)
 
-      setFormData((prev) => ({
-        ...defaultFormState,
-        tourName: prev.tourName,
-        tourCode: prev.tourCode,
-        productCode: prev.productCode,
-        tourId: prev.tourId,
-        departureId: prev.departureId,
-        tourCodeId: prev.tourCodeId,
-        type: prev.type,
-        departureDate1: prev.departureDate1,
-      }))
+      setFormData(defaultFormState)
+
       if (recaptchaEnabled && window.grecaptcha?.reset) {
         window.grecaptcha.reset()
       }
@@ -415,7 +406,7 @@ function EnquiryContent() {
                           <div className="col-lg-4">
                             <div className="form-clt">
                               <span>Adults</span>
-                              <select value={formData.adults} onChange={(event) => handleInputChange('adults', event.target.value)}>
+                              <select data-no-nice-select="true" value={formData.adults} onChange={(event) => handleInputChange('adults', event.target.value)}>
                                 {adultOptions.map((value) => (
                                   <option key={`adult-${value}`} value={value}>
                                     {value}
@@ -427,7 +418,7 @@ function EnquiryContent() {
                           <div className="col-lg-4">
                             <div className="form-clt">
                               <span>Children</span>
-                              <select value={formData.children} onChange={(event) => handleInputChange('children', event.target.value)}>
+                              <select data-no-nice-select="true" value={formData.children} onChange={(event) => handleInputChange('children', event.target.value)}>
                                 {numberOptions.map((value) => (
                                   <option key={`child-${value}`} value={value}>
                                     {value}
@@ -439,7 +430,7 @@ function EnquiryContent() {
                           <div className="col-lg-4">
                             <div className="form-clt">
                               <span>Infants</span>
-                              <select value={formData.infants} onChange={(event) => handleInputChange('infants', event.target.value)}>
+                              <select data-no-nice-select="true" value={formData.infants} onChange={(event) => handleInputChange('infants', event.target.value)}>
                                 {numberOptions.map((value) => (
                                   <option key={`infant-${value}`} value={value}>
                                     {value}
@@ -496,6 +487,8 @@ export default function EnquiryPage() {
     </Suspense>
   )
 }
+
+
 
 
 

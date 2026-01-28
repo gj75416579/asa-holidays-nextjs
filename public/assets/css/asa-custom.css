@@ -1,4 +1,4 @@
-/*
+﻿/*
  * ASA Holidays Custom Styles
  * Override default Roavio theme colors with ASA branding
  */
@@ -786,6 +786,37 @@
   text-decoration: underline;
 }
 
+.tour-detail-banner {
+  position: relative;
+  border-radius: 10px;
+  margin-bottom: 24px;
+  background-color: #f7f9fc;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  min-height: 430px;
+}
+
+.tour-detail-banner::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(21, 21, 21, 0) 29.25%, rgba(21, 21, 21, 0.45) 100%);
+}
+
+@media (max-width: 991px) {
+  .tour-detail-banner {
+    min-height: 320px;
+  }
+}
+
+@media (max-width: 575px) {
+  .tour-detail-banner {
+    min-height: 240px;
+  }
+}
+
 .tour-richtext strong {
   color: var(--header);
   font-weight: 600;
@@ -933,6 +964,28 @@
 
 .enquiry-recaptcha {
   margin-top: 8px;
+}
+
+.contact-us-wrapper-3 .contact-box.enquiry-box .form-clt {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.contact-us-wrapper-3 .contact-box.enquiry-box .form-clt span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  line-height: 1.2;
+  margin-bottom: 0;
+}
+
+.contact-us-wrapper-3 .contact-box.enquiry-box .form-clt span .required {
+  color: #dc2626;
+  line-height: 1;
+  display: inline-block;
+  font-weight: 600;
 }
 
 @media (max-width: 767px) {
@@ -2259,3 +2312,4 @@ pre code {
     padding: 0 34px 0 16px;
   }
 }
+
