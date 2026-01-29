@@ -783,23 +783,23 @@ function TourDetailsContent() {
     const showPhoneAction = availability.status === 'selling-fast'
     const hasPhone = Boolean(callPhone)
     const actionPrimaryUrl = bookingUrl
-    const tripDays = typeof (departure as Record<string, unknown>).days === 'number'
-      ? (departure as Record<string, unknown>).days
+    const rawTripDays = (departure as Record<string, unknown>).days
+    const tripDays: number | null = typeof rawTripDays === 'number'
+      ? rawTripDays
       : dateStart && dateEnd
         ? Math.max(1, Math.round((new Date(dateEnd).getTime() - new Date(dateStart).getTime()) / (1000 * 60 * 60 * 24)) + 1)
         : null
     const tripNights = typeof (departure as Record<string, unknown>).nights === 'number'
       ? (departure as Record<string, unknown>).nights
-      : tripDays
+      : typeof tripDays === 'number'
         ? Math.max(0, tripDays - 1)
         : null
     const departureName = getLocalizedText((departure as Record<string, unknown>).name)
-    const airlineCode = typeof (departure as Record<string, unknown>).airlineCode === 'string'
-      ? (departure as Record<string, unknown>).airlineCode
-      : ''
-    const airlineName = typeof (departure as Record<string, unknown>).airlineName === 'string'
-      ? (departure as Record<string, unknown>).airlineName
-      : ''
+    const rawAirlineCode = (departure as Record<string, unknown>).airlineCode
+    const rawAirlineName = (departure as Record<string, unknown>).airlineName
+    const airlineCode = typeof rawAirlineCode === 'string' ? rawAirlineCode : ''
+    const airlineName = typeof rawAirlineName === 'string' ? rawAirlineName : ''
+    const flights = Array.isArray(departure.flights) ? departure.flights : []
 
     const renderActionButton = (size: 'small' | 'large') => {
       if (availability.status === 'sold-out') {
@@ -963,7 +963,7 @@ function TourDetailsContent() {
               </div>
             </div>
 
-            {false && departure.flights && departure.flights.length ? (
+            {false && flights.length ? (
               <div className="namho-flight-schedule">
                 <h4>Flight Schedule</h4>
                 <div className="namho-flight-table">
@@ -974,7 +974,7 @@ function TourDetailsContent() {
                     <span>ETD</span>
                     <span>ETA</span>
                   </div>
-                  {departure.flights.map((flight, index) => {
+                  {flights.map((flight, index) => {
                     const flightRecord = flight as Record<string, unknown>
                     const flightDate = typeof flightRecord.departureDate === 'string' ? flightRecord.departureDate : ''
                     const flightSector = typeof flightRecord.sector === 'string' ? flightRecord.sector : ''

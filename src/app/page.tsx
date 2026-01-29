@@ -905,6 +905,8 @@ const resolveHeroSlides = (
 
   return list.map((item, index) => {
     const base = fallback[index] ?? fallback[0]
+    const record = isRecord(item) ? (item as ApiRecord) : {}
+    const itemId = pickString(record, ['id', 'bannerId', 'code'])
     const title = typeof item.name === 'string' ? item.name.trim() : ''
     const description = ''
     const images = isRecord(item.images) ? (item.images as ApiRecord) : null
@@ -913,7 +915,7 @@ const resolveHeroSlides = (
 
     return {
       ...base,
-      id: base?.id ?? `hero-${index + 1}`,
+      id: `${itemId || base?.id || 'hero'}-${index}`,
       bgImage: image || (fallbackEnabled ? base?.bgImage : ''),
       title: title || (fallbackEnabled ? base?.title : ''),
       description: description || (fallbackEnabled ? base?.description : ''),

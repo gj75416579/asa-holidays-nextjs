@@ -339,6 +339,12 @@ const BOOKING_STORAGE_KEYS = {
   userAppliedCodes: 'userAppliedCodes',
 }
 
+const PAYMENT_RETURN_STORAGE_KEYS = {
+  gateway: 'asa-payment-gateway',
+  intentId: 'asa-payment-intent-id',
+  tourId: 'asa-payment-tour-id',
+}
+
 const bookingStorage = {
   async getItem(key: string) {
     if (typeof window === 'undefined') {
@@ -377,6 +383,15 @@ const clearSavedBookingState = async () => {
   await Promise.all(
     Object.values(BOOKING_STORAGE_KEYS).map((key) => bookingStorage.removeItem(key))
   )
+}
+
+const clearPaymentReturnStorage = () => {
+  if (typeof window === 'undefined') {
+    return
+  }
+  window.sessionStorage.removeItem(PAYMENT_RETURN_STORAGE_KEYS.gateway)
+  window.sessionStorage.removeItem(PAYMENT_RETURN_STORAGE_KEYS.intentId)
+  window.sessionStorage.removeItem(PAYMENT_RETURN_STORAGE_KEYS.tourId)
 }
 
 const getApiErrorMessage = (payload: unknown) => {
@@ -1120,23 +1135,33 @@ function BookingPageContent() {
     if (typeof window === 'undefined') {
       return
     }
-    const storedGateway = window.sessionStorage.getItem('asa-payment-gateway')
-    const storedId = window.sessionStorage.getItem('asa-payment-intent-id')
-    if (storedGateway && storedId) {
-      setStoredPaymentReturn({ gateway: storedGateway, id: storedId })
+    const storedGateway = window.sessionStorage.getItem(PAYMENT_RETURN_STORAGE_KEYS.gateway)
+    const storedId = window.sessionStorage.getItem(PAYMENT_RETURN_STORAGE_KEYS.intentId)
+    const storedTourId = window.sessionStorage.getItem(PAYMENT_RETURN_STORAGE_KEYS.tourId)
+    if (!storedGateway || !storedId) {
+      return
     }
-  }, [])
+    if (tourId && (!storedTourId || storedTourId !== String(tourId))) {
+      clearPaymentReturnStorage()
+      setStoredPaymentReturn(null)
+      return
+    }
+    setStoredPaymentReturn({ gateway: storedGateway, id: storedId })
+  }, [tourId])
 
   useEffect(() => {
     if (typeof window === 'undefined') {
       return
     }
     if (paymentGateway && paymentIntentId) {
-      window.sessionStorage.setItem('asa-payment-gateway', paymentGateway)
-      window.sessionStorage.setItem('asa-payment-intent-id', paymentIntentId)
+      window.sessionStorage.setItem(PAYMENT_RETURN_STORAGE_KEYS.gateway, paymentGateway)
+      window.sessionStorage.setItem(PAYMENT_RETURN_STORAGE_KEYS.intentId, paymentIntentId)
+      if (tourId) {
+        window.sessionStorage.setItem(PAYMENT_RETURN_STORAGE_KEYS.tourId, String(tourId))
+      }
       setStoredPaymentReturn({ gateway: paymentGateway, id: paymentIntentId })
     }
-  }, [paymentGateway, paymentIntentId])
+  }, [paymentGateway, paymentIntentId, tourId])
 
   useEffect(() => {
     if (!tourId) {
@@ -1197,6 +1222,7 @@ function BookingPageContent() {
           console.error('Booking cancel mismatch error:', error)
         }
         await clearSavedBookingState()
+        clearPaymentReturnStorage()
         return
       }
 
@@ -1433,16 +1459,36 @@ function BookingPageContent() {
   }, [storageReady, appliedDiscounts])
 
   useEffect(() => {
+    if (!storageReady || !tourId) {
+      return
+    }
+    if (paymentGateway || paymentIntentId) {
+      return
+    }
+    if (!storedPaymentReturn || currentStep < 5) {
+      return
+    }
+    clearPaymentReturnStorage()
+    setStoredPaymentReturn(null)
+    void clearSavedBookingState().then(() => {
+      if (typeof window !== 'undefined') {
+        window.location.href = window.location.pathname + window.location.search
+      }
+    })
+  }, [storageReady, tourId, currentStep, paymentGateway, paymentIntentId, storedPaymentReturn])
+
+  useEffect(() => {
     if (!tourId) {
       return
     }
     if (paymentGateway || paymentIntentId || storedPaymentReturn) {
       return
     }
-    if (bookingId || currentStep > 1) {
-      clearBookingUrlParams(encodedTourParam, tourIdParam)
+    if (currentStep < 5) {
+      return
     }
-  }, [bookingId, currentStep, encodedTourParam, tourId, tourIdParam, paymentGateway, paymentIntentId, storedPaymentReturn])
+    clearBookingUrlParams(encodedTourParam, tourIdParam)
+  }, [currentStep, encodedTourParam, tourId, tourIdParam, paymentGateway, paymentIntentId, storedPaymentReturn])
 
   const totalTravellers = useMemo(
     () =>
@@ -2280,7 +2326,7 @@ function BookingPageContent() {
             window.location.href = enquiryUrl
           }
           return
-        }        console.log('[booking][tourDetail] response:', detailJson)
+        } console.log('[booking][tourDetail] response:', detailJson)
         if (isActive) {
           setTourData(detailJson)
         }
@@ -2918,6 +2964,11 @@ function BookingPageContent() {
   const handlePreviousStep = () => {
     setCurrentStep((prev) => Math.max(prev - 1, 1))
     window.scrollTo(0, 0)
+  }
+
+  const handleBackToTours = () => {
+    clearPaymentReturnStorage()
+    void clearSavedBookingState()
   }
 
   const showApiNotice = (tourError || departureError || roomConfigError || tourInfoError) && !shouldFallback
@@ -3867,7 +3918,7 @@ function BookingPageContent() {
                             checked={paymentTermsAccepted}
                             onChange={(event) => setPaymentTermsAccepted(event.target.checked)}
                           />
-                          I have read and understood the booking&apos; <a href="/tour-terms" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a>.
+                          I have read and understood the booking <a href="/tour-terms" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a>.
                         </label>
 
                         {(!paymentStatus || paymentStatus === 'failed' || paymentStatus === 'error') ? (
@@ -4185,7 +4236,7 @@ function BookingPageContent() {
                     )}
 
                     <div className="booking-navigation">
-                      {currentStep > 1 && currentStep < 5 ? (
+                      {currentStep > 1 && currentStep < 4 ? (
                         <button type="button" className="theme-btn outline" onClick={handlePreviousStep}>
                           Back
                         </button>
@@ -4201,7 +4252,7 @@ function BookingPageContent() {
                           Continue
                         </button>
                       ) : currentStep >= 5 ? (
-                        <a href="/tour-list" className="theme-btn">
+                        <a href="/tour-list" className="theme-btn" onClick={handleBackToTours}>
                           Back to Tours
                         </a>
                       ) : null}
@@ -4212,177 +4263,177 @@ function BookingPageContent() {
                 {currentStep < 4 ? (
                   <div className="col-lg-4">
                     <div className="booking-summary">
-                    <div className="booking-summary-header">
-                      {tourSummary.cover ? <img src={tourSummary.cover} alt={tourSummary.title} /> : null}
-                      <div>
-                        <span className="booking-summary-code">{tripCode}</span>
-                        <h4>{tourSummary.title}</h4>
-                        <p>{tourSummary.duration}</p>
-                        <div className="booking-summary-meta">
-                          <span>Travellers: {totalTravellers}</span>
-                          <span className="booking-pill">{priceType === 'land' ? 'Land Tour' : 'Full Tour'}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="booking-summary-section">
-                      <div className="booking-summary-grid">
+                      <div className="booking-summary-header">
+                        {tourSummary.cover ? <img src={tourSummary.cover} alt={tourSummary.title} /> : null}
                         <div>
-                          <span className="booking-summary-label">Departure Date</span>
-                          <p>{formatDate(selectedDeparture?.flightStartDate || selectedDeparture?.startDate || '') || 'To be confirmed'}</p>
-                        </div>
-                        <div className="booking-summary-plane">
-                          <i className="fa-solid fa-plane"></i>
-                        </div>
-                        <div className="booking-summary-right">
-                          <span className="booking-summary-label">Return Date</span>
-                          <p>{formatDate(selectedDeparture?.flightEndDate || selectedDeparture?.endDate || '') || 'To be confirmed'}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {flightRows.length ? (
-                      <div className="booking-summary-section">
-                        <div className="booking-summary-title">Flight Details</div>
-                        <div className="booking-summary-flights">
-                          <div className="flight-row flight-head">
-                            <span>Date</span>
-                            <span>Sector</span>
-                            <span>Flight</span>
-                            <span>ETD</span>
-                            <span>ETA</span>
+                          <span className="booking-summary-code">{tripCode}</span>
+                          <h4>{tourSummary.title}</h4>
+                          <p>{tourSummary.duration}</p>
+                          <div className="booking-summary-meta">
+                            <span>Travellers: {totalTravellers}</span>
+                            <span className="booking-pill">{priceType === 'land' ? 'Land Tour' : 'Full Tour'}</span>
                           </div>
-                          {flightRows.map((flight, index) => (
-                            <div key={`flight-${index}`} className="flight-row">
-                              <span>{formatDate(flight.departureDate || '')}</span>
-                              <span>{flight.sector || '-'}</span>
-                              <span>{flight.flightNo || '-'}</span>
-                              <span>{flight.etd || '-'}</span>
-                              <span>
-                                {flight.eta || '-'}
-                                {typeof flight.zone === 'number' && flight.zone !== 0 ? (
-                                  <span className="flight-zone">{flight.zone > 0 ? `+${flight.zone}` : flight.zone}</span>
-                                ) : null}
-                              </span>
-                            </div>
-                          ))}
                         </div>
                       </div>
-                    ) : null}
 
-                    {priceRows.length ? (
                       <div className="booking-summary-section">
-                        <div className="booking-summary-title">Tour Fare</div>
-                        <div className="booking-summary-table">
-                          <div className="booking-summary-price-row booking-summary-head">
-                            <span>Type</span>
-                            <span>Unit</span>
-                            <span>Qty</span>
-                            <span>Amount</span>
+                        <div className="booking-summary-grid">
+                          <div>
+                            <span className="booking-summary-label">Departure Date</span>
+                            <p>{formatDate(selectedDeparture?.flightStartDate || selectedDeparture?.startDate || '') || 'To be confirmed'}</p>
                           </div>
-                          {priceRows.map((row) => (
-                            <div key={row.label} className="booking-summary-price-row">
-                              <span>{row.label}</span>
-                              <span>{formatPrice(row.unitPrice)}</span>
-                              <span>{row.qty}</span>
-                              <span>{formatPrice(row.amount)}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-
-                    {taxRows.length ? (
-                      <div className="booking-summary-section">
-                        <div className="booking-summary-title">Taxes</div>
-                        <div className="booking-summary-table">
-                          <div className="booking-summary-price-row booking-summary-head">
-                            <span>Type</span>
-                            <span>Unit</span>
-                            <span>Qty</span>
-                            <span>Amount</span>
+                          <div className="booking-summary-plane">
+                            <i className="fa-solid fa-plane"></i>
                           </div>
-                          {taxRows.map((row) => (
-                            <div key={row.label} className="booking-summary-price-row">
-                              <span>{row.label}</span>
-                              <span>{formatPrice(row.unitPrice)}</span>
-                              <span>{row.qty}</span>
-                              <span>{formatPrice(row.amount)}</span>
-                            </div>
-                          ))}
+                          <div className="booking-summary-right">
+                            <span className="booking-summary-label">Return Date</span>
+                            <p>{formatDate(selectedDeparture?.flightEndDate || selectedDeparture?.endDate || '') || 'To be confirmed'}</p>
+                          </div>
                         </div>
                       </div>
-                    ) : null}
 
-                    {discountRows.length ? (
-                      <div className="booking-summary-section">
-                        <div className="booking-summary-title">Discount</div>
-                        <div className="booking-summary-table">
-                          {discountRows.map((row, index) => (
-                            <div key={`discount-${index}`} className="booking-summary-price-row">
-                              <span>{row.label}</span>
-                              <span></span>
-                              <span></span>
-                              <span>{formatSignedPrice(row.amount)}</span>
+                      {flightRows.length ? (
+                        <div className="booking-summary-section">
+                          <div className="booking-summary-title">Flight Details</div>
+                          <div className="booking-summary-flights">
+                            <div className="flight-row flight-head">
+                              <span>Date</span>
+                              <span>Sector</span>
+                              <span>Flight</span>
+                              <span>ETD</span>
+                              <span>ETA</span>
                             </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-
-                    {showDiscountForm ? (
-                      <div className="booking-summary-section booking-discount-summary">
-                        <div className="booking-summary-title">Discount Code</div>
-                        <div className="booking-discount-form">
-                          <input
-                            type="text"
-                            value={discountCode}
-                            onChange={(event) => setDiscountCode(event.target.value)}
-                            placeholder="Enter promo code"
-                          />
-                          <button type="button" className="theme-btn outline" onClick={handleApplyDiscount} disabled={isApplyingDiscount}>
-                            {isApplyingDiscount ? 'Applying...' : 'Apply'}
-                          </button>
-                        </div>
-                        {discountMessage ? <div className="booking-discount-message">{discountMessage}</div> : null}
-                        {appliedDiscounts.length ? (
-                          <div className="booking-discount-list">
-                            {appliedDiscounts.map((code) => (
-                              <button
-                                key={`discount-summary-${code}`}
-                                type="button"
-                                className="booking-discount-chip"
-                                onClick={() => handleRemoveDiscount(code)}
-                              >
-                                {code} <span>&times;</span>
-                              </button>
+                            {flightRows.map((flight, index) => (
+                              <div key={`flight-${index}`} className="flight-row">
+                                <span>{formatDate(flight.departureDate || '')}</span>
+                                <span>{flight.sector || '-'}</span>
+                                <span>{flight.flightNo || '-'}</span>
+                                <span>{flight.etd || '-'}</span>
+                                <span>
+                                  {flight.eta || '-'}
+                                  {typeof flight.zone === 'number' && flight.zone !== 0 ? (
+                                    <span className="flight-zone">{flight.zone > 0 ? `+${flight.zone}` : flight.zone}</span>
+                                  ) : null}
+                                </span>
+                              </div>
                             ))}
                           </div>
-                        ) : null}
-                      </div>
-                    ) : null}
-
-                    {totalAmount ? (
-                      <div className="booking-summary-section booking-summary-total">
-                        <div className="booking-summary-total-row">
-                          <span>Total Amount</span>
-                          <span>{formatPrice(totalAmount)}</span>
                         </div>
-                      </div>
-                    ) : fromPrice ? (
-                      <div className="booking-summary-section booking-summary-total">
-                        <div className="booking-summary-total-row">
-                          <span>From</span>
-                          <span>{fromPrice}</span>
-                        </div>
-                      </div>
-                    ) : null}
+                      ) : null}
 
-                    <div className="booking-summary-note">
-                      <p className="text">Payment is reserved for a short period. Complete the steps to confirm your booking.</p>
+                      {priceRows.length ? (
+                        <div className="booking-summary-section">
+                          <div className="booking-summary-title">Tour Fare</div>
+                          <div className="booking-summary-table">
+                            <div className="booking-summary-price-row booking-summary-head">
+                              <span>Type</span>
+                              <span>Unit</span>
+                              <span>Qty</span>
+                              <span>Amount</span>
+                            </div>
+                            {priceRows.map((row) => (
+                              <div key={row.label} className="booking-summary-price-row">
+                                <span>{row.label}</span>
+                                <span>{formatPrice(row.unitPrice)}</span>
+                                <span>{row.qty}</span>
+                                <span>{formatPrice(row.amount)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {taxRows.length ? (
+                        <div className="booking-summary-section">
+                          <div className="booking-summary-title">Taxes</div>
+                          <div className="booking-summary-table">
+                            <div className="booking-summary-price-row booking-summary-head">
+                              <span>Type</span>
+                              <span>Unit</span>
+                              <span>Qty</span>
+                              <span>Amount</span>
+                            </div>
+                            {taxRows.map((row) => (
+                              <div key={row.label} className="booking-summary-price-row">
+                                <span>{row.label}</span>
+                                <span>{formatPrice(row.unitPrice)}</span>
+                                <span>{row.qty}</span>
+                                <span>{formatPrice(row.amount)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {discountRows.length ? (
+                        <div className="booking-summary-section">
+                          <div className="booking-summary-title">Discount</div>
+                          <div className="booking-summary-table">
+                            {discountRows.map((row, index) => (
+                              <div key={`discount-${index}`} className="booking-summary-price-row">
+                                <span>{row.label}</span>
+                                <span></span>
+                                <span></span>
+                                <span>{formatSignedPrice(row.amount)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {showDiscountForm ? (
+                        <div className="booking-summary-section booking-discount-summary">
+                          <div className="booking-summary-title">Discount Code</div>
+                          <div className="booking-discount-form">
+                            <input
+                              type="text"
+                              value={discountCode}
+                              onChange={(event) => setDiscountCode(event.target.value)}
+                              placeholder="Enter promo code"
+                            />
+                            <button type="button" className="theme-btn outline" onClick={handleApplyDiscount} disabled={isApplyingDiscount}>
+                              {isApplyingDiscount ? 'Applying...' : 'Apply'}
+                            </button>
+                          </div>
+                          {discountMessage ? <div className="booking-discount-message">{discountMessage}</div> : null}
+                          {appliedDiscounts.length ? (
+                            <div className="booking-discount-list">
+                              {appliedDiscounts.map((code) => (
+                                <button
+                                  key={`discount-summary-${code}`}
+                                  type="button"
+                                  className="booking-discount-chip"
+                                  onClick={() => handleRemoveDiscount(code)}
+                                >
+                                  {code} <span>&times;</span>
+                                </button>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+
+                      {totalAmount ? (
+                        <div className="booking-summary-section booking-summary-total">
+                          <div className="booking-summary-total-row">
+                            <span>Total Amount</span>
+                            <span>{formatPrice(totalAmount)}</span>
+                          </div>
+                        </div>
+                      ) : fromPrice ? (
+                        <div className="booking-summary-section booking-summary-total">
+                          <div className="booking-summary-total-row">
+                            <span>From</span>
+                            <span>{fromPrice}</span>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      <div className="booking-summary-note">
+                        <p className="text">Payment is reserved for a short period. Complete the steps to confirm your booking.</p>
+                      </div>
                     </div>
                   </div>
-                </div>
                 ) : null}
               </div>
             </div>
