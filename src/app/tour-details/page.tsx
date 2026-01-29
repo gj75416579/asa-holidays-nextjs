@@ -1629,37 +1629,6 @@ function TourDetailsContent() {
             </div>
           </section>
 
-          {/* Contact Section Start */}
-          <section className="contact-section section-padding pb-0">
-            <div className="container">
-              <div className="contact-wrapper">
-                <div className="row g-4 align-items-end">
-                  <div className="col-lg-6">
-                    <div className="contact-image">
-                      <img data-speed=".8" src="/assets/img/home-1/Image.jpg" alt="img" />
-                    </div>
-                  </div>
-                  <div className="col-lg-6">
-                    <div className="contact-content">
-                      <div className="logo-image">
-                        <a href="/"><img src="/assets/img/logo/white-logo.svg" alt="img" /></a>
-                      </div>
-                      <div className="section-title mb-0">
-                        <h2 className="sec-title text-white text-anim">
-                          Adventure Is Calling 茅藛?Are You Ready?
-                        </h2>
-                      </div>
-                      <p className="text wow fadeInUp" data-wow-delay=".3s">
-                        Get ready to embark on unforgettable journeys with us. whether you&apos;re seeking thrilling adventures, relaxing escapes
-                      </p>
-                      <a href="/tour-details" className="theme-btn">Explore Our Tours</a>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
           {/* Footer Section Start */}
           <Footer />
         </div>

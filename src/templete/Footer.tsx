@@ -33,11 +33,11 @@ export default function Footer({ contactSection }: FooterProps) {
                 </div>
                 <div className="col-lg-6">
                   <div className="contact-content">
-                    <div className="logo-image">
+                    {/* <div className="logo-image">
                       <a href="/">
                         <img src={resolvedContactSection.logo} alt="img" />
                       </a>
-                    </div>
+                    </div> */}
                     <div className="section-title mb-0">
                       <h2 className="sec-title text-white text-anim">{resolvedContactSection.title}</h2>
                     </div>
