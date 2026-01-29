@@ -650,7 +650,7 @@ function TourDetailsContent() {
   const mapLocation = resolvedDetail.sector.trim()
   const hasMapLocation = Boolean(mapLocation)
   const hasMapImage = Boolean(resolvedDetail.mapImage)
-  const callPhone = '63035303'
+  const callPhone = '+6563035303'
   const primaryDeparture = departures[0] ?? null
   const showSidebarPricing = false
   const detailNavItems = [
