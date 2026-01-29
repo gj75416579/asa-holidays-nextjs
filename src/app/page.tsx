@@ -536,11 +536,11 @@ const adventureSection = {
     image: '/assets/img/home-1/adventure/03.jpg',
     discountLabel: '23% Discount',
     title: 'Hotel & Resort',
-    href: '/tour-details',
+    href: '/tour-list',
     price: '$1500',
     priceNote: 'per night 4 star rating',
     ctaLabel: 'Book Now',
-    ctaHref: '/tour-details',
+    ctaHref: '/tour-list',
   },
 }
 

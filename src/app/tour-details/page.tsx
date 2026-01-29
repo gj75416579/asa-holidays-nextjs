@@ -1,6 +1,6 @@
 ﻿'use client'
 
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 import Header from '@/templete/HeaderWithSuspense'
@@ -510,6 +510,11 @@ function TourDetailsContent() {
   const [relatedError, setRelatedError] = useState(false)
   const [itineraryItems, setItineraryItems] = useState<ItineraryDay[]>([])
   const [itineraryError, setItineraryError] = useState(false)
+  const [activeDetailSection, setActiveDetailSection] = useState('overview')
+  const [isDetailNavSticky, setIsDetailNavSticky] = useState(false)
+  const [detailNavTop, setDetailNavTop] = useState(0)
+  const detailNavRef = useRef<HTMLDivElement | null>(null)
+  const detailNavTriggerRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     let isActive = true
@@ -648,6 +653,12 @@ function TourDetailsContent() {
   const hasMapImage = Boolean(resolvedDetail.mapImage)
   const callPhone = '63035303'
   const primaryDeparture = departures[0] ?? null
+  const showSidebarPricing = false
+  const detailNavItems = [
+    { id: 'overview', label: 'OVERVIEW' },
+    { id: 'itinerary', label: 'ITINERARY' },
+    { id: 'price', label: 'PRICE & DEPARTURE' },
+  ]
   const enquiryParams = new URLSearchParams()
   if (resolvedDetail.title) {
     enquiryParams.set('tourName', resolvedDetail.title)
@@ -675,22 +686,68 @@ function TourDetailsContent() {
   enquiryParams.set('type', String(isGroupTour ? 1 : 2))
   const enquiryQuery = enquiryParams.toString()
   const enquiryUrl = enquiryQuery ? `/enquiry?${enquiryQuery}` : '/enquiry'
+  const scrollToDetailSection = (sectionId: string) => {
+    if (typeof window === 'undefined') {
+      return
+    }
+    const target = document.getElementById(`detail-${sectionId}`)
+    if (!target) {
+      return
+    }
+    const headerOffset = detailNavTop
+    const navHeight = detailNavRef.current?.getBoundingClientRect().height ?? 0
+    const targetTop = target.getBoundingClientRect().top + window.scrollY
+    window.scrollTo({
+      top: targetTop - headerOffset - navHeight - 16,
+      behavior: 'smooth',
+    })
+  }
   const DepartureCard = ({ departure }: { departure: DepartureItem }) => {
-    const [isOpen, setIsOpen] = useState(false)
+    const [isExpanded, setIsExpanded] = useState(false)
     const [priceType, setPriceType] = useState<'full' | 'land'>('full')
+
+    useEffect(() => {
+      if (!isExpanded && priceType !== 'full') {
+        setPriceType('full')
+      }
+    }, [isExpanded, priceType])
+
+    const formatDateDisplay = (value: string, options: Intl.DateTimeFormatOptions) => {
+      if (!value) {
+        return ''
+      }
+      const date = new Date(value)
+      if (Number.isNaN(date.getTime())) {
+        return value
+      }
+      return new Intl.DateTimeFormat('en-US', options).format(date)
+    }
+
+    const formatTime = (value: string) => {
+      if (!value) {
+        return ''
+      }
+      const trimmed = value.replace(/[^0-9]/g, '')
+      if (trimmed.length !== 4) {
+        return value
+      }
+      return `${trimmed.slice(0, 2)}:${trimmed.slice(2)}`
+    }
+
     const availability = getAvailability(departure)
     const prices = getDeparturePrices(departure, priceType)
-    const fromPrice = pickFromPrice(prices)
     const dateStart = departure.flightStartDate || departure.startDate || ''
     const dateEnd = departure.flightEndDate || departure.endDate || ''
-    const dateRange = dateStart && dateEnd ? `${dateStart} - ${dateEnd}` : dateStart || dateEnd || 'TBA'
+    const dateRange = dateStart && dateEnd
+      ? `${formatDateDisplay(dateStart, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} - ${formatDateDisplay(dateEnd, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}`
+      : formatDateDisplay(dateStart || dateEnd, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) || 'TBA'
     const tourCode = departure.tourCode || departure.code || ''
     const bookingTourId = departure.tourId ?? resolvedDetail.id
     const bookingPayload: Record<string, unknown> = {
       tourId: bookingTourId ?? undefined,
       tourCodeId: departure.id ?? departure.priceCodeId ?? undefined,
       departureId: departure.id ?? undefined,
-      type: priceType === 'full' ? 1 : 2,
+      type: 1,
     }
     const bookingUrl = `/booking?tour=${encodeTourParam(bookingPayload)}`
     const enquiryParams = new URLSearchParams()
@@ -718,86 +775,206 @@ function TourDetailsContent() {
     enquiryParams.set('type', '2')
     const enquiryQuery = enquiryParams.toString()
     const enquiryUrl = enquiryQuery ? `/enquiry?${enquiryQuery}` : '/enquiry'
-    const actionUrl = priceType === 'land' ? enquiryUrl : bookingUrl
-    const actionLabel = priceType === 'land' ? 'Enquiry Now' : 'Book Now'
+    const availabilityClass =
+      availability.status === 'sold-out'
+        ? 'is-sold-out'
+        : availability.status === 'selling-fast'
+          ? 'is-selling-fast'
+          : 'is-available'
+    const showPhoneAction = availability.status === 'selling-fast'
+    const hasPhone = Boolean(callPhone)
+    const actionPrimaryUrl = bookingUrl
+    const tripDays = typeof (departure as Record<string, unknown>).days === 'number'
+      ? (departure as Record<string, unknown>).days
+      : dateStart && dateEnd
+        ? Math.max(1, Math.round((new Date(dateEnd).getTime() - new Date(dateStart).getTime()) / (1000 * 60 * 60 * 24)) + 1)
+        : null
+    const tripNights = typeof (departure as Record<string, unknown>).nights === 'number'
+      ? (departure as Record<string, unknown>).nights
+      : tripDays
+        ? Math.max(0, tripDays - 1)
+        : null
+    const departureName = getLocalizedText((departure as Record<string, unknown>).name)
+    const airlineCode = typeof (departure as Record<string, unknown>).airlineCode === 'string'
+      ? (departure as Record<string, unknown>).airlineCode
+      : ''
+    const airlineName = typeof (departure as Record<string, unknown>).airlineName === 'string'
+      ? (departure as Record<string, unknown>).airlineName
+      : ''
+
+    const renderActionButton = (size: 'small' | 'large') => {
+      if (availability.status === 'sold-out') {
+        return (
+          <button type="button" className={`theme-btn namho-book-btn ${size} is-disabled`} disabled>
+            BOOK NOW
+          </button>
+        )
+      }
+
+      if (showPhoneAction) {
+        if (!hasPhone) {
+          return <div className={`action-btn-placeholder ${size}`}></div>
+        }
+        return (
+          <a href={`tel:${callPhone}`} className={`action-btn action-primary ${size}`}>
+            CALL US NOW
+          </a>
+        )
+      }
+
+      return (
+        <a href={actionPrimaryUrl} className={`theme-btn namho-book-btn ${size}`}>
+          BOOK NOW
+        </a>
+      )
+    }
 
     return (
-      <div className={`departure-card ${isOpen ? 'is-open' : ''}`}>
-        <div className="departure-header">
-          <div className="departure-info">
-            <div className="departure-dates">{dateRange}</div>
-            {tourCode ? <div className="departure-code">{tourCode}</div> : null}
+      <div className={`namho-departure-card${isExpanded ? ' is-expanded' : ''}`}>
+        <div className="namho-card-header">
+          <div className="namho-card-header-main">
+            <div className="namho-card-date">
+              <div className="namho-card-date-range">{dateRange}</div>
+              {tourCode ? <div className="namho-card-code">{tourCode}</div> : null}
+            </div>
+            <div className="namho-card-meta">
+              <div className={`namho-availability ${availabilityClass}`}>{availability.label}</div>
+              {airlineCode ? (
+                <img
+                  src={`https://resources-mytourix-prod.s3.ap-southeast-1.amazonaws.com/Platform/airline/${airlineCode}.png`}
+                  alt={airlineName || 'Airline'}
+                  className="namho-airline-logo"
+                />
+              ) : null}
+              <div className="namho-from">
+                <div className="namho-from-label">From:</div>
+                <div className="namho-from-value">{formatPriceDisplay(prices.twnFare)}</div>
+              </div>
+            </div>
           </div>
-          <div className="departure-meta">
-            <span className={`departure-badge ${availability.status}`}>{availability.label}</span>
-            {fromPrice ? <div className="departure-from">From {fromPrice}</div> : null}
+          <div className="namho-card-header-actions">
+            <div className="namho-card-actions">{renderActionButton('small')}</div>
+            <button
+              type="button"
+              className="namho-card-toggle"
+              onClick={() => setIsExpanded((prev) => !prev)}
+              aria-expanded={isExpanded}
+              aria-label={isExpanded ? 'Collapse departure' : 'Expand departure'}
+            >
+              {isExpanded ? '▲' : '▼'}
+            </button>
           </div>
-          <button
-            type="button"
-            className="departure-toggle"
-            onClick={() => setIsOpen((prev) => !prev)}
-            aria-expanded={isOpen}
-            aria-label={isOpen ? 'Collapse departure' : 'Expand departure'}
-          >
-            {isOpen ? '-' : '+'}
-          </button>
         </div>
-        {isOpen ? (
-          <div className="departure-body">
-            <div className="departure-toggle-group">
+
+        {isExpanded ? (
+          <div className="namho-card-body">
+            <div className="namho-body-top">
+              <div className="namho-calendar">
+                <div className="namho-calendar-label">Travel Dates</div>
+                <div className="namho-calendar-range">{dateRange}</div>
+              </div>
+              <div className="namho-body-summary">
+                {tripDays ? (
+                  <div className="namho-duration">
+                    {tripDays} Days{tripNights !== null ? ` | ${tripNights} Nights` : ''}
+                  </div>
+                ) : null}
+                {departureName ? <div className="namho-departure-name">{departureName}</div> : null}
+              </div>
+              <div className="namho-body-price">
+                <div className="namho-body-price-row">
+                  {airlineCode ? (
+                    <img
+                      src={`https://resources-mytourix-prod.s3.ap-southeast-1.amazonaws.com/Platform/airline/${airlineCode}.png`}
+                      alt={airlineName || 'Airline'}
+                      className="namho-airline-logo large"
+                    />
+                  ) : null}
+                  <div className="namho-from">
+                    <div className="namho-from-label">From:</div>
+                    <div className="namho-from-value large">{formatPriceDisplay(prices.twnFare)}</div>
+                  </div>
+                </div>
+                {/* <div className="namho-body-action">{renderActionButton('large')}</div> */}
+              </div>
+            </div>
+
+            <div className="namho-price-toggle">
               <button
                 type="button"
-                className={priceType === 'full' ? 'is-active' : ''}
+                className={`namho-price-tab${priceType === 'full' ? ' is-active' : ''}`}
                 onClick={() => setPriceType('full')}
               >
                 Full Tour
               </button>
               <button
                 type="button"
-                className={priceType === 'land' ? 'is-active' : ''}
+                className={`namho-price-tab${priceType === 'land' ? ' is-active' : ''}`}
                 onClick={() => setPriceType('land')}
               >
                 Land Tour
               </button>
             </div>
-            <div className="departure-prices">
-              <div className="price-row">
-                <span>Single Fare</span>
-                <span>{formatPriceDisplay(prices.sglFare)}</span>
+
+            <div className="namho-price-grid">
+              <div className="namho-price-block">
+                <h4>Adult Fares (12 years & above)</h4>
+                <div className="namho-price-row">
+                  <span>Single Fare</span>
+                  <span>{formatPriceDisplay(prices.sglFare)}</span>
+                </div>
+                <div className="namho-price-row">
+                  <span>Twin Fare</span>
+                  <span>{formatPriceDisplay(prices.twnFare)}</span>
+                </div>
+                <div className="namho-price-row">
+                  <span>Triple Fare</span>
+                  <span>{formatPriceDisplay(prices.trpFare)}</span>
+                </div>
+                <div className="namho-price-row muted">
+                  <span>Adult Tax</span>
+                  <span>{formatPriceDisplay(prices.adultTax)}</span>
+                </div>
               </div>
-              <div className="price-row">
-                <span>Twin Fare</span>
-                <span>{formatPriceDisplay(prices.twnFare)}</span>
+              <div className="namho-price-block">
+                <h4>Child Fares (2 to 11 years)</h4>
+                <div className="namho-price-row">
+                  <span>Child Twin</span>
+                  <span>{formatPriceDisplay(prices.chdHalfTwnFare)}</span>
+                </div>
+                <div className="namho-price-row">
+                  <span>Child w/Bed</span>
+                  <span>{formatPriceDisplay(prices.chdWithBedFare)}</span>
+                </div>
+                <div className="namho-price-row">
+                  <span>Child w/o Bed</span>
+                  <span>{formatPriceDisplay(prices.chdWithOutBedFare)}</span>
+                </div>
+                <div className="namho-price-row muted">
+                  <span>Child Tax</span>
+                  <span>{formatPriceDisplay(prices.childTax)}</span>
+                </div>
               </div>
-              <div className="price-row">
-                <span>Triple Fare</span>
-                <span>{formatPriceDisplay(prices.trpFare)}</span>
-              </div>
-              <div className="price-row">
-                <span>Child w/Bed</span>
-                <span>{formatPriceDisplay(prices.chdWithBedFare)}</span>
-              </div>
-              <div className="price-row">
-                <span>Child w/o Bed</span>
-                <span>{formatPriceDisplay(prices.chdWithOutBedFare)}</span>
-              </div>
-              <div className="price-row">
-                <span>Infant Fare</span>
-                <span>{formatPriceDisplay(prices.infantFare)}</span>
-              </div>
-              <div className="price-row">
-                <span>Adult Tax</span>
-                <span>{formatPriceDisplay(prices.adultTax)}</span>
-              </div>
-              <div className="price-row">
-                <span>Child Tax</span>
-                <span>{formatPriceDisplay(prices.childTax)}</span>
+              <div className="namho-price-block">
+                <h4>Infant Fares (Below 2 years)</h4>
+                <div className="namho-price-row">
+                  <span>Infant</span>
+                  <span>{formatPriceDisplay(prices.infantFare)}</span>
+                </div>
               </div>
             </div>
-            {departure.flights && departure.flights.length ? (
-              <div className="departure-flights">
-                <div className="departure-section-title">Flight Schedule</div>
-                <div className="departure-flight-list">
+
+            {false && departure.flights && departure.flights.length ? (
+              <div className="namho-flight-schedule">
+                <h4>Flight Schedule</h4>
+                <div className="namho-flight-table">
+                  <div className="namho-flight-row header">
+                    <span>DATE</span>
+                    <span>SECTOR</span>
+                    <span>FLIGHT</span>
+                    <span>ETD</span>
+                    <span>ETA</span>
+                  </div>
                   {departure.flights.map((flight, index) => {
                     const flightRecord = flight as Record<string, unknown>
                     const flightDate = typeof flightRecord.departureDate === 'string' ? flightRecord.departureDate : ''
@@ -807,39 +984,18 @@ function TourDetailsContent() {
                     const eta = typeof flightRecord.eta === 'string' ? flightRecord.eta : ''
 
                     return (
-                      <div key={`${departure.id}-flight-${index}`} className="departure-flight-item">
-                        <div>{flightDate}</div>
-                        <div>{flightSector}</div>
-                        <div>{flightNo}</div>
-                        <div>{etd && eta ? `${etd} - ${eta}` : etd || eta}</div>
+                      <div key={`${departure.id}-flight-${index}`} className="namho-flight-row">
+                        <span>{formatDateDisplay(flightDate, { weekday: 'short', month: 'short', day: 'numeric', year: '2-digit' })}</span>
+                        <span>{flightSector}</span>
+                        <span>{flightNo}</span>
+                        <span>{formatTime(etd)}</span>
+                        <span>{formatTime(eta)}</span>
                       </div>
                     )
                   })}
                 </div>
               </div>
             ) : null}
-            <div className="departure-actions">
-              {priceType === 'land' ? (
-                <a href={actionUrl} className="theme-btn">
-                  {actionLabel}
-                </a>
-              ) : availability.status === 'sold-out' ? (
-                <button type="button" className="theme-btn is-disabled" disabled>
-                  Sold Out
-                </button>
-              ) : availability.status === 'selling-fast' ? (
-                <a href={`tel:${callPhone}`} className="theme-btn outline">
-                  Call Us
-                </a>
-              ) : (
-                <a href={actionUrl} className="theme-btn">
-                  {actionLabel}
-                </a>
-              )}
-              <div className="departure-availability">
-                {availability.available > 0 ? `${availability.available} seats left` : 'No seats left'}
-              </div>
-            </div>
           </div>
         ) : null}
       </div>
@@ -893,6 +1049,72 @@ function TourDetailsContent() {
       isActive = false
     }
   }, [resolvedDetail.id])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    const navItems = ['overview', 'itinerary', 'price']
+
+    const getHeaderHeight = () => {
+      const header =
+        document.getElementById('header-sticky') ||
+        document.querySelector('.sticky-header') ||
+        document.querySelector('header')
+      return header ? header.getBoundingClientRect().height : 80
+    }
+
+    const updateHeaderOffset = () => {
+      setDetailNavTop(getHeaderHeight())
+    }
+
+    const updateSticky = () => {
+      const headerOffset = getHeaderHeight()
+      setDetailNavTop(headerOffset)
+      const banner = document.querySelector('.tour-detail-banner') || document.querySelector('.breadcrumb-wrapper')
+      if (!banner) {
+        return
+      }
+      const bannerBottom = banner.getBoundingClientRect().bottom + window.scrollY
+      setIsDetailNavSticky(window.scrollY >= bannerBottom - headerOffset)
+    }
+
+    const updateActiveSection = () => {
+      const headerOffset = getHeaderHeight()
+      const navHeight = detailNavRef.current?.getBoundingClientRect().height ?? 0
+      const offset = headerOffset + navHeight + 16
+      let currentSection = 'overview'
+      for (const id of navItems) {
+        const section = document.getElementById(`detail-${id}`)
+        if (!section) {
+          continue
+        }
+        const sectionTop = section.getBoundingClientRect().top + window.scrollY
+        if (window.scrollY + offset >= sectionTop) {
+          currentSection = id
+        }
+      }
+      setActiveDetailSection(currentSection)
+    }
+
+    const handleScroll = () => {
+      updateSticky()
+      updateActiveSection()
+    }
+
+    updateHeaderOffset()
+    updateSticky()
+    updateActiveSection()
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    window.addEventListener('resize', updateHeaderOffset)
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+      window.removeEventListener('resize', updateHeaderOffset)
+    }
+  }, [detailNavTop])
 
   const showApiNotice = detailError || departuresError || relatedError || itineraryError
   return (
@@ -983,83 +1205,81 @@ function TourDetailsContent() {
                       style={{ backgroundImage: `url(${resolvedDetail.bannerImage})` }}
                     ></div>
                   ) : null}
+                  <div
+                    ref={detailNavTriggerRef}
+                    className="tour-detail-nav-trigger"
+                    style={{ height: '0px' }}
+                  ></div>
+                  <div
+                    ref={detailNavRef}
+                    className={`tour-detail-nav${isDetailNavSticky ? ' is-sticky' : ''}`}
+                    style={{ top: `${detailNavTop}px` }}
+                  >
+                    <div className="tour-detail-nav-inner">
+                      <div className="tour-detail-nav-links">
+                        {detailNavItems.map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            className="tour-detail-nav-link"
+                            onClick={() => scrollToDetailSection(item.id)}
+                          >
+                            {item.label}
+                          </button>
+                        ))}
+                      </div>
+                      <select
+                        className="tour-detail-nav-select"
+                        onChange={(event) => scrollToDetailSection(event.target.value)}
+                        value={activeDetailSection}
+                      >
+                        {detailNavItems.map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
                   <div className="row g-4">
-                    <div className="col-lg-8 col-12">
+                    <div className="col-lg-12 col-12">
                       <div className="tour-left-content">
-                        <h3>Tours Overview</h3>
-                        {resolvedDetail.overviewHtml ? (
-                          <div className="tour-richtext mt-3 mb-5" dangerouslySetInnerHTML={{ __html: resolvedDetail.overviewHtml }} />
-                        ) : (
-                          <div className="mt-3 mb-5">{emptyNotice}</div>
-                        )}
-                        <div className="row g-4 mb-5">
-                          <div className="col-lg-6">
-                            <div className="list-item">
-                              <h3>Included and Excluded</h3>
-                              {resolvedDetail.inclusionsHtml ? (
-                                <div className="tour-richtext" dangerouslySetInnerHTML={{ __html: resolvedDetail.inclusionsHtml }} />
-                              ) : (
-                                emptyNotice
-                              )}
+                        <div id="detail-overview" className="tour-detail-section">
+                          <h3>Tours Overview</h3>
+                          {resolvedDetail.overviewHtml ? (
+                            <div className="tour-richtext mt-3 mb-5" dangerouslySetInnerHTML={{ __html: resolvedDetail.overviewHtml }} />
+                          ) : (
+                            <div className="mt-3 mb-5">{emptyNotice}</div>
+                          )}
+                          <div className="row g-4 mb-5">
+                            <div className="col-lg-6">
+                              <div className="list-item">
+                                <h3>Included and Excluded</h3>
+                                {resolvedDetail.inclusionsHtml ? (
+                                  <div className="tour-richtext" dangerouslySetInnerHTML={{ __html: resolvedDetail.inclusionsHtml }} />
+                                ) : (
+                                  emptyNotice
+                                )}
+                              </div>
+                            </div>
+                            <div className="col-lg-6">
+                              <div className="list-item">
+                                <h3>Excluded</h3>
+                                {resolvedDetail.exclusionsHtml ? (
+                                  <div className="tour-richtext" dangerouslySetInnerHTML={{ __html: resolvedDetail.exclusionsHtml }} />
+                                ) : (
+                                  emptyNotice
+                                )}
+                              </div>
                             </div>
                           </div>
-                          <div className="col-lg-6">
-                            <div className="list-item">
-                              <h3>Excluded</h3>
-                              {resolvedDetail.exclusionsHtml ? (
-                                <div className="tour-richtext" dangerouslySetInnerHTML={{ __html: resolvedDetail.exclusionsHtml }} />
-                              ) : (
-                                emptyNotice
-                              )}
-                            </div>
-                          </div>
+                          <h3>Top Highlights</h3>
+                          {resolvedDetail.highlightsHtml ? (
+                            <div className="tour-richtext mt-3" dangerouslySetInnerHTML={{ __html: resolvedDetail.highlightsHtml }} />
+                          ) : (
+                            <div className="mt-3">{emptyNotice}</div>
+                          )}
                         </div>
-                        <h3>Top Highlights</h3>
-                        {resolvedDetail.highlightsHtml ? (
-                          <div className="tour-richtext mt-3" dangerouslySetInnerHTML={{ __html: resolvedDetail.highlightsHtml }} />
-                        ) : (
-                          <div className="mt-3">{emptyNotice}</div>
-                        )}
-                        <h3>Itinerary</h3>
-                        {itineraryItems.length ? (
-                          <div className="accordion-two mt-3 mb-5" id="itinerary-accordion">
-                            {itineraryItems.map((item, index) => {
-                              const collapseId = `itinerary-collapse-${item.id}`
-                              const isFirst = index === 0
-                              return (
-                                <div key={item.id} className="accordion-item">
-                                  <h5 className="accordion-header">
-                                    <button
-                                      className={`accordion-button${isFirst ? '' : ' collapsed'}`}
-                                      type="button"
-                                      data-bs-toggle="collapse"
-                                      data-bs-target={`#${collapseId}`}
-                                      aria-expanded={isFirst}
-                                      aria-controls={collapseId}
-                                    >
-                                      {item.title}
-                                    </button>
-                                  </h5>
-                                  <div
-                                    id={collapseId}
-                                    className={`accordion-collapse collapse${isFirst ? ' show' : ''}`}
-                                    data-bs-parent="#itinerary-accordion"
-                                  >
-                                    <div className="accordion-body">
-                                      {item.descriptionHtml ? (
-                                        <div className="tour-richtext" dangerouslySetInnerHTML={{ __html: item.descriptionHtml }} />
-                                      ) : (
-                                        <div className="tour-richtext">{emptyNotice}</div>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        ) : (
-                          <div className="mt-3 mb-5">{emptyNotice}</div>
-                        )}
                         {/* Frequently Asked Questions hidden for now */}
                         {/*
                         <h3>Frequently Asked Questions</h3>
@@ -1153,6 +1373,73 @@ function TourDetailsContent() {
                             </div>
                           </>
                         ) : null}
+                        <div id="detail-itinerary" className="tour-detail-section">
+                          <h3>Itinerary</h3>
+                          {itineraryItems.length ? (
+                            <div className="accordion-two mt-3 mb-5" id="itinerary-accordion">
+                              {itineraryItems.map((item, index) => {
+                                const collapseId = `itinerary-collapse-${item.id}`
+                                const isFirst = index === 0
+                                return (
+                                  <div key={item.id} className="accordion-item">
+                                    <h5 className="accordion-header">
+                                      <button
+                                        className={`accordion-button${isFirst ? '' : ' collapsed'}`}
+                                        type="button"
+                                        data-bs-toggle="collapse"
+                                        data-bs-target={`#${collapseId}`}
+                                        aria-expanded={isFirst}
+                                        aria-controls={collapseId}
+                                      >
+                                        {item.title}
+                                      </button>
+                                    </h5>
+                                    <div
+                                      id={collapseId}
+                                      className={`accordion-collapse collapse${isFirst ? ' show' : ''}`}
+                                      data-bs-parent="#itinerary-accordion"
+                                    >
+                                      <div className="accordion-body">
+                                        {item.descriptionHtml ? (
+                                          <div className="tour-richtext" dangerouslySetInnerHTML={{ __html: item.descriptionHtml }} />
+                                        ) : (
+                                          <div className="tour-richtext">{emptyNotice}</div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          ) : (
+                            <div className="mt-3 mb-5">{emptyNotice}</div>
+                          )}
+                        </div>
+                        <div id="detail-price" className="tour-detail-section">
+                          <h3 className="tour-detail-section-title">Price & Departure</h3>
+                          <p className="tour-detail-section-subtitle">
+                            {resolvedDetail.title}
+                          </p>
+                          <p className="tour-detail-section-note">
+                            For more departures/airlines{' '}
+                            <a href={enquiryUrl} className="tour-detail-section-link">
+                              Enquire Now!
+                            </a>
+                          </p>
+                          {isGroupTour ? (
+                            departures.length ? (
+                              <div className="departure-card-list detail-departure-list">
+                                {departures.map((departure) => (
+                                  <DepartureCard key={`departure-main-${departure.id}`} departure={departure} />
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text">No departures available yet.</p>
+                            )
+                          ) : (
+                            <p className="text">This tour is for enquiry only. Please contact us for availability.</p>
+                          )}
+                        </div>
                         {/* Clients Reviews hidden for now */}
                         {/*
                         <h3>Clients Reviews</h3>
@@ -1242,35 +1529,37 @@ function TourDetailsContent() {
                         {/* Add Reviews hidden for now */}
                       </div>
                     </div>
-                    <div className="col-lg-4 col-12">
+                    {/* <div className="col-lg-4 col-12">
                       <div className="tour-details-side">
                         <div className="tour-details-sidebar sticky-style">
-                          <div className="tour-sidebar-items">
-                            {isGroupTour ? (
-                              <a href={enquiryUrl} className="theme-btn">
-                                Enquiry Now
-                              </a>
-                            ) : null}
-                            <h3>{isGroupTour ? 'Price & Departure' : 'Tour Enquiry'}</h3>
-                            {isGroupTour ? (
-                              departures.length ? (
-                                <div className="departure-card-list">
-                                  {departures.map((departure) => (
-                                    <DepartureCard key={`departure-${departure.id}`} departure={departure} />
-                                  ))}
-                                </div>
-                              ) : (
-                                <p className="text">No departures available yet.</p>
-                              )
-                            ) : (
-                              <>
-                                <p className="text">This tour is for enquiry only. Please contact us for availability.</p>
+                          {showSidebarPricing ? (
+                            <div className="tour-sidebar-items">
+                              {isGroupTour ? (
                                 <a href={enquiryUrl} className="theme-btn">
                                   Enquiry Now
                                 </a>
-                              </>
-                            )}
-                          </div>
+                              ) : null}
+                              <h3>{isGroupTour ? 'Price & Departure' : 'Tour Enquiry'}</h3>
+                              {isGroupTour ? (
+                                departures.length ? (
+                                  <div className="departure-card-list">
+                                    {departures.map((departure) => (
+                                      <DepartureCard key={`departure-${departure.id}`} departure={departure} />
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className="text">No departures available yet.</p>
+                                )
+                              ) : (
+                                <>
+                                  <p className="text">This tour is for enquiry only. Please contact us for availability.</p>
+                                  <a href={enquiryUrl} className="theme-btn">
+                                    Enquiry Now
+                                  </a>
+                                </>
+                              )}
+                            </div>
+                          ) : null}
                           <div className="widget-contact">
                             <h3>Need Help?</h3>
                             <ul className="list-style-one">
@@ -1290,7 +1579,7 @@ function TourDetailsContent() {
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </div> */}
                   </div>
                 </div>
               </div>
