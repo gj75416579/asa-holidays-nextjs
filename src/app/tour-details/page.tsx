@@ -511,7 +511,6 @@ function TourDetailsContent() {
   const [itineraryItems, setItineraryItems] = useState<ItineraryDay[]>([])
   const [itineraryError, setItineraryError] = useState(false)
   const [activeDetailSection, setActiveDetailSection] = useState('overview')
-  const [isDetailNavSticky, setIsDetailNavSticky] = useState(false)
   const [detailNavTop, setDetailNavTop] = useState(0)
   const detailNavRef = useRef<HTMLDivElement | null>(null)
   const detailNavTriggerRef = useRef<HTMLDivElement | null>(null)
@@ -1069,17 +1068,6 @@ function TourDetailsContent() {
       setDetailNavTop(getHeaderHeight())
     }
 
-    const updateSticky = () => {
-      const headerOffset = getHeaderHeight()
-      setDetailNavTop(headerOffset)
-      const banner = document.querySelector('.tour-detail-banner') || document.querySelector('.breadcrumb-wrapper')
-      if (!banner) {
-        return
-      }
-      const bannerBottom = banner.getBoundingClientRect().bottom + window.scrollY
-      setIsDetailNavSticky(window.scrollY >= bannerBottom - headerOffset)
-    }
-
     const updateActiveSection = () => {
       const headerOffset = getHeaderHeight()
       const navHeight = detailNavRef.current?.getBoundingClientRect().height ?? 0
@@ -1099,12 +1087,10 @@ function TourDetailsContent() {
     }
 
     const handleScroll = () => {
-      updateSticky()
       updateActiveSection()
     }
 
     updateHeaderOffset()
-    updateSticky()
     updateActiveSection()
 
     window.addEventListener('scroll', handleScroll, { passive: true })
@@ -1212,8 +1198,7 @@ function TourDetailsContent() {
                   ></div>
                   <div
                     ref={detailNavRef}
-                    className={`tour-detail-nav${isDetailNavSticky ? ' is-sticky' : ''}`}
-                    style={{ top: `${detailNavTop}px` }}
+                    className="tour-detail-nav"
                   >
                     <div className="tour-detail-nav-inner">
                       <div className="tour-detail-nav-links">

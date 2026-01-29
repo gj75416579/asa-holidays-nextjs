@@ -1493,6 +1493,39 @@
   word-break: break-word;
 }
 
+.booking-confirmation-summary .booking-summary-header {
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.booking-confirmation-summary .booking-summary-header,
+.booking-confirmation-summary .booking-summary-header * {
+  text-align: left;
+}
+
+.booking-confirmation .booking-review-grid {
+  grid-template-columns: 1fr;
+  justify-items: start;
+  text-align: left;
+}
+
+.booking-confirmation .booking-review-row {
+  align-items: flex-start;
+}
+
+.booking-confirmation .booking-review-label,
+.booking-confirmation .booking-review-value {
+  text-align: left;
+}
+
+.booking-confirmation .booking-payment-toggle,
+.booking-confirmation .booking-payment-room h5,
+.booking-confirmation .booking-review-card h5,
+.booking-confirmation .booking-review-room h4,
+.booking-confirmation .booking-review-card {
+  text-align: left;
+}
+
 .booking-review-travellers {
   display: grid;
   gap: 12px;
@@ -1641,6 +1674,51 @@
   background: var(--bg-2);
 }
 
+.booking-payment-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--bg-2);
+}
+
+.booking-payment-status-success {
+  background: #eaf7ee;
+  color: #2f7a4e;
+}
+
+.booking-payment-status-pending {
+  background: #fff6e5;
+  color: #8a6a2a;
+}
+
+.booking-payment-status-failed {
+  background: #fdeaea;
+  color: #a33a3a;
+}
+
+.booking-payment-status-info {
+  background: var(--bg-2);
+  color: var(--header);
+}
+
+.booking-payment-status-spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.15);
+  border-top-color: currentColor;
+  animation: booking-spin 1s linear infinite;
+}
+
+@keyframes booking-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .booking-payment-ref {
   margin: 8px 0 12px;
   font-size: 14px;
@@ -1713,6 +1791,31 @@
 
 .booking-payment-check input {
   margin-top: 3px;
+}
+
+.booking-confirmation-banner {
+  background: #eaf7ee;
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 20px;
+}
+
+.booking-confirmation-banner h3 {
+  margin: 0 0 8px;
+  color: #2f7a4e;
+}
+
+.booking-confirmation-banner .text {
+  margin: 0;
+  color: #3f5b4c;
+}
+
+.booking-confirmation-summary {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+  background: #fff;
 }
 
 .booking-radio {
@@ -1861,6 +1964,10 @@
   margin-bottom: 14px;
 }
 
+.booking-summary-countdown-main {
+  margin-bottom: 20px;
+}
+
 .booking-summary-countdown-text {
   margin: 0;
   font-size: 12px;
@@ -1922,6 +2029,10 @@
   align-items: center;
 }
 
+.booking-summary-grid > div {
+  text-align: left;
+}
+
 .booking-summary-label {
   display: block;
   font-size: 12px;
@@ -1938,6 +2049,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  justify-self: center;
 }
 
 .booking-summary-right {
@@ -2025,7 +2137,7 @@
 }
 
 .booking-confirmation {
-  text-align: center;
+  text-align: left;
 }
 
 .booking-confirmation-icon {
