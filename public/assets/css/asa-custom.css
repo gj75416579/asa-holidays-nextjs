@@ -2750,22 +2750,6 @@ pre code {
   }
 }
 
-.hero-section-1 .hero-1 {
-  min-height: 560px;
-}
-
-@media (max-width: 991px) {
-  .hero-section-1 .hero-1 {
-    min-height: 480px;
-  }
-}
-
-@media (max-width: 575px) {
-  .hero-section-1 .hero-1 {
-    min-height: 420px;
-  }
-}
-
 .tour-detail-nav {
   background: #ffffff;
   border-bottom: 1px solid #e5e7eb;
@@ -3300,28 +3284,6 @@ pre code {
   }
 }
 
-.hero-1 {
-  padding: 190px 0 60px;
-}
-
-@media (max-width: 1399px) {
-  .hero-1 {
-    padding: 140px 0 60px;
-  }
-}
-
-@media (max-width: 991px) {
-  .hero-1 {
-    padding: 120px 0 50px;
-  }
-}
-
-@media (max-width: 575px) {
-  .hero-1 {
-    padding: 110px 0 40px;
-  }
-}
-
 .home-popup-backdrop {
   position: fixed;
   inset: 0;
@@ -3372,4 +3334,18 @@ pre code {
 
 .home-popup-close:hover {
   background: rgba(0, 0, 0, 0.8);
+}
+
+.header-1 .container-fluid {
+  max-height: 84px;
+}
+
+.hero-section-1 .hero-1 {
+  min-height: 750px;
+}
+
+@media (max-width: 575px) {
+  .hero-section-1 .hero-1 {
+    min-height: 550px;
+  }
 }
