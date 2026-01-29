@@ -3300,6 +3300,28 @@ pre code {
   }
 }
 
+.hero-1 {
+  padding: 190px 0 60px;
+}
+
+@media (max-width: 1399px) {
+  .hero-1 {
+    padding: 140px 0 60px;
+  }
+}
+
+@media (max-width: 991px) {
+  .hero-1 {
+    padding: 120px 0 50px;
+  }
+}
+
+@media (max-width: 575px) {
+  .hero-1 {
+    padding: 110px 0 40px;
+  }
+}
+
 .home-popup-backdrop {
   position: fixed;
   inset: 0;
