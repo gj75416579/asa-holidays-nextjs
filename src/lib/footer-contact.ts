@@ -5,7 +5,7 @@ export const footerContactSection = {
   description:
     'Let ASA Holidays take you on a journey of a lifetime. From Europe to Asia, we have the perfect tour package waiting for you.',
   cta: {
-    href: '/tour-grid',
+    href: '/tour-list',
     label: 'Browse All Tours',
   },
 } as const

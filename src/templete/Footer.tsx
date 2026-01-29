@@ -33,11 +33,11 @@ export default function Footer({ contactSection }: FooterProps) {
                 </div>
                 <div className="col-lg-6">
                   <div className="contact-content">
-                    <div className="logo-image">
+                    {/* <div className="logo-image">
                       <a href="/">
                         <img src={resolvedContactSection.logo} alt="img" />
                       </a>
-                    </div>
+                    </div> */}
                     <div className="section-title mb-0">
                       <h2 className="sec-title text-white text-anim">{resolvedContactSection.title}</h2>
                     </div>
@@ -76,14 +76,14 @@ export default function Footer({ contactSection }: FooterProps) {
                         Free &amp; Easy
                       </a>
                     </li>
-                    <li>
+                    {/* <li>
                       <a href="/destination">
                         <i className="fa-solid fa-chevron-right"></i>
                         Cruises
                       </a>
-                    </li>
+                    </li> */}
                     <li>
-                      <a href="/about">
+                      <a href="/mice">
                         <i className="fa-solid fa-chevron-right"></i>
                         MICE Services
                       </a>
@@ -103,16 +103,16 @@ export default function Footer({ contactSection }: FooterProps) {
                         About Us
                       </a>
                     </li>
-                    <li>
+                    {/* <li>
                       <a href="/team">
                         <i className="fa-solid fa-chevron-right"></i>
                         Our Team
                       </a>
-                    </li>
+                    </li> */}
                     <li>
-                      <a href="/contact-us">
+                      <a href="/career">
                         <i className="fa-solid fa-chevron-right"></i>
-                        Careers
+                        Career
                       </a>
                     </li>
                     <li>

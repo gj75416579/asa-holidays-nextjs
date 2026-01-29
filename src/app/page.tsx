@@ -12,6 +12,7 @@ type HomeApiData = {
   hotTours: unknown | null
   sectorLevels: unknown | null
   banners: unknown | null
+  popupBanners: unknown | null
   sectors: unknown | null
 }
 
@@ -69,6 +70,7 @@ const homeApiEndpoints = {
   hotTours: '/api/tour/hot-list',
   sectorLevels: '/api/tour/sector',
   banners: '/api/banners?position=Home Page',
+  popupBanners: '/api/banners?position=Home Popup',
   sectors: '/api/sectors',
 }
 
@@ -92,6 +94,7 @@ const homeApiInitialData: HomeApiData = {
   hotTours: null,
   sectorLevels: null,
   banners: null,
+  popupBanners: null,
   sectors: null,
 }
 
@@ -536,11 +539,11 @@ const adventureSection = {
     image: '/assets/img/home-1/adventure/03.jpg',
     discountLabel: '23% Discount',
     title: 'Hotel & Resort',
-    href: '/tour-details',
+    href: '/tour-list',
     price: '$1500',
     priceNote: 'per night 4 star rating',
     ctaLabel: 'Book Now',
-    ctaHref: '/tour-details',
+    ctaHref: '/tour-list',
   },
 }
 
@@ -902,6 +905,8 @@ const resolveHeroSlides = (
 
   return list.map((item, index) => {
     const base = fallback[index] ?? fallback[0]
+    const record = isRecord(item) ? (item as ApiRecord) : {}
+    const itemId = pickString(record, ['id', 'bannerId', 'code'])
     const title = typeof item.name === 'string' ? item.name.trim() : ''
     const description = ''
     const images = isRecord(item.images) ? (item.images as ApiRecord) : null
@@ -910,7 +915,7 @@ const resolveHeroSlides = (
 
     return {
       ...base,
-      id: base?.id ?? `hero-${index + 1}`,
+      id: `${itemId || base?.id || 'hero'}-${index}`,
       bgImage: image || (fallbackEnabled ? base?.bgImage : ''),
       title: title || (fallbackEnabled ? base?.title : ''),
       description: description || (fallbackEnabled ? base?.description : ''),
@@ -921,6 +926,43 @@ const resolveHeroSlides = (
       counters: base?.counters ?? [],
     }
   })
+}
+
+type PopupBanner = {
+  image: string
+  link: string
+  alt: string
+}
+
+const resolvePopupBanner = (data: unknown): PopupBanner | null => {
+  const list = extractList(data)
+  const first = list.find((item) => isRecord(item))
+  if (!first || !isRecord(first)) {
+    return null
+  }
+  const images = isRecord(first.images) ? (first.images as ApiRecord) : null
+  const imageCandidate = pickString(first, [
+    'image',
+    'banner',
+    'bannerImage',
+    'picture',
+    'img',
+    'imgUrl',
+    'file',
+    'filePath',
+  ])
+  const imageFromImages = images ? pickString(images, ['desktop', 'mobile', 'image', 'url', 'src']) : ''
+  const image = imageCandidate || imageFromImages
+  if (!image) {
+    return null
+  }
+  const link = pickString(first, ['url', 'link', 'href', 'jumpUrl', 'landingUrl'])
+  const alt = pickString(first, ['name', 'title', 'alt']) || 'Home popup banner'
+  return {
+    image,
+    link,
+    alt,
+  }
 }
 
 const resolveContactForm = (
@@ -1139,6 +1181,7 @@ export default function Home() {
   const router = useRouter()
   const [homeApiData, setHomeApiData] = useState(homeApiInitialData)
   const [apiError, setApiError] = useState(false)
+  const [isPopupOpen, setIsPopupOpen] = useState(false)
 
   useEffect(() => {
     let isActive = true
@@ -1158,10 +1201,11 @@ export default function Home() {
         if (isActive) {
           setApiError(false)
         }
-        const [hotTours, sectorLevels, banners, sectors] = await Promise.all([
+        const [hotTours, sectorLevels, banners, popupBanners, sectors] = await Promise.all([
           postJson(homeApiEndpoints.hotTours, homeApiPayloads.hotTours),
           postJson(homeApiEndpoints.sectorLevels, homeApiPayloads.sectorLevels),
           fetch(homeApiEndpoints.banners).then((res) => parseJsonResponse(res)),
+          fetch(homeApiEndpoints.popupBanners).then((res) => parseJsonResponse(res)),
           postJson(homeApiEndpoints.sectors, homeApiPayloads.sectors),
         ])
 
@@ -1169,11 +1213,12 @@ export default function Home() {
           hotTours,
           sectorLevels,
           banners,
+          popupBanners,
           sectors,
         })
 
         if (isActive) {
-          setHomeApiData({ hotTours, sectorLevels, banners, sectors })
+          setHomeApiData({ hotTours, sectorLevels, banners, popupBanners, sectors })
         }
       } catch (error) {
         console.error('Home API fetch error:', error)
@@ -1194,6 +1239,7 @@ export default function Home() {
   const resolvedContactForm = resolveContactForm(homeApiData.sectors, contactForm, shouldFallback)
   const resolvedTourSection = resolveTourSection(homeApiData.sectorLevels, tourSection, shouldFallback)
   const resolvedTourPlaceSection = resolveTourPlaceSection(homeApiData.hotTours, tourPlaceSection, shouldFallback)
+  const popupBanner = resolvePopupBanner(homeApiData.popupBanners)
 
   const selectOptionsKey = resolvedContactForm.selects[0]?.options.join('|') ?? ''
 
@@ -1218,6 +1264,19 @@ export default function Home() {
       $select.niceSelect()
     }
   }, [selectOptionsKey])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+    if (!popupBanner?.image) {
+      return
+    }
+    if (window.sessionStorage.getItem('asaHomePopupHidden') === '1') {
+      return
+    }
+    setIsPopupOpen(true)
+  }, [popupBanner?.image])
 
   const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -1248,9 +1307,32 @@ export default function Home() {
     router.push(query ? `/tour-list?${query}` : '/tour-list')
   }
 
+  const handlePopupClose = () => {
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.setItem('asaHomePopupHidden', '1')
+    }
+    setIsPopupOpen(false)
+  }
+
   return (
     <>
       <Header />
+      {popupBanner?.image && isPopupOpen ? (
+        <div className="home-popup-backdrop" onClick={handlePopupClose}>
+          <div className="home-popup" onClick={(event) => event.stopPropagation()}>
+            <button type="button" className="home-popup-close" aria-label="Close popup" onClick={handlePopupClose}>
+              x
+            </button>
+            {popupBanner.link ? (
+              <a href={popupBanner.link} className="home-popup-link">
+                <img src={popupBanner.image} alt={popupBanner.alt} />
+              </a>
+            ) : (
+              <img src={popupBanner.image} alt={popupBanner.alt} />
+            )}
+          </div>
+        </div>
+      ) : null}
 
       <div id="smooth-wrapper">
         <div id="smooth-content">

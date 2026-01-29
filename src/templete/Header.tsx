@@ -175,14 +175,14 @@ export default function Header() {
                         <li className={isFreeEasy ? 'active' : ''}>
                           <a href="/tour-list?productType=2">Free &amp; Easy</a>
                         </li>
-                        <li className={isCruises ? 'active' : ''}>
+                        {/* <li className={isCruises ? 'active' : ''}>
                           <a href="/destination">Cruises</a>
                         </li>
                         <li>
                           <a href="/">Vouchers</a>
-                        </li>
+                        </li> */}
                         <li>
-                          <a href="/">MICE</a>
+                          <a href="/mice">MICE</a>
                         </li>
                         <li className={isAbout ? 'active' : ''}>
                           <a href="/about">
