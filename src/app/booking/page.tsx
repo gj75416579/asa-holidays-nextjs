@@ -3693,6 +3693,7 @@ function BookingPageContent() {
                           </button>
                           {isPaymentContactOpen ? (
                             <div className="booking-payment-panel">
+                              <div className="booking-review-grid">
                               {renderReviewRow(
                                 'Name',
                                 formatPersonName(
@@ -3725,6 +3726,7 @@ function BookingPageContent() {
                                   ? `${typeof reviewDetails.purchaser.address === 'string' ? reviewDetails.purchaser.address : ''} ${typeof reviewDetails.purchaser.postCode === 'string' ? reviewDetails.purchaser.postCode : ''}`.trim()
                                   : `${primaryContact.address} ${primaryContact.postCode}`.trim()
                               )}
+                              </div>
                             </div>
                           ) : null}
                         </div>
@@ -4021,6 +4023,7 @@ function BookingPageContent() {
                           </button>
                           {isConfirmContactOpen ? (
                             <div className="booking-payment-panel">
+                              <div className="booking-review-grid">
                               {renderReviewRow(
                                 'Name',
                                 formatPersonName(
@@ -4053,6 +4056,7 @@ function BookingPageContent() {
                                   ? `${typeof reviewDetails.purchaser.address === 'string' ? reviewDetails.purchaser.address : ''} ${typeof reviewDetails.purchaser.postCode === 'string' ? reviewDetails.purchaser.postCode : ''}`.trim()
                                   : `${primaryContact.address} ${primaryContact.postCode}`.trim()
                               )}
+                              </div>
                             </div>
                           ) : null}
                         </div>

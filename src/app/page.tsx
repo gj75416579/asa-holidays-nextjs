@@ -108,7 +108,7 @@ const heroSlides = [
     title: 'Your Gateway to Unforgettable Adventures',
     description: "Singapore's premier travel agency offering curated group tours, cruises, and customized travel experiences worldwide",
     cta: {
-      href: '/tour-grid',
+      href: '/tour-list',
       label: 'Explore Our Tours',
     },
     counters: [
@@ -130,7 +130,7 @@ const heroSlides = [
     title: 'Explore Europe in Style with ASA Holidays',
     description: 'Discover Switzerland, Scandinavia, Italy and Eastern Europe with our expertly guided tours',
     cta: {
-      href: '/tour-grid',
+      href: '/tour-list',
       label: 'View Europe Tours',
     },
     counters: [
@@ -152,7 +152,7 @@ const heroSlides = [
     title: "Discover Asia's Hidden Treasures",
     description: "From Japan's cherry blossoms to China's ancient wonders - experience the best of Asia with ASA Holidays",
     cta: {
-      href: '/tour-grid',
+      href: '/tour-list',
       label: 'View Asia Tours',
     },
     counters: [
@@ -221,7 +221,7 @@ const tourSection = {
     badge: '20+ tours',
     title: 'Swiss Alps Adventure',
     location: 'Switzerland',
-    href: '/tour-details',
+    href: '/tour-list',
     animationClass: 'wow fadeInUp',
     delay: '.3s',
   },
@@ -232,7 +232,7 @@ const tourSection = {
       badge: '15+ tours',
       title: 'Cherry Blossom Season',
       location: 'Tokyo, Japan',
-      href: '/tour-details',
+      href: '/tour-list',
       imageClass: 'style-3',
       animationClass: 'wow fadeInRight',
       delay: '.3s',
@@ -243,7 +243,7 @@ const tourSection = {
       badge: '12+ tours',
       title: 'Northern Lights',
       location: 'Scandinavia',
-      href: '/tour-details',
+      href: '/tour-list',
       imageClass: 'style-3',
       animationClass: 'wow fadeInRight',
       delay: '.5s',
@@ -255,7 +255,7 @@ const tourSection = {
     badge: '25+ tours',
     title: 'Great Wall & Forbidden City',
     location: 'Beijing, China',
-    href: '/tour-details',
+    href: '/tour-list',
     imageClass: 'style-2',
     animationClass: 'wow fadeInUp',
     delay: '.3s',
@@ -267,7 +267,7 @@ const tourSection = {
       badge: '10+ tours',
       title: 'K-Culture Experience',
       location: 'Seoul, Korea',
-      href: '/tour-details',
+      href: '/tour-list',
       imageClass: 'style-3',
       contentClass: 'style-4',
       animationClass: 'wow fadeInRight',
@@ -279,7 +279,7 @@ const tourSection = {
       badge: '8+ tours',
       title: 'Outback Discovery',
       location: 'Sydney, Australia',
-      href: '/tour-details',
+      href: '/tour-list',
       imageClass: 'style-3',
       contentClass: 'style-5',
       animationClass: 'wow fadeInRight',
@@ -1086,6 +1086,7 @@ const resolveTourSection = (
           ? item.name.EN.trim()
           : ''
     const imageValue = typeof item.picture === 'string' ? item.picture.trim() : ''
+    const sectorId = pickString(item, ['id', 'sectorId'])
     const countValue =
       typeof item.tourCount === 'number'
         ? item.tourCount
@@ -1094,8 +1095,7 @@ const resolveTourSection = (
           : ''
     const badge = countValue ? `${countValue}+ tours` : ''
     const parentName = typeof item.parentName === 'string' ? item.parentName.trim() : ''
-    const uri = typeof item.uri === 'string' ? item.uri.trim() : ''
-    const href = uri ? (uri.startsWith('/') ? uri : `/${uri}`) : ''
+    const href = sectorId ? `/tour-list?sectorId=${encodeURIComponent(sectorId)}` : ''
 
     return {
       ...base,

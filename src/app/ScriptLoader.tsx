@@ -66,6 +66,10 @@ export default function ScriptLoader() {
         // Main.js last - depends on all above
         await loadScript('/assets/js/main.js')
 
+        ;(window as any).Tawk_API = (window as any).Tawk_API || {}
+        ;(window as any).Tawk_LoadStart = new Date()
+        await loadScript('https://embed.tawk.to/56aecb195cc0c7a6483ecdf8/default')
+
         // Hide preloader after all scripts loaded
         if ($) {
           $(".preloader").addClass('loaded')

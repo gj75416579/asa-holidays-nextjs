@@ -3348,4 +3348,66 @@ pre code {
   .hero-section-1 .hero-1 {
     min-height: 550px;
   }
+
+  .booking-payment-panel .booking-review-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.header-talk-btn {
+  border: none;
+  background: none;
+  padding: 0;
+  margin-left: 6px;
+  font-weight: 600;
+  color: inherit;
+  cursor: pointer;
+}
+
+.header-talk-btn:hover {
+  text-decoration: underline;
+}
+
+.header-top-wrapper .header-left .header-list {
+  display: flex;
+  align-items: center;
+  gap: 60px;
+}
+
+.header-top-wrapper .header-left .header-list li {
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.header-top-wrapper .header-left .header-list li a {
+  color: var(--white);
+}
+
+.header-top-wrapper .header-left .header-list li i {
+  color: var(--theme);
+  margin-right: 5px;
+}
+
+.header-top-wrapper .header-right .social-icon {
+  gap: 12px;
+}
+
+.header-top-wrapper .header-right .social-icon a {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--theme-2);
+  color: var(--white);
+}
+
+.header-top-wrapper .header-right .social-icon a i {
+  color: var(--white);
+  font-size: 13px;
+}
+
+.header-top-wrapper .header-right .header-list {
+  gap: 24px;
 }

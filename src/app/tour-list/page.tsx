@@ -43,6 +43,54 @@ type TravelDateOption = {
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null
 
+const extractBannerList = (data: unknown): Record<string, unknown>[] => {
+  if (Array.isArray(data)) {
+    return data.filter((item) => isRecord(item)) as Record<string, unknown>[]
+  }
+  if (!isRecord(data)) {
+    return []
+  }
+  const candidates = [data.data, data.list, data.items, data.records, data.rows, data.result]
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) {
+      return candidate.filter((item) => isRecord(item)) as Record<string, unknown>[]
+    }
+    if (isRecord(candidate)) {
+      const nested = candidate as Record<string, unknown>
+      const nestedCandidates = [nested.data, nested.list, nested.items, nested.records, nested.rows, nested.result]
+      for (const nestedCandidate of nestedCandidates) {
+        if (Array.isArray(nestedCandidate)) {
+          return nestedCandidate.filter((item) => isRecord(item)) as Record<string, unknown>[]
+        }
+      }
+    }
+  }
+  return []
+}
+
+const pickString = (record: Record<string, unknown>, keys: string[]): string => {
+  for (const key of keys) {
+    const value = record[key]
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim()
+    }
+  }
+  return ''
+}
+
+const resolveBannerImage = (data: unknown): string => {
+  const list = extractBannerList(data)
+  const first = list[0]
+  if (!first) {
+    return ''
+  }
+  const images = isRecord(first.images) ? (first.images as Record<string, unknown>) : null
+  return (
+    pickString(first, ['image', 'banner', 'bannerImage', 'bannerImg', 'bannerUrl', 'picture']) ||
+    (images ? pickString(images, ['desktop', 'mobile', 'image', 'url', 'src']) : '')
+  )
+}
+
 const MONTH_LABELS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 const MONTH_LOOKUP: Record<string, number> = {
   jan: 0,
@@ -331,6 +379,7 @@ function TourListContent() {
   const [sectorsData, setSectorsData] = useState<unknown | null>(null)
   const [listError, setListError] = useState(false)
   const [sectorsError, setSectorsError] = useState(false)
+  const [bannerData, setBannerData] = useState<unknown | null>(null)
 
   const sectorOptions = useMemo(() => extractSectors(sectorsData), [sectorsData])
   const selectedSectorOptions = useMemo(
@@ -475,6 +524,32 @@ function TourListContent() {
     }
   }, [listPayload])
 
+  useEffect(() => {
+    let isActive = true
+    const position = productType === 2 ? 'Free & Easy' : 'Group Tour'
+
+    const fetchBanner = async () => {
+      try {
+        const res = await fetch(`/api/banners?position=${encodeURIComponent(position)}`)
+        const data = await parseJsonResponse(res)
+        if (isActive) {
+          setBannerData(data)
+        }
+      } catch (error) {
+        console.error('Tour list banner error:', error)
+        if (isActive) {
+          setBannerData(null)
+        }
+      }
+    }
+
+    fetchBanner()
+
+    return () => {
+      isActive = false
+    }
+  }, [productType])
+
   const pageNumbers = useMemo(() => {
     if (totalPages <= 1) {
       return []
@@ -533,6 +608,7 @@ function TourListContent() {
   const displayTotalRows = totalRows ?? resolvedTourListItems.length
   const showApiNotice = listError || sectorsError
   const travelDateLabel = formatTravelDateLabel(filters.travelDate, travelDateOptions)
+  const bannerImage = resolveBannerImage(bannerData) || '/assets/img/inner-page/breadcrumb/bg-1.jpg'
 
   return (
     <>
@@ -541,7 +617,7 @@ function TourListContent() {
       <div id="smooth-wrapper">
         <div id="smooth-content">
           {/* Breadcrumb Section Start */}
-          <div className="breadcrumb-wrapper-2 fix bg-cover" style={{ backgroundImage: 'url(/assets/img/inner-page/breadcrumb/bg-1.jpg)' }}>
+          <div className="breadcrumb-wrapper-2 fix bg-cover" style={{ backgroundImage: `url(${bannerImage})` }}>
             <div className="container">
               <div className="page-heading">
                 <div className="breadcrumb-sub-title">

@@ -18,6 +18,18 @@ export default function Header() {
   const isAbout = pathname === '/about' || pathname.startsWith('/faq')
   const isContact = pathname.startsWith('/contact')
 
+  const handleLetsTalk = () => {
+    if (typeof window === 'undefined') {
+      return
+    }
+    const tawkApi = (window as any).Tawk_API
+    if (tawkApi && typeof tawkApi.maximize === 'function') {
+      tawkApi.maximize()
+      return
+    }
+    console.warn('Tawk API not ready yet.')
+  }
+
   useEffect(() => {
     const preloader = document.querySelector('.preloader') as HTMLElement | null
     if (!preloader) {
@@ -125,27 +137,30 @@ export default function Header() {
       <div className="header-top-section">
         <div className="container-fluid">
           <div className="header-top-wrapper">
-            <p>Welcome to <span>ASA Holidays</span> - Singapore&apos;s Premier Travel Agency <b>Let&apos;s Talk</b></p>
-            <div className="header-right">
-              {/* <div className="flag-wrap">
-                <i className="fa-solid fa-globe"></i>
-                <div className="nice-select" tabIndex={0}>
-                  <span className="current">English</span>
-                  <ul className="list">
-                    <li data-value="1" className="option selected focus">English</li>
-                    <li data-value="2" className="option">中文</li>
-                  </ul>
-                </div>
-              </div> */}
+            <div className="header-left">
               <ul className="header-list">
                 <li>
-                  <i className="fa-solid fa-envelope"></i>
-                  <a href="mailto:enquiry@asaholiday.com">Email : enquiry@asaholiday.com</a>
+                  <i className="fa-solid fa-phone-flip"></i>
+                  <a href="tel:+6563035303">(+65) 6303 5303</a>
                 </li>
                 <li>
-                  <i className="fa-solid fa-phone-flip"></i>
-                  <a href="tel:+6563035303">Call : +65 6303 5303</a>
+                  <i className="fa-solid fa-envelope"></i>
+                  <a href="mailto:enquiry@asaholiday.com?subject=Enquiry">enquiry@asaholiday.com</a>
                 </li>
+              </ul>
+            </div>
+            <div className="header-right">
+              <div className="social-icon d-flex align-items-center">
+                <a href="https://www.facebook.com/ASAHolidays"><i className="fab fa-facebook-f"></i></a>
+                <a href="http://www.weibo.com/AsaHoliday"><i className="fab fa-weibo"></i></a>
+                <a href="https://www.instagram.com/asa.holidays/"><i className="fab fa-instagram"></i></a>
+              </div>
+              <ul className="header-list">
+                <li><a href="/faq">FAQ</a></li>
+                <li><a href="/about">About Us</a></li>
+                <li><a href="/career">Career</a></li>
+                <li><a href="/contact-us">Contact Us</a></li>
+                <li><a href="/member/login">Member Login</a></li>
               </ul>
             </div>
           </div>
