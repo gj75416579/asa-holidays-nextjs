@@ -912,6 +912,18 @@
   margin: 0 auto;
 }
 
+.privacy-wrapper ul,
+.career-positions ul {
+  list-style: disc;
+  padding-left: 20px;
+  margin: 12px 0;
+}
+
+.privacy-wrapper ul li::marker,
+.career-positions ul li::marker {
+  color: #000000;
+}
+
 .privacy-intro {
   margin: 12px 0 24px;
   color: var(--text);

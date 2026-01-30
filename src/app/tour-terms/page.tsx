@@ -512,8 +512,8 @@ const termsSections: TermsSection[] = [
           We will comply with all relevant obligations under the Personal Data Protection Act 2012 (PDPA) governing the
           collection, use, disclosure and care of your personal data in accordance with our privacy statement, a copy of
           which can be found at{' '}
-          <a href="https://asaholiday.com/privacy.php" target="_blank" rel="noreferrer">
-            https://asaholiday.com/privacy.php
+          <a href="/privacy/" target="_blank" rel="noreferrer">
+            https://asaholiday.com/privacy/
           </a>
           .
         </p>
