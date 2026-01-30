@@ -3348,6 +3348,10 @@ pre code {
   .hero-section-1 .hero-1 {
     min-height: 550px;
   }
+
+  .booking-payment-panel .booking-review-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .header-talk-btn {
