@@ -18,6 +18,18 @@ export default function Header() {
   const isAbout = pathname === '/about' || pathname.startsWith('/faq')
   const isContact = pathname.startsWith('/contact')
 
+  const handleLetsTalk = () => {
+    if (typeof window === 'undefined') {
+      return
+    }
+    const tawkApi = (window as any).Tawk_API
+    if (tawkApi && typeof tawkApi.maximize === 'function') {
+      tawkApi.maximize()
+      return
+    }
+    console.warn('Tawk API not ready yet.')
+  }
+
   useEffect(() => {
     const preloader = document.querySelector('.preloader') as HTMLElement | null
     if (!preloader) {
@@ -125,7 +137,12 @@ export default function Header() {
       <div className="header-top-section">
         <div className="container-fluid">
           <div className="header-top-wrapper">
-            <p>Welcome to <span>ASA Holidays</span> - Singapore&apos;s Premier Travel Agency <b>Let&apos;s Talk</b></p>
+            <p>
+              Welcome to <span>ASA Holidays</span> - Singapore&apos;s Premier Travel Agency{' '}
+              <button type="button" className="header-talk-btn" onClick={handleLetsTalk}>
+                Let&apos;s Talk
+              </button>
+            </p>
             <div className="header-right">
               {/* <div className="flag-wrap">
                 <i className="fa-solid fa-globe"></i>

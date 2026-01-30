@@ -11901,6 +11901,7 @@ span {
   cursor: pointer;
   z-index: 999;
   transition: all 0.4s ease-in-out;
+  display: none;
 }
 .tour-place-item .tour-place-image .icon:hover {
   background-color: var(--theme);
@@ -13665,6 +13666,7 @@ span {
   cursor: pointer;
   z-index: 999;
   transition: all 0.4s ease-in-out;
+  display: none;
 }
 .tour-list-wrapper .tour-list-box-items .tour-image .icon:hover {
   background-color: var(--theme);

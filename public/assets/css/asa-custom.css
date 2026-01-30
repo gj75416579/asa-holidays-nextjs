@@ -3349,3 +3349,17 @@ pre code {
     min-height: 550px;
   }
 }
+
+.header-talk-btn {
+  border: none;
+  background: none;
+  padding: 0;
+  margin-left: 6px;
+  font-weight: 600;
+  color: inherit;
+  cursor: pointer;
+}
+
+.header-talk-btn:hover {
+  text-decoration: underline;
+}
