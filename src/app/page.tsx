@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import Header from '@/templete/HeaderWithSuspense'
@@ -65,6 +65,24 @@ type TourPlaceSection = {
     halfStar: boolean
   }
   items: TourPlaceItem[]
+}
+
+type RecommendedTour = {
+  id: string
+  title: string
+  image: string
+  price: string
+  priceLabel: string
+  productCode: string
+  href: string
+  location: string
+  duration: string
+  badge: string
+}
+
+type RecommendedSector = {
+  id: string
+  name: string
 }
 const homeApiEndpoints = {
   hotTours: '/api/tour/hot-list',
@@ -916,7 +934,8 @@ const resolveHeroSlides = (
     const description = ''
     const images = isRecord(item.images) ? (item.images as ApiRecord) : null
     const image = typeof images?.desktop === 'string' ? images.desktop.trim() : ''
-    const link = typeof item.url === 'string' ? item.url.trim() : ''
+    /* const link = typeof item.url === 'string' ? item.url.trim() : '' */
+    const link = ''
 
     return {
       ...base,
@@ -925,7 +944,8 @@ const resolveHeroSlides = (
       title: title || (fallbackEnabled ? base?.title : ''),
       description: description || (fallbackEnabled ? base?.description : ''),
       cta: {
-        href: link || (fallbackEnabled ? base?.cta.href : '/'),
+        /* href: link || (fallbackEnabled ? base?.cta.href : '/'), */
+        href: link,
         label: base?.cta.label ?? 'View Tours',
       },
       counters: base?.counters ?? [],
@@ -987,8 +1007,6 @@ const resolveContactForm = (
       return ''
     })
     .filter((value) => value)
-
-  console.log('Select Destination options:', options)
 
   if (!options.length) {
     if (!fallbackEnabled) {
@@ -1182,11 +1200,124 @@ const resolveTourPlaceSection = (
     items: mappedItems,
   }
 }
+
+const resolveRecommendedSectors = (data: unknown) => {
+  const sectorList = extractList(data)
+  if (!sectorList.length) {
+    return []
+  }
+
+  return sectorList
+    .map((sector, index) => {
+      if (!isRecord(sector)) {
+        return null
+      }
+      const nameValue =
+        typeof sector.name === 'string'
+          ? sector.name.trim()
+          : isRecord(sector.name) && typeof sector.name.EN === 'string'
+            ? sector.name.EN.trim()
+            : ''
+      if (!nameValue) {
+        return null
+      }
+
+      const sectorId = pickString(sector, ['id', 'sectorId', 'code']) || `sector-${index + 1}`
+
+      return {
+        id: sectorId,
+        name: nameValue,
+      }
+    })
+    .filter((sector): sector is RecommendedSector => Boolean(sector))
+    .slice(0, 6)
+}
+
+const resolveRecommendedTours = (data: unknown) => {
+  let list = extractList(data)
+  if (!list.length && isRecord(data) && isRecord(data.data) && Array.isArray(data.data.pageData)) {
+    list = data.data.pageData as ApiRecord[]
+  }
+  if (!list.length) {
+    return []
+  }
+
+  return list
+    .map((item, index) => {
+      if (!isRecord(item)) {
+        return null
+      }
+      const titleValue =
+        typeof item.name === 'string'
+          ? item.name.trim()
+          : isRecord(item.name) && typeof item.name.EN === 'string'
+            ? item.name.EN.trim()
+            : ''
+      if (!titleValue) {
+        return null
+      }
+      const images = isRecord(item.images) ? (item.images as ApiRecord) : null
+      const imageValue = pickString(item, [
+        'cover',
+        'image',
+        'thumbnail',
+        'picture',
+        'banner',
+        'bannerImage',
+        'img',
+      ]) || (images ? pickString(images, ['desktop', 'image', 'url', 'src']) : '')
+      const priceValue = formatPrice(item.price ?? item.fromPrice ?? item.startingPrice ?? '')
+      const productCodeValue = pickString(item, ['productCode', 'tourCode', 'code', 'tripCode'])
+      const uriValue = typeof item.uri === 'string' ? item.uri.trim() : ''
+      const idValue =
+        typeof item.id === 'number'
+          ? String(item.id)
+          : typeof item.id === 'string' && item.id
+            ? item.id
+            : productCodeValue || `tour-${index + 1}`
+      const hrefValue = uriValue
+        ? `/tour-details?uri=${encodeURIComponent(uriValue)}`
+        : typeof item.id === 'number'
+          ? `/tour-details?id=${item.id}`
+          : ''
+      const locationValue = pickString(item, ['sector', 'destination', 'country', 'location'])
+      const durationValue =
+        typeof item.duration === 'number'
+          ? formatDuration(item.duration)
+          : typeof item.duration === 'string'
+            ? item.duration.trim()
+            : ''
+      const badgeValue =
+        typeof item.badge === 'string'
+          ? item.badge.trim()
+          : typeof item.tag === 'string'
+            ? item.tag.trim()
+            : ''
+
+      return {
+        id: idValue,
+        title: titleValue,
+        image: imageValue,
+        price: priceValue,
+        priceLabel: priceValue ? 'From' : '',
+        productCode: productCodeValue,
+        href: hrefValue,
+        location: locationValue,
+        duration: durationValue,
+        badge: badgeValue,
+      }
+    })
+    .filter((item): item is RecommendedTour => Boolean(item))
+}
 export default function Home() {
   const router = useRouter()
   const [homeApiData, setHomeApiData] = useState(homeApiInitialData)
   const [apiError, setApiError] = useState(false)
   const [isPopupOpen, setIsPopupOpen] = useState(false)
+  const [activeRecommendedSector, setActiveRecommendedSector] = useState('')
+  const [recommendedTours, setRecommendedTours] = useState<Record<string, RecommendedTour[]>>({})
+  const [recommendedLoading, setRecommendedLoading] = useState(false)
+  const [recommendedError, setRecommendedError] = useState(false)
 
   useEffect(() => {
     let isActive = true
@@ -1244,31 +1375,82 @@ export default function Home() {
   const resolvedContactForm = resolveContactForm(homeApiData.sectors, contactForm, shouldFallback)
   const resolvedTourSection = resolveTourSection(homeApiData.sectorLevels, tourSection, shouldFallback)
   const resolvedTourPlaceSection = resolveTourPlaceSection(homeApiData.hotTours, tourPlaceSection, shouldFallback)
+  const recommendedSectors = useMemo(
+    () => resolveRecommendedSectors(homeApiData.sectorLevels),
+    [homeApiData.sectorLevels]
+  )
   const popupBanner = resolvePopupBanner(homeApiData.popupBanners)
 
   const selectOptionsKey = resolvedContactForm.selects[0]?.options.join('|') ?? ''
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
+    if (!recommendedSectors.length) {
+      setActiveRecommendedSector('')
       return
     }
+    if (!activeRecommendedSector || !recommendedSectors.some((sector) => sector.id === activeRecommendedSector)) {
+      setActiveRecommendedSector(recommendedSectors[0].id)
+    }
+  }, [recommendedSectors, activeRecommendedSector])
 
-    const $ = (window as any).jQuery
-    if (!$ || !$.fn || !$.fn.niceSelect) {
+  useEffect(() => {
+    if (!activeRecommendedSector) {
       return
     }
+    let isActive = true
 
-    const $select = $('.contact-from-section .single-select')
-    if (!$select.length) {
-      return
+    const fetchRecommendedTours = async () => {
+      try {
+        if (isActive) {
+          setRecommendedError(false)
+          setRecommendedLoading(true)
+        }
+        const payload = {
+          search: '',
+          tourIds: '',
+          sectorIds: activeRecommendedSector,
+          startDuration: 1,
+          endDuration: 30,
+          startPrice: 1,
+          endPrice: 20000,
+          date: '',
+          productType: 1,
+          sort: 2,
+          sortType: 1,
+          currentPage: 0,
+          pageSize: 8,
+        }
+        const res = await fetch('/api/tour/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        const data = await parseJsonResponse(res)
+        console.log('Recommended tours data:', data)
+        if (isActive) {
+          const items = resolveRecommendedTours(data)
+          setRecommendedTours((prev) => ({ ...prev, [activeRecommendedSector]: items }))
+        }
+      } catch (error) {
+        console.error('Recommended tours fetch error:', error)
+        if (isActive) {
+          setRecommendedError(true)
+        }
+      } finally {
+        if (isActive) {
+          setRecommendedLoading(false)
+        }
+      }
     }
 
-    if ($select.next('.nice-select').length) {
-      $select.niceSelect('update')
-    } else {
-      $select.niceSelect()
+    fetchRecommendedTours()
+
+    return () => {
+      isActive = false
     }
-  }, [selectOptionsKey])
+  }, [activeRecommendedSector])
+
+  void selectOptionsKey
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -1318,6 +1500,9 @@ export default function Home() {
     }
     setIsPopupOpen(false)
   }
+
+  const activeRecommendedItems = recommendedTours[activeRecommendedSector] ?? []
+  const displayRecommendedItems = activeRecommendedItems.slice(0, 8)
 
   return (
     <>
@@ -1453,7 +1638,7 @@ export default function Home() {
           </div>
 
           {/* Tour Section Start */}
-          <section className="tour-section section-padding pt-0 fix">
+          <section hidden className="tour-section section-padding pt-0 fix">
             <div className="container custom-container">
               <div className="row g-1">
                 <div className="col-xl-5">
@@ -1579,7 +1764,7 @@ export default function Home() {
           </section>
 
           {/* About Section Start */}
-          <section className="about-section section-right fix">
+          {/* <section className="about-section section-right fix">
             <div className="container">
               <div className="about-wrapper">
                 <div className="row g-4">
@@ -1638,10 +1823,91 @@ export default function Home() {
                 </div>
               </div>
             </div>
-          </section>
+          </section> */}
+
+          {recommendedSectors.length ? (
+            <section className="asa-recommended-section section-padding pt-0 fix">
+              <div className="container custom-container-2">
+                <div className="section-title text-center">
+                  <h2 className="text-anim">ASA Recommended Tours</h2>
+                </div>
+                <div className="asa-recommended-tabs">
+                  {recommendedSectors.map((sector) => (
+                    <button
+                      key={sector.id}
+                      type="button"
+                      className={`asa-recommended-tab${sector.id === activeRecommendedSector ? ' is-active' : ''}`}
+                      onClick={() => {
+                        console.log('[asa-recommended] tab click:', {
+                          id: sector.id,
+                          name: sector.name,
+                        })
+                        setActiveRecommendedSector(sector.id)
+                      }}
+                    >
+                      {sector.name}
+                    </button>
+                  ))}
+                </div>
+                {recommendedLoading ? (
+                  <div className="asa-recommended-empty">Loading recommended tours...</div>
+                ) : recommendedError ? (
+                  <div className="asa-recommended-empty">Unable to load recommended tours right now.</div>
+                ) : displayRecommendedItems.length ? (
+                  <div className="row">
+                    {displayRecommendedItems.map((item) => (
+                      <div key={item.id} className="col-xl-3 col-lg-6 col-md-6">
+                        <div className="tour-place-item">
+                          <div className={`tour-place-image${item.image ? '' : ' is-empty'}`}>
+                            {item.image ? <img src={item.image} alt="img" /> : null}
+                            {item.badge ? <span>{item.badge}</span> : null}
+                            <div className="icon">
+                              <i className="fa-regular fa-heart"></i>
+                            </div>
+                          </div>
+                          <div className="tour-place-content">
+                            <div className="rating-item">
+                              {item.productCode ? <div className="product-code">{item.productCode}</div> : null}
+                              {item.price ? (
+                                <h5>
+                                  <span>{item.priceLabel}</span>
+                                  {item.price}
+                                </h5>
+                              ) : null}
+                            </div>
+                            {item.title ? (
+                              <h3 title={item.title}>
+                                {item.href ? <a href={item.href}>{item.title}</a> : <span>{item.title}</span>}
+                              </h3>
+                            ) : null}
+                            <ul className="tour-list">
+                              {item.location ? (
+                                <li>
+                                  <i className="fa-regular fa-location-dot"></i>
+                                  {item.location}
+                                </li>
+                              ) : null}
+                              {item.duration ? (
+                                <li>
+                                  <i className="fa-regular fa-clock"></i>
+                                  {item.duration}
+                                </li>
+                              ) : null}
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="asa-recommended-empty">No recommended tours available right now.</div>
+                )}
+              </div>
+            </section>
+          ) : null}
 
           {/* Tour-place Section Start */}
-          <section className="tour-place-section section-padding fix">
+          <section hidden className="tour-place-section section-padding fix">
             <div className="container custom-container-2">
               <div className="section-title text-center">
                 <h2 className="text-anim">Popular Tour Packages</h2>
@@ -1714,7 +1980,7 @@ export default function Home() {
           </section>
 
           {/* Benefit-Tour Section Start */}
-          <section className="benefit-tour-section section-padding fix header-bg">
+          {/* <section className="benefit-tour-section section-padding fix header-bg">
             <div className="container">
               <div className="section-title text-center">
                 <h2 className="text-white text-anim">{benefitTourSection.title}</h2>
@@ -1753,10 +2019,10 @@ export default function Home() {
                 })}
               </div>
             </div>
-          </section>
+          </section> */}
 
           {/* Adventure Section Start */}
-          <section className="adventure-section section-padding fix">
+          {/* <section className="adventure-section section-padding fix">
             <div className="container">
               <div className="adventure-wrapper">
                 <div className="row g-4">
@@ -1826,7 +2092,7 @@ export default function Home() {
                 </div>
               </div>
             </div>
-          </section>
+          </section> */}
 
           {/* Feature Section Start */}
           <section className="feature-section section-padding fix pt-0">
@@ -1893,7 +2159,7 @@ export default function Home() {
           </section>
 
           {/* Activities Section Start */}
-          <section className="activities-section section-padding fix">
+          {/* <section className="activities-section section-padding fix">
             <div className="container custom-container">
               <div className="activities-wrapper row g-4 g-xl-2 row-cols-xl-5 row-cols-lg-4 row-cols-md-2 row-cols-1">
                 {activitiesSection.map((activity) => (
@@ -1910,7 +2176,7 @@ export default function Home() {
                 ))}
               </div>
             </div>
-          </section>
+          </section> */}
 
           {/* Testimonial Section Start */}
           <section
@@ -1976,7 +2242,7 @@ export default function Home() {
           </section>
 
           {/* News Section Start */}
-          <section className="news-section section-padding fix">
+          {/* <section className="news-section section-padding fix">
             <div className="container custom-container-2">
               <div className="section-title text-center">
                 <h2 className="text-anim">{newsSection.title}</h2>
@@ -2004,7 +2270,7 @@ export default function Home() {
                 ))}
               </div>
             </div>
-          </section>
+          </section> */}
 
           {/* Brand Section Start */}
           <section className="brand-section section-padding fix">

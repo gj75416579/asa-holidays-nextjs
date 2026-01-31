@@ -3424,3 +3424,158 @@ pre code {
 .header-top-wrapper .header-right .header-list {
   gap: 24px;
 }
+
+.contact-from-section {
+  position: relative;
+  z-index: 10;
+}
+
+.contact-from-section .single-select {
+  position: relative;
+  z-index: 11;
+}
+
+.contact-from-section .nice-select {
+  position: relative;
+  z-index: 12;
+}
+
+.contact-from-section .nice-select .list {
+  z-index: 20;
+}
+
+.asa-recommended-section {
+  padding-top: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.whatsapp-float {
+  position: fixed;
+  left: 20px;
+  bottom: 20px;
+  width: 52px;
+  height: 52px;
+  border-radius: 26px;
+  background: #25d366;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+  z-index: 10000;
+}
+
+.whatsapp-float:hover {
+  color: #fff;
+  background: #1ebe5b;
+}
+
+@media (max-width: 576px) {
+  .whatsapp-float {
+    left: 14px;
+    bottom: 14px;
+    width: 46px;
+    height: 46px;
+    border-radius: 23px;
+    font-size: 22px;
+  }
+}
+
+.asa-recommended-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin: 20px 0 28px;
+}
+
+.asa-recommended-tab {
+  border: none;
+  background: #00a6b8;
+  color: #fff;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.asa-recommended-tab.is-active {
+  background: var(--theme);
+  position: relative;
+}
+
+.asa-recommended-tab.is-active::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -10px;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 10px solid var(--theme);
+}
+
+.asa-recommended-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.asa-recommended-card .tour-place-image {
+  height: 170px;
+  overflow: hidden;
+}
+
+.asa-recommended-card .tour-place-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.asa-recommended-empty {
+  text-align: center;
+  color: #555;
+  padding: 24px 0 8px;
+}
+
+@media (max-width: 1200px) {
+  .asa-recommended-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 992px) {
+  .asa-recommended-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .asa-recommended-tabs {
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .asa-recommended-tab {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .asa-recommended-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 576px) {
+  .asa-recommended-grid {
+    grid-template-columns: 1fr;
+  }
+}

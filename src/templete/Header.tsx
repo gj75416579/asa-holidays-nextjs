@@ -199,6 +199,9 @@ export default function Header() {
                         <li>
                           <a href="/mice">MICE</a>
                         </li>
+                        <li>
+                          <a href="/">Member Ship</a>
+                        </li>
                         <li className={isAbout ? 'active' : ''}>
                           <a href="/about">
                             About
