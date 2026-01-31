@@ -929,7 +929,8 @@ const resolveHeroSlides = (
     const description = ''
     const images = isRecord(item.images) ? (item.images as ApiRecord) : null
     const image = typeof images?.desktop === 'string' ? images.desktop.trim() : ''
-    const link = typeof item.url === 'string' ? item.url.trim() : ''
+    /* const link = typeof item.url === 'string' ? item.url.trim() : '' */
+    const link = ''
 
     return {
       ...base,
@@ -938,7 +939,8 @@ const resolveHeroSlides = (
       title: title || (fallbackEnabled ? base?.title : ''),
       description: description || (fallbackEnabled ? base?.description : ''),
       cta: {
-        href: link || (fallbackEnabled ? base?.cta.href : '/'),
+        /* href: link || (fallbackEnabled ? base?.cta.href : '/'), */
+        href: link,
         label: base?.cta.label ?? 'View Tours',
       },
       counters: base?.counters ?? [],
