@@ -77,7 +77,7 @@ type RecommendedTour = {
   href: string
   location: string
   duration: string
-  badge?: string
+  badge: string
 }
 
 type RecommendedSector = {
