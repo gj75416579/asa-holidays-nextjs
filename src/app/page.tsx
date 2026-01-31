@@ -1225,6 +1225,7 @@ const resolveRecommendedSectors = (data: unknown) => {
       }
     })
     .filter((sector): sector is RecommendedSector => Boolean(sector))
+    .slice(0, 6)
 }
 
 const resolveRecommendedTours = (data: unknown) => {
