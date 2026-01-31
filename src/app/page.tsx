@@ -865,12 +865,17 @@ const formatPrice = (value: unknown): string => {
   if (value === null || value === undefined) {
     return ''
   }
-  const raw = typeof value === 'number' ? value.toString() : String(value)
-  const trimmed = raw.trim()
-  if (!trimmed) {
+  const raw = typeof value === 'number' ? String(value) : String(value).trim()
+  if (!raw) {
     return ''
   }
-  return trimmed.startsWith('$') ? trimmed : `$${trimmed}`
+
+  const prefix = raw.startsWith('S$') ? 'S$' : '$'
+  const numericCandidate = typeof value === 'number' ? value : Number(raw.replace(/[^0-9.-]/g, ''))
+  if (!Number.isFinite(numericCandidate)) {
+    return raw.startsWith('$') || raw.startsWith('S$') ? raw : `${prefix}${raw}`
+  }
+  return `${prefix}${numericCandidate.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
 }
 
 const formatDuration = (value: unknown): string => {
