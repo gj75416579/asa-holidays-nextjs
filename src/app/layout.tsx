@@ -28,6 +28,15 @@ export default function RootLayout({
       </head>
       <body>
         {children}
+        <a
+          className="whatsapp-float"
+          href="https://wa.me/6563035303"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="WhatsApp chat"
+        >
+          <i className="fa-brands fa-whatsapp" />
+        </a>
         <ScriptLoader />
       </body>
     </html>

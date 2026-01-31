@@ -3437,6 +3437,39 @@ pre code {
   z-index: 1;
 }
 
+.whatsapp-float {
+  position: fixed;
+  left: 20px;
+  bottom: 20px;
+  width: 52px;
+  height: 52px;
+  border-radius: 26px;
+  background: #25d366;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+  z-index: 10000;
+}
+
+.whatsapp-float:hover {
+  color: #fff;
+  background: #1ebe5b;
+}
+
+@media (max-width: 576px) {
+  .whatsapp-float {
+    left: 14px;
+    bottom: 14px;
+    width: 46px;
+    height: 46px;
+    border-radius: 23px;
+    font-size: 22px;
+  }
+}
+
 .asa-recommended-tabs {
   display: flex;
   flex-wrap: wrap;
