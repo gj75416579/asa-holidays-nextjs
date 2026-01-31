@@ -1372,6 +1372,19 @@ export default function Home() {
   }, [])
 
   const resolvedHeroSlides = resolveHeroSlides(homeApiData.banners, heroSlides, shouldFallback)
+  const showHeroSkeleton = resolvedHeroSlides.length === 0
+  const heroSlidesToRender = showHeroSkeleton
+    ? [
+      {
+        ...heroSlides[0],
+        id: 'hero-skeleton',
+        bgImage: '',
+        title: '',
+        description: '',
+        counters: [],
+      },
+    ]
+    : resolvedHeroSlides
   const resolvedContactForm = resolveContactForm(homeApiData.sectors, contactForm, shouldFallback)
   const resolvedTourSection = resolveTourSection(homeApiData.sectorLevels, tourSection, shouldFallback)
   const resolvedTourPlaceSection = resolveTourPlaceSection(homeApiData.hotTours, tourPlaceSection, shouldFallback)
@@ -1451,6 +1464,91 @@ export default function Home() {
   }, [activeRecommendedSector])
 
   void selectOptionsKey
+
+  useEffect(() => {
+    if (showHeroSkeleton) {
+      return
+    }
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    let attempts = 0
+    let timer: number | null = null
+
+    const initHeroSwiper = () => {
+      const Swiper = (window as any).Swiper
+      if (!Swiper) {
+        attempts += 1
+        if (attempts < 20) {
+          timer = window.setTimeout(initHeroSwiper, 200)
+        }
+        return
+      }
+
+      const sliderEl = document.querySelector('.hero-slider') as any
+      if (!sliderEl) {
+        return
+      }
+
+      if (sliderEl.swiper && typeof sliderEl.swiper.destroy === 'function') {
+        sliderEl.swiper.destroy(true, true)
+      }
+
+      const sliderInit = new Swiper('.hero-slider', {
+        loop: true,
+        slidesPerView: 1,
+        effect: 'fade',
+        speed: 3000,
+        autoplay: {
+          delay: 3000,
+          disableOnInteraction: false,
+        },
+        pagination: {
+          el: '.dot',
+          clickable: true,
+        },
+      })
+
+      const $ = (window as any).jQuery
+      if ($) {
+        const animated = () => {
+          $('.hero-slider [data-animation]').each((_: number, element: HTMLElement) => {
+            const $element = $(element)
+            const anim = $element.data('animation')
+            const delay = $element.data('delay')
+            const duration = $element.data('duration')
+            $element
+              .removeClass(`anim${anim}`)
+              .addClass(`${anim} animated`)
+              .css({
+                webkitAnimationDelay: delay,
+                animationDelay: delay,
+                webkitAnimationDuration: duration,
+                animationDuration: duration,
+              })
+              .one('animationend', () => {
+                $element.removeClass(`${anim} animated`)
+              })
+          })
+        }
+
+        animated()
+        sliderInit.on('slideChange', () => {
+          $('.hero-slider [data-animation]').removeClass('animated')
+        })
+        sliderInit.on('slideChange', animated)
+      }
+    }
+
+    initHeroSwiper()
+
+    return () => {
+      if (timer) {
+        window.clearTimeout(timer)
+      }
+    }
+  }, [showHeroSkeleton, resolvedHeroSlides.length])
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -1534,45 +1632,56 @@ export default function Home() {
             </div>
             <div className="swiper hero-slider">
               <div className="swiper-wrapper">
-                {resolvedHeroSlides.map((slide) => (
+                {heroSlidesToRender.map((slide) => (
                   <div key={slide.id} className="swiper-slide">
-                    <div className="hero-1">
-                      <div className="hero-bg bg-cover" style={{ backgroundImage: `url(${slide.bgImage})` }}></div>
+                    <div className={`hero-1${showHeroSkeleton ? ' hero-skeleton' : ''}`}>
+                      <div
+                        className="hero-bg bg-cover"
+                        style={slide.bgImage ? { backgroundImage: `url(${slide.bgImage})` } : undefined}
+                      ></div>
                       <div className="container-fluid">
-                        <div className="row g-4 justify-content-between align-items-end">
-                          <div className="col-xl-4 col-lg-6">
-                            <div className="hero-content">
-                              {slide.title ? (
-                                <h1 data-animation="fadeInUp" data-delay="1.3s">
-                                  {slide.title}
-                                </h1>
-                              ) : null}
-                              {slide.description ? (
-                                <p data-animation="fadeInUp" data-delay="1.3s">
-                                  {slide.description}
-                                </p>
-                              ) : null}
-                              {slide.cta.href ? (
-                                <a href={slide.cta.href} className="theme-btn" data-animation="fadeInUp" data-delay="1.3s">
-                                  {slide.cta.label}
-                                </a>
-                              ) : null}
+                        {showHeroSkeleton ? (
+                          <div className="hero-skeleton-content">
+                            <div className="skeleton-line hero-line-lg"></div>
+                            <div className="skeleton-line hero-line-md"></div>
+                            <div className="skeleton-line hero-line-sm"></div>
+                          </div>
+                        ) : (
+                          <div className="row g-4 justify-content-between align-items-end">
+                            <div className="col-xl-4 col-lg-6">
+                              <div className="hero-content">
+                                {slide.title ? (
+                                  <h1 data-animation="fadeInUp" data-delay="1.3s">
+                                    {slide.title}
+                                  </h1>
+                                ) : null}
+                                {slide.description ? (
+                                  <p data-animation="fadeInUp" data-delay="1.3s">
+                                    {slide.description}
+                                  </p>
+                                ) : null}
+                                {slide.cta.href ? (
+                                  <a href={slide.cta.href} className="theme-btn" data-animation="fadeInUp" data-delay="1.3s">
+                                    {slide.cta.label}
+                                  </a>
+                                ) : null}
+                              </div>
+                            </div>
+                            <div className="col-xl-6 col-lg-6">
+                              <div className="counter-item" data-animation="fadeInUp" data-delay="1.3s">
+                                {slide.counters.map((counter) => (
+                                  <div key={counter.label} className="content">
+                                    <h2>
+                                      <span className="count">{counter.value}</span>
+                                      {counter.suffix}
+                                    </h2>
+                                    <p>{counter.label}</p>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
                           </div>
-                          <div className="col-xl-6 col-lg-6">
-                            <div className="counter-item" data-animation="fadeInUp" data-delay="1.3s">
-                              {slide.counters.map((counter) => (
-                                <div key={counter.label} className="content">
-                                  <h2>
-                                    <span className="count">{counter.value}</span>
-                                    {counter.suffix}
-                                  </h2>
-                                  <p>{counter.label}</p>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1850,7 +1959,25 @@ export default function Home() {
                   ))}
                 </div>
                 {recommendedLoading ? (
-                  <div className="asa-recommended-empty">Loading recommended tours...</div>
+                  <div className="row">
+                    {Array.from({ length: 8 }).map((_, index) => (
+                      <div key={`recommended-skeleton-${index}`} className="col-xl-3 col-lg-6 col-md-6">
+                        <div className="tour-place-item asa-recommended-skeleton">
+                          <div className="tour-place-image is-empty">
+                            <div className="skeleton-block"></div>
+                          </div>
+                          <div className="tour-place-content">
+                            <div className="rating-item">
+                              <div className="skeleton-line skeleton-line-sm"></div>
+                              <div className="skeleton-line skeleton-line-md"></div>
+                            </div>
+                            <div className="skeleton-line skeleton-line-lg"></div>
+                            <div className="skeleton-line skeleton-line-md"></div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 ) : recommendedError ? (
                   <div className="asa-recommended-empty">Unable to load recommended tours right now.</div>
                 ) : displayRecommendedItems.length ? (
