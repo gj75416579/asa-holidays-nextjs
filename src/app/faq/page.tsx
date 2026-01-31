@@ -78,7 +78,7 @@ const faqSections: FaqSection[] = [
           <p>
             Bookings are processed immediately. If an amendment or cancellation is required, you can find ASA Holidays
             cancellation instructions{' '}
-            <a href="https://asaholiday.com/pdf/T%26C.pdf" target="_blank" rel="noreferrer">
+            <a href="/pdf/T%26C.pdf" target="_blank" rel="noreferrer">
               here
             </a>{' '}
             or call our friendly customer service hotline at (65) 6303 5303 for assistance.
@@ -90,7 +90,7 @@ const faqSections: FaqSection[] = [
         answer: (
           <p>
             You can find ASA Holidays cancellation instructions{' '}
-            <a href="https://asaholiday.com/pdf/T%26C.pdf" target="_blank" rel="noreferrer">
+            <a href="/pdf/T%26C.pdf" target="_blank" rel="noreferrer">
               here
             </a>{' '}
             or call our friendly customer service hotline at (65) 6303 5303 for assistance. ASA Holidays adheres
@@ -170,7 +170,7 @@ const faqSections: FaqSection[] = [
           </p>
         )
       },
-      {
+      /* {
         question: 'What happen if I miss a tour / flight due to unforeseen circumstances?',
         answer: (
           <p>
@@ -185,7 +185,7 @@ const faqSections: FaqSection[] = [
             .
           </p>
         )
-      }
+      } */
     ]
   }
 ]

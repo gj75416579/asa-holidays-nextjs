@@ -661,18 +661,6 @@ const buildTripPriceFromDetails = (details: Record<string, unknown>) => {
   }
 }
 
-const extractDiscountCodes = (details: Record<string, unknown>) => {
-  const discounts = Array.isArray(details.discounts) ? details.discounts : []
-  return discounts
-    .map((discount) => {
-      if (isRecord(discount) && isRecord(discount.info) && typeof discount.info.code === 'string') {
-        return discount.info.code
-      }
-      return null
-    })
-    .filter((code): code is string => Boolean(code))
-}
-
 const parseNationalityValue = (value: string) => {
   if (!value) {
     return { name: '', code: '' }
@@ -1264,9 +1252,6 @@ function BookingPageContent() {
           }
           if (typeof detailData.ref === 'string') {
             setBookingRef(detailData.ref)
-          }
-          if (details) {
-            setAppliedDiscounts(extractDiscountCodes(details))
           }
         }
       }
@@ -2007,7 +1992,6 @@ function BookingPageContent() {
               return
             }
           }
-          setAppliedDiscounts(extractDiscountCodes(details))
         }
         if (typeof data.ref === 'string') {
           setBookingRef(data.ref)
@@ -3565,7 +3549,7 @@ function BookingPageContent() {
                         )}
 
                         {showDiscountForm ? (
-                          <div className="booking-review-block booking-discount">
+                          <div className="booking-review-block booking-discount" hidden>
                             <h4>Promo Code</h4>
                             <div className="booking-discount-form">
                               <input
@@ -3694,38 +3678,38 @@ function BookingPageContent() {
                           {isPaymentContactOpen ? (
                             <div className="booking-payment-panel">
                               <div className="booking-review-grid">
-                              {renderReviewRow(
-                                'Name',
-                                formatPersonName(
-                                  reviewDetails?.purchaser && typeof reviewDetails.purchaser.title === 'string'
-                                    ? reviewDetails.purchaser.title
-                                    : primaryContact.title,
-                                  reviewDetails?.purchaser && typeof reviewDetails.purchaser.firstName === 'string'
-                                    ? reviewDetails.purchaser.firstName
-                                    : primaryContact.firstName,
-                                  reviewDetails?.purchaser && typeof reviewDetails.purchaser.lastName === 'string'
-                                    ? reviewDetails.purchaser.lastName
-                                    : primaryContact.lastName
-                                )
-                              )}
-                              {renderReviewRow(
-                                'Email',
-                                reviewDetails?.purchaser && typeof reviewDetails.purchaser.email === 'string'
-                                  ? reviewDetails.purchaser.email
-                                  : primaryContact.email
-                              )}
-                              {renderReviewRow(
-                                'Contact Number',
-                                reviewDetails?.purchaser && typeof reviewDetails.purchaser.mobile === 'string'
-                                  ? reviewDetails.purchaser.mobile
-                                  : `${primaryContact.countryCode}${primaryContact.phone}`.trim()
-                              )}
-                              {renderReviewRow(
-                                'Address',
-                                reviewDetails?.purchaser
-                                  ? `${typeof reviewDetails.purchaser.address === 'string' ? reviewDetails.purchaser.address : ''} ${typeof reviewDetails.purchaser.postCode === 'string' ? reviewDetails.purchaser.postCode : ''}`.trim()
-                                  : `${primaryContact.address} ${primaryContact.postCode}`.trim()
-                              )}
+                                {renderReviewRow(
+                                  'Name',
+                                  formatPersonName(
+                                    reviewDetails?.purchaser && typeof reviewDetails.purchaser.title === 'string'
+                                      ? reviewDetails.purchaser.title
+                                      : primaryContact.title,
+                                    reviewDetails?.purchaser && typeof reviewDetails.purchaser.firstName === 'string'
+                                      ? reviewDetails.purchaser.firstName
+                                      : primaryContact.firstName,
+                                    reviewDetails?.purchaser && typeof reviewDetails.purchaser.lastName === 'string'
+                                      ? reviewDetails.purchaser.lastName
+                                      : primaryContact.lastName
+                                  )
+                                )}
+                                {renderReviewRow(
+                                  'Email',
+                                  reviewDetails?.purchaser && typeof reviewDetails.purchaser.email === 'string'
+                                    ? reviewDetails.purchaser.email
+                                    : primaryContact.email
+                                )}
+                                {renderReviewRow(
+                                  'Contact Number',
+                                  reviewDetails?.purchaser && typeof reviewDetails.purchaser.mobile === 'string'
+                                    ? reviewDetails.purchaser.mobile
+                                    : `${primaryContact.countryCode}${primaryContact.phone}`.trim()
+                                )}
+                                {renderReviewRow(
+                                  'Address',
+                                  reviewDetails?.purchaser
+                                    ? `${typeof reviewDetails.purchaser.address === 'string' ? reviewDetails.purchaser.address : ''} ${typeof reviewDetails.purchaser.postCode === 'string' ? reviewDetails.purchaser.postCode : ''}`.trim()
+                                    : `${primaryContact.address} ${primaryContact.postCode}`.trim()
+                                )}
                               </div>
                             </div>
                           ) : null}
@@ -4024,38 +4008,38 @@ function BookingPageContent() {
                           {isConfirmContactOpen ? (
                             <div className="booking-payment-panel">
                               <div className="booking-review-grid">
-                              {renderReviewRow(
-                                'Name',
-                                formatPersonName(
-                                  reviewDetails?.purchaser && typeof reviewDetails.purchaser.title === 'string'
-                                    ? reviewDetails.purchaser.title
-                                    : primaryContact.title,
-                                  reviewDetails?.purchaser && typeof reviewDetails.purchaser.firstName === 'string'
-                                    ? reviewDetails.purchaser.firstName
-                                    : primaryContact.firstName,
-                                  reviewDetails?.purchaser && typeof reviewDetails.purchaser.lastName === 'string'
-                                    ? reviewDetails.purchaser.lastName
-                                    : primaryContact.lastName
-                                )
-                              )}
-                              {renderReviewRow(
-                                'Email',
-                                reviewDetails?.purchaser && typeof reviewDetails.purchaser.email === 'string'
-                                  ? reviewDetails.purchaser.email
-                                  : primaryContact.email
-                              )}
-                              {renderReviewRow(
-                                'Contact Number',
-                                reviewDetails?.purchaser && typeof reviewDetails.purchaser.mobile === 'string'
-                                  ? reviewDetails.purchaser.mobile
-                                  : `${primaryContact.countryCode}${primaryContact.phone}`.trim()
-                              )}
-                              {renderReviewRow(
-                                'Address',
-                                reviewDetails?.purchaser
-                                  ? `${typeof reviewDetails.purchaser.address === 'string' ? reviewDetails.purchaser.address : ''} ${typeof reviewDetails.purchaser.postCode === 'string' ? reviewDetails.purchaser.postCode : ''}`.trim()
-                                  : `${primaryContact.address} ${primaryContact.postCode}`.trim()
-                              )}
+                                {renderReviewRow(
+                                  'Name',
+                                  formatPersonName(
+                                    reviewDetails?.purchaser && typeof reviewDetails.purchaser.title === 'string'
+                                      ? reviewDetails.purchaser.title
+                                      : primaryContact.title,
+                                    reviewDetails?.purchaser && typeof reviewDetails.purchaser.firstName === 'string'
+                                      ? reviewDetails.purchaser.firstName
+                                      : primaryContact.firstName,
+                                    reviewDetails?.purchaser && typeof reviewDetails.purchaser.lastName === 'string'
+                                      ? reviewDetails.purchaser.lastName
+                                      : primaryContact.lastName
+                                  )
+                                )}
+                                {renderReviewRow(
+                                  'Email',
+                                  reviewDetails?.purchaser && typeof reviewDetails.purchaser.email === 'string'
+                                    ? reviewDetails.purchaser.email
+                                    : primaryContact.email
+                                )}
+                                {renderReviewRow(
+                                  'Contact Number',
+                                  reviewDetails?.purchaser && typeof reviewDetails.purchaser.mobile === 'string'
+                                    ? reviewDetails.purchaser.mobile
+                                    : `${primaryContact.countryCode}${primaryContact.phone}`.trim()
+                                )}
+                                {renderReviewRow(
+                                  'Address',
+                                  reviewDetails?.purchaser
+                                    ? `${typeof reviewDetails.purchaser.address === 'string' ? reviewDetails.purchaser.address : ''} ${typeof reviewDetails.purchaser.postCode === 'string' ? reviewDetails.purchaser.postCode : ''}`.trim()
+                                    : `${primaryContact.address} ${primaryContact.postCode}`.trim()
+                                )}
                               </div>
                             </div>
                           ) : null}
