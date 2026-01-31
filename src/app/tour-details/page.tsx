@@ -418,6 +418,313 @@ const getAvailability = (departure: DepartureItem) => {
   return { label: 'Available', status: 'available', available }
 }
 
+type DepartureCardProps = {
+  departure: DepartureItem
+  resolvedTitle: string
+  resolvedId: number | null
+  callPhone: string
+}
+
+const DepartureCard = ({ departure, resolvedTitle, resolvedId, callPhone }: DepartureCardProps) => {
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [priceType, setPriceType] = useState<'full' | 'land'>('full')
+
+  useEffect(() => {
+    if (!isExpanded && priceType !== 'full') {
+      setPriceType('full')
+    }
+  }, [isExpanded, priceType])
+
+  const formatDateDisplay = (value: string, options: Intl.DateTimeFormatOptions) => {
+    if (!value) {
+      return ''
+    }
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) {
+      return value
+    }
+    return new Intl.DateTimeFormat('en-US', options).format(date)
+  }
+
+  const formatTime = (value: string) => {
+    if (!value) {
+      return ''
+    }
+    const trimmed = value.replace(/[^0-9]/g, '')
+    if (trimmed.length !== 4) {
+      return value
+    }
+    return `${trimmed.slice(0, 2)}:${trimmed.slice(2)}`
+  }
+
+  const availability = getAvailability(departure)
+  const prices = getDeparturePrices(departure, priceType)
+  const dateStart = departure.flightStartDate || departure.startDate || ''
+  const dateEnd = departure.flightEndDate || departure.endDate || ''
+  const dateRange = dateStart && dateEnd
+    ? `${formatDateDisplay(dateStart, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} - ${formatDateDisplay(dateEnd, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}`
+    : formatDateDisplay(dateStart || dateEnd, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) || 'TBA'
+  const tourCode = departure.tourCode || departure.code || ''
+  const bookingTourId = departure.tourId ?? resolvedId
+  const bookingPayload: Record<string, unknown> = {
+    tourId: bookingTourId ?? undefined,
+    tourCodeId: departure.id ?? departure.priceCodeId ?? undefined,
+    departureId: departure.id ?? undefined,
+    type: 1,
+  }
+  const bookingUrl = `/booking?tour=${encodeTourParam(bookingPayload)}`
+  const enquiryParams = new URLSearchParams()
+  if (resolvedTitle) {
+    enquiryParams.set('tourName', resolvedTitle)
+  }
+  if (tourCode) {
+    enquiryParams.set('tourCode', tourCode)
+  }
+  if (departure.priceCode) {
+    enquiryParams.set('productCode', departure.priceCode)
+  }
+  if (dateStart) {
+    enquiryParams.set('departureDate', dateStart)
+  }
+  if (bookingTourId) {
+    enquiryParams.set('tourId', String(bookingTourId))
+  }
+  if (departure.id) {
+    enquiryParams.set('departureId', String(departure.id))
+  }
+  if (departure.priceCodeId) {
+    enquiryParams.set('tourCodeId', String(departure.priceCodeId))
+  }
+  enquiryParams.set('type', '2')
+  const enquiryQuery = enquiryParams.toString()
+  const enquiryUrl = enquiryQuery ? `/enquiry?${enquiryQuery}` : '/enquiry'
+  const availabilityClass =
+    availability.status === 'sold-out'
+      ? 'is-sold-out'
+      : availability.status === 'selling-fast'
+        ? 'is-selling-fast'
+        : 'is-available'
+  const showPhoneAction = availability.status === 'selling-fast'
+  const hasPhone = Boolean(callPhone)
+  const actionPrimaryUrl = bookingUrl
+  const rawTripDays = (departure as Record<string, unknown>).days
+  const tripDays: number | null = typeof rawTripDays === 'number'
+    ? rawTripDays
+    : dateStart && dateEnd
+      ? Math.max(1, Math.round((new Date(dateEnd).getTime() - new Date(dateStart).getTime()) / (1000 * 60 * 60 * 24)) + 1)
+      : null
+  const tripNights = typeof (departure as Record<string, unknown>).nights === 'number'
+    ? (departure as Record<string, unknown>).nights
+    : typeof tripDays === 'number'
+      ? Math.max(0, tripDays - 1)
+      : null
+  const departureName = getLocalizedText((departure as Record<string, unknown>).name)
+  const rawAirlineCode = (departure as Record<string, unknown>).airlineCode
+  const rawAirlineName = (departure as Record<string, unknown>).airlineName
+  const airlineCode = typeof rawAirlineCode === 'string' ? rawAirlineCode : ''
+  const airlineName = typeof rawAirlineName === 'string' ? rawAirlineName : ''
+  const flights = Array.isArray(departure.flights) ? departure.flights : []
+
+  const renderActionButton = (size: 'small' | 'large') => {
+    if (availability.status === 'sold-out') {
+      return (
+        <button type="button" className={`theme-btn namho-book-btn ${size} is-disabled`} disabled>
+          BOOK NOW
+        </button>
+      )
+    }
+
+    if (showPhoneAction) {
+      if (!hasPhone) {
+        return <div className={`action-btn-placeholder ${size}`}></div>
+      }
+      return (
+        <a href={`tel:${callPhone}`} className={`action-btn action-primary ${size}`}>
+          CALL US NOW
+        </a>
+      )
+    }
+
+    return (
+      <a href={actionPrimaryUrl} className={`theme-btn namho-book-btn ${size}`}>
+        BOOK NOW
+      </a>
+    )
+  }
+
+  return (
+    <div className={`namho-departure-card${isExpanded ? ' is-expanded' : ''}`}>
+      <div className="namho-card-header">
+        <div className="namho-card-header-main">
+          <div className="namho-card-date">
+            <div className="namho-card-date-range">{dateRange}</div>
+            {tourCode ? <div className="namho-card-code">{tourCode}</div> : null}
+          </div>
+          <div className="namho-card-meta">
+            <div className={`namho-availability ${availabilityClass}`}>{availability.label}</div>
+            {airlineCode ? (
+              <img
+                src={`https://resources-mytourix-prod.s3.ap-southeast-1.amazonaws.com/Platform/airline/${airlineCode}.png`}
+                alt={airlineName || 'Airline'}
+                className="namho-airline-logo"
+              />
+            ) : null}
+            <div className="namho-from">
+              <div className="namho-from-label">From:</div>
+              <div className="namho-from-value">{formatPriceDisplay(prices.twnFare)}</div>
+            </div>
+          </div>
+        </div>
+        <div className="namho-card-header-actions">
+          <div className="namho-card-actions">{renderActionButton('small')}</div>
+          <button
+            type="button"
+            className="namho-card-toggle"
+            onClick={() => setIsExpanded((prev) => !prev)}
+            aria-expanded={isExpanded}
+            aria-label={isExpanded ? 'Collapse departure' : 'Expand departure'}
+          >
+            {isExpanded ? '▲' : '▼'}
+          </button>
+        </div>
+      </div>
+
+      {isExpanded ? (
+        <div className="namho-card-body">
+          <div className="namho-body-top">
+            <div className="namho-calendar">
+              <div className="namho-calendar-label">Travel Dates</div>
+              <div className="namho-calendar-range">{dateRange}</div>
+            </div>
+            <div className="namho-body-summary">
+              {tripDays ? (
+                <div className="namho-duration">
+                  {tripDays} Days{tripNights !== null ? ` | ${tripNights} Nights` : ''}
+                </div>
+              ) : null}
+              {departureName ? <div className="namho-departure-name">{departureName}</div> : null}
+            </div>
+            <div className="namho-body-price">
+              <div className="namho-body-price-row">
+                {airlineCode ? (
+                  <img
+                    src={`https://resources-mytourix-prod.s3.ap-southeast-1.amazonaws.com/Platform/airline/${airlineCode}.png`}
+                    alt={airlineName || 'Airline'}
+                    className="namho-airline-logo large"
+                  />
+                ) : null}
+                <div className="namho-from">
+                  <div className="namho-from-label">From:</div>
+                  <div className="namho-from-value large">{formatPriceDisplay(prices.twnFare)}</div>
+                </div>
+              </div>
+              {/* <div className="namho-body-action">{renderActionButton('large')}</div> */}
+            </div>
+          </div>
+
+          <div className="namho-price-toggle">
+            <button
+              type="button"
+              className={`namho-price-tab${priceType === 'full' ? ' is-active' : ''}`}
+              onClick={() => setPriceType('full')}
+            >
+              Full Tour
+            </button>
+            <button
+              type="button"
+              className={`namho-price-tab${priceType === 'land' ? ' is-active' : ''}`}
+              onClick={() => setPriceType('land')}
+            >
+              Land Tour
+            </button>
+          </div>
+
+          <div className="namho-price-grid">
+            <div className="namho-price-block">
+              <h4>Adult Fares (12 years & above)</h4>
+              <div className="namho-price-row">
+                <span>Single Fare</span>
+                <span>{formatPriceDisplay(prices.sglFare)}</span>
+              </div>
+              <div className="namho-price-row">
+                <span>Twin Fare</span>
+                <span>{formatPriceDisplay(prices.twnFare)}</span>
+              </div>
+              <div className="namho-price-row">
+                <span>Triple Fare</span>
+                <span>{formatPriceDisplay(prices.trpFare)}</span>
+              </div>
+              <div className="namho-price-row muted">
+                <span>Adult Tax</span>
+                <span>{formatPriceDisplay(prices.adultTax)}</span>
+              </div>
+            </div>
+            <div className="namho-price-block">
+              <h4>Child Fares (2 to 11 years)</h4>
+              <div className="namho-price-row">
+                <span>Child Twin</span>
+                <span>{formatPriceDisplay(prices.chdHalfTwnFare)}</span>
+              </div>
+              <div className="namho-price-row">
+                <span>Child w/Bed</span>
+                <span>{formatPriceDisplay(prices.chdWithBedFare)}</span>
+              </div>
+              <div className="namho-price-row">
+                <span>Child w/o Bed</span>
+                <span>{formatPriceDisplay(prices.chdWithOutBedFare)}</span>
+              </div>
+              <div className="namho-price-row muted">
+                <span>Child Tax</span>
+                <span>{formatPriceDisplay(prices.childTax)}</span>
+              </div>
+            </div>
+            <div className="namho-price-block">
+              <h4>Infant Fares (Below 2 years)</h4>
+              <div className="namho-price-row">
+                <span>Infant</span>
+                <span>{formatPriceDisplay(prices.infantFare)}</span>
+              </div>
+            </div>
+          </div>
+
+          {false && flights.length ? (
+            <div className="namho-flight-schedule">
+              <h4>Flight Schedule</h4>
+              <div className="namho-flight-table">
+                <div className="namho-flight-row header">
+                  <span>DATE</span>
+                  <span>SECTOR</span>
+                  <span>FLIGHT</span>
+                  <span>ETD</span>
+                  <span>ETA</span>
+                </div>
+                {flights.map((flight, index) => {
+                  const flightRecord = flight as Record<string, unknown>
+                  const flightDate = typeof flightRecord.departureDate === 'string' ? flightRecord.departureDate : ''
+                  const flightSector = typeof flightRecord.sector === 'string' ? flightRecord.sector : ''
+                  const flightNo = typeof flightRecord.flightNo === 'string' ? flightRecord.flightNo : ''
+                  const etd = typeof flightRecord.etd === 'string' ? flightRecord.etd : ''
+                  const eta = typeof flightRecord.eta === 'string' ? flightRecord.eta : ''
+
+                  return (
+                    <div key={`${departure.id}-flight-${index}`} className="namho-flight-row">
+                      <span>{formatDateDisplay(flightDate, { weekday: 'short', month: 'short', day: 'numeric', year: '2-digit' })}</span>
+                      <span>{flightSector}</span>
+                      <span>{flightNo}</span>
+                      <span>{formatTime(etd)}</span>
+                      <span>{formatTime(eta)}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 const resolveItineraryGroupId = (data: unknown): number | null => {
   if (!isRecord(data) || !Array.isArray(data.data)) {
     return null
@@ -701,306 +1008,6 @@ function TourDetailsContent() {
       behavior: 'smooth',
     })
   }
-  const DepartureCard = ({ departure }: { departure: DepartureItem }) => {
-    const [isExpanded, setIsExpanded] = useState(false)
-    const [priceType, setPriceType] = useState<'full' | 'land'>('full')
-
-    useEffect(() => {
-      if (!isExpanded && priceType !== 'full') {
-        setPriceType('full')
-      }
-    }, [isExpanded, priceType])
-
-    const formatDateDisplay = (value: string, options: Intl.DateTimeFormatOptions) => {
-      if (!value) {
-        return ''
-      }
-      const date = new Date(value)
-      if (Number.isNaN(date.getTime())) {
-        return value
-      }
-      return new Intl.DateTimeFormat('en-US', options).format(date)
-    }
-
-    const formatTime = (value: string) => {
-      if (!value) {
-        return ''
-      }
-      const trimmed = value.replace(/[^0-9]/g, '')
-      if (trimmed.length !== 4) {
-        return value
-      }
-      return `${trimmed.slice(0, 2)}:${trimmed.slice(2)}`
-    }
-
-    const availability = getAvailability(departure)
-    const prices = getDeparturePrices(departure, priceType)
-    const dateStart = departure.flightStartDate || departure.startDate || ''
-    const dateEnd = departure.flightEndDate || departure.endDate || ''
-    const dateRange = dateStart && dateEnd
-      ? `${formatDateDisplay(dateStart, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} - ${formatDateDisplay(dateEnd, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}`
-      : formatDateDisplay(dateStart || dateEnd, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) || 'TBA'
-    const tourCode = departure.tourCode || departure.code || ''
-    const bookingTourId = departure.tourId ?? resolvedDetail.id
-    const bookingPayload: Record<string, unknown> = {
-      tourId: bookingTourId ?? undefined,
-      tourCodeId: departure.id ?? departure.priceCodeId ?? undefined,
-      departureId: departure.id ?? undefined,
-      type: 1,
-    }
-    const bookingUrl = `/booking?tour=${encodeTourParam(bookingPayload)}`
-    const enquiryParams = new URLSearchParams()
-    if (resolvedDetail.title) {
-      enquiryParams.set('tourName', resolvedDetail.title)
-    }
-    if (tourCode) {
-      enquiryParams.set('tourCode', tourCode)
-    }
-    if (departure.priceCode) {
-      enquiryParams.set('productCode', departure.priceCode)
-    }
-    if (dateStart) {
-      enquiryParams.set('departureDate', dateStart)
-    }
-    if (bookingTourId) {
-      enquiryParams.set('tourId', String(bookingTourId))
-    }
-    if (departure.id) {
-      enquiryParams.set('departureId', String(departure.id))
-    }
-    if (departure.priceCodeId) {
-      enquiryParams.set('tourCodeId', String(departure.priceCodeId))
-    }
-    enquiryParams.set('type', '2')
-    const enquiryQuery = enquiryParams.toString()
-    const enquiryUrl = enquiryQuery ? `/enquiry?${enquiryQuery}` : '/enquiry'
-    const availabilityClass =
-      availability.status === 'sold-out'
-        ? 'is-sold-out'
-        : availability.status === 'selling-fast'
-          ? 'is-selling-fast'
-          : 'is-available'
-    const showPhoneAction = availability.status === 'selling-fast'
-    const hasPhone = Boolean(callPhone)
-    const actionPrimaryUrl = bookingUrl
-    const rawTripDays = (departure as Record<string, unknown>).days
-    const tripDays: number | null = typeof rawTripDays === 'number'
-      ? rawTripDays
-      : dateStart && dateEnd
-        ? Math.max(1, Math.round((new Date(dateEnd).getTime() - new Date(dateStart).getTime()) / (1000 * 60 * 60 * 24)) + 1)
-        : null
-    const tripNights = typeof (departure as Record<string, unknown>).nights === 'number'
-      ? (departure as Record<string, unknown>).nights
-      : typeof tripDays === 'number'
-        ? Math.max(0, tripDays - 1)
-        : null
-    const departureName = getLocalizedText((departure as Record<string, unknown>).name)
-    const rawAirlineCode = (departure as Record<string, unknown>).airlineCode
-    const rawAirlineName = (departure as Record<string, unknown>).airlineName
-    const airlineCode = typeof rawAirlineCode === 'string' ? rawAirlineCode : ''
-    const airlineName = typeof rawAirlineName === 'string' ? rawAirlineName : ''
-    const flights = Array.isArray(departure.flights) ? departure.flights : []
-
-    const renderActionButton = (size: 'small' | 'large') => {
-      if (availability.status === 'sold-out') {
-        return (
-          <button type="button" className={`theme-btn namho-book-btn ${size} is-disabled`} disabled>
-            BOOK NOW
-          </button>
-        )
-      }
-
-      if (showPhoneAction) {
-        if (!hasPhone) {
-          return <div className={`action-btn-placeholder ${size}`}></div>
-        }
-        return (
-          <a href={`tel:${callPhone}`} className={`action-btn action-primary ${size}`}>
-            CALL US NOW
-          </a>
-        )
-      }
-
-      return (
-        <a href={actionPrimaryUrl} className={`theme-btn namho-book-btn ${size}`}>
-          BOOK NOW
-        </a>
-      )
-    }
-
-    return (
-      <div className={`namho-departure-card${isExpanded ? ' is-expanded' : ''}`}>
-        <div className="namho-card-header">
-          <div className="namho-card-header-main">
-            <div className="namho-card-date">
-              <div className="namho-card-date-range">{dateRange}</div>
-              {tourCode ? <div className="namho-card-code">{tourCode}</div> : null}
-            </div>
-            <div className="namho-card-meta">
-              <div className={`namho-availability ${availabilityClass}`}>{availability.label}</div>
-              {airlineCode ? (
-                <img
-                  src={`https://resources-mytourix-prod.s3.ap-southeast-1.amazonaws.com/Platform/airline/${airlineCode}.png`}
-                  alt={airlineName || 'Airline'}
-                  className="namho-airline-logo"
-                />
-              ) : null}
-              <div className="namho-from">
-                <div className="namho-from-label">From:</div>
-                <div className="namho-from-value">{formatPriceDisplay(prices.twnFare)}</div>
-              </div>
-            </div>
-          </div>
-          <div className="namho-card-header-actions">
-            <div className="namho-card-actions">{renderActionButton('small')}</div>
-            <button
-              type="button"
-              className="namho-card-toggle"
-              onClick={() => setIsExpanded((prev) => !prev)}
-              aria-expanded={isExpanded}
-              aria-label={isExpanded ? 'Collapse departure' : 'Expand departure'}
-            >
-              {isExpanded ? '▲' : '▼'}
-            </button>
-          </div>
-        </div>
-
-        {isExpanded ? (
-          <div className="namho-card-body">
-            <div className="namho-body-top">
-              <div className="namho-calendar">
-                <div className="namho-calendar-label">Travel Dates</div>
-                <div className="namho-calendar-range">{dateRange}</div>
-              </div>
-              <div className="namho-body-summary">
-                {tripDays ? (
-                  <div className="namho-duration">
-                    {tripDays} Days{tripNights !== null ? ` | ${tripNights} Nights` : ''}
-                  </div>
-                ) : null}
-                {departureName ? <div className="namho-departure-name">{departureName}</div> : null}
-              </div>
-              <div className="namho-body-price">
-                <div className="namho-body-price-row">
-                  {airlineCode ? (
-                    <img
-                      src={`https://resources-mytourix-prod.s3.ap-southeast-1.amazonaws.com/Platform/airline/${airlineCode}.png`}
-                      alt={airlineName || 'Airline'}
-                      className="namho-airline-logo large"
-                    />
-                  ) : null}
-                  <div className="namho-from">
-                    <div className="namho-from-label">From:</div>
-                    <div className="namho-from-value large">{formatPriceDisplay(prices.twnFare)}</div>
-                  </div>
-                </div>
-                {/* <div className="namho-body-action">{renderActionButton('large')}</div> */}
-              </div>
-            </div>
-
-            <div className="namho-price-toggle">
-              <button
-                type="button"
-                className={`namho-price-tab${priceType === 'full' ? ' is-active' : ''}`}
-                onClick={() => setPriceType('full')}
-              >
-                Full Tour
-              </button>
-              <button
-                type="button"
-                className={`namho-price-tab${priceType === 'land' ? ' is-active' : ''}`}
-                onClick={() => setPriceType('land')}
-              >
-                Land Tour
-              </button>
-            </div>
-
-            <div className="namho-price-grid">
-              <div className="namho-price-block">
-                <h4>Adult Fares (12 years & above)</h4>
-                <div className="namho-price-row">
-                  <span>Single Fare</span>
-                  <span>{formatPriceDisplay(prices.sglFare)}</span>
-                </div>
-                <div className="namho-price-row">
-                  <span>Twin Fare</span>
-                  <span>{formatPriceDisplay(prices.twnFare)}</span>
-                </div>
-                <div className="namho-price-row">
-                  <span>Triple Fare</span>
-                  <span>{formatPriceDisplay(prices.trpFare)}</span>
-                </div>
-                <div className="namho-price-row muted">
-                  <span>Adult Tax</span>
-                  <span>{formatPriceDisplay(prices.adultTax)}</span>
-                </div>
-              </div>
-              <div className="namho-price-block">
-                <h4>Child Fares (2 to 11 years)</h4>
-                <div className="namho-price-row">
-                  <span>Child Twin</span>
-                  <span>{formatPriceDisplay(prices.chdHalfTwnFare)}</span>
-                </div>
-                <div className="namho-price-row">
-                  <span>Child w/Bed</span>
-                  <span>{formatPriceDisplay(prices.chdWithBedFare)}</span>
-                </div>
-                <div className="namho-price-row">
-                  <span>Child w/o Bed</span>
-                  <span>{formatPriceDisplay(prices.chdWithOutBedFare)}</span>
-                </div>
-                <div className="namho-price-row muted">
-                  <span>Child Tax</span>
-                  <span>{formatPriceDisplay(prices.childTax)}</span>
-                </div>
-              </div>
-              <div className="namho-price-block">
-                <h4>Infant Fares (Below 2 years)</h4>
-                <div className="namho-price-row">
-                  <span>Infant</span>
-                  <span>{formatPriceDisplay(prices.infantFare)}</span>
-                </div>
-              </div>
-            </div>
-
-            {false && flights.length ? (
-              <div className="namho-flight-schedule">
-                <h4>Flight Schedule</h4>
-                <div className="namho-flight-table">
-                  <div className="namho-flight-row header">
-                    <span>DATE</span>
-                    <span>SECTOR</span>
-                    <span>FLIGHT</span>
-                    <span>ETD</span>
-                    <span>ETA</span>
-                  </div>
-                  {flights.map((flight, index) => {
-                    const flightRecord = flight as Record<string, unknown>
-                    const flightDate = typeof flightRecord.departureDate === 'string' ? flightRecord.departureDate : ''
-                    const flightSector = typeof flightRecord.sector === 'string' ? flightRecord.sector : ''
-                    const flightNo = typeof flightRecord.flightNo === 'string' ? flightRecord.flightNo : ''
-                    const etd = typeof flightRecord.etd === 'string' ? flightRecord.etd : ''
-                    const eta = typeof flightRecord.eta === 'string' ? flightRecord.eta : ''
-
-                    return (
-                      <div key={`${departure.id}-flight-${index}`} className="namho-flight-row">
-                        <span>{formatDateDisplay(flightDate, { weekday: 'short', month: 'short', day: 'numeric', year: '2-digit' })}</span>
-                        <span>{flightSector}</span>
-                        <span>{flightNo}</span>
-                        <span>{formatTime(etd)}</span>
-                        <span>{formatTime(eta)}</span>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
-    )
-  }
-
   useEffect(() => {
     let isActive = true
 
@@ -1415,7 +1422,13 @@ function TourDetailsContent() {
                             departures.length ? (
                               <div className="departure-card-list detail-departure-list">
                                 {departures.map((departure) => (
-                                  <DepartureCard key={`departure-main-${departure.id}`} departure={departure} />
+                                  <DepartureCard
+                                    key={`departure-main-${departure.id}`}
+                                    departure={departure}
+                                    resolvedTitle={resolvedDetail.title}
+                                    resolvedId={resolvedDetail.id}
+                                    callPhone={callPhone}
+                                  />
                                 ))}
                               </div>
                             ) : (
@@ -1529,7 +1542,13 @@ function TourDetailsContent() {
                                 departures.length ? (
                                   <div className="departure-card-list">
                                     {departures.map((departure) => (
-                                      <DepartureCard key={`departure-${departure.id}`} departure={departure} />
+                                      <DepartureCard
+                                        key={`departure-${departure.id}`}
+                                        departure={departure}
+                                        resolvedTitle={resolvedDetail.title}
+                                        resolvedId={resolvedDetail.id}
+                                        callPhone={callPhone}
+                                      />
                                     ))}
                                   </div>
                                 ) : (
