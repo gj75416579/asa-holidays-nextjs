@@ -97,18 +97,12 @@ export default function Footer({ contactSection }: FooterProps) {
                     <h4>Company</h4>
                   </div>
                   <ul className="list-area">
-                    <li>
+                    {/* <li>
                       <a href="/about">
                         <i className="fa-solid fa-chevron-right"></i>
                         About Us
                       </a>
                     </li>
-                    {/* <li>
-                      <a href="/team">
-                        <i className="fa-solid fa-chevron-right"></i>
-                        Our Team
-                      </a>
-                    </li> */}
                     <li>
                       <a href="/career">
                         <i className="fa-solid fa-chevron-right"></i>
@@ -119,6 +113,24 @@ export default function Footer({ contactSection }: FooterProps) {
                       <a href="/faq">
                         <i className="fa-solid fa-chevron-right"></i>
                         FAQ
+                      </a>
+                    </li> */}
+                    <li>
+                      <a href="/privacy/">
+                        <i className="fa-solid fa-chevron-right"></i>
+                        Privacy Statements
+                      </a>
+                    </li>
+                    <li>
+                      <a href="/web-terms/">
+                        <i className="fa-solid fa-chevron-right"></i>
+                        Website Terms of Use
+                      </a>
+                    </li>
+                    <li>
+                      <a href="/tour-terms/">
+                        <i className="fa-solid fa-chevron-right"></i>
+                        Tour Terms & Conditions
                       </a>
                     </li>
                   </ul>

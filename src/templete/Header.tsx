@@ -174,7 +174,7 @@ export default function Header() {
               <div className="header-left">
                 <div className="logo">
                   <a href="/" className="header-logo">
-                    <img src="/assets/img/logo/asa-logo.png" alt="ASA Holidays logo" />
+                    <img src="/assets/img/logo/asa-logo.png" alt="ASA Holidays logo" height={65} />
                   </a>
                 </div>
                 <div className="mean__menu-wrapper">
