@@ -1393,7 +1393,6 @@ export default function Home() {
     [homeApiData.sectorLevels]
   )
   const popupBanner = resolvePopupBanner(homeApiData.popupBanners)
-
   const selectOptionsKey = resolvedContactForm.selects[0]?.options.join('|') ?? ''
 
   useEffect(() => {
